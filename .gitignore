@@ -1,0 +1,4 @@
+__pycache__
+ray_results
+*.txt
+.DS_STORE
