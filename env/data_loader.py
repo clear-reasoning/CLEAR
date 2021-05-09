@@ -34,7 +34,7 @@ def load_data():
     time_step = df['Time'][1] - df['Time'][0]
     dist_from_start = 0
     leader_positions = [space_gaps[0]]
-    leader_velocities = (velocities + relative_velocities) / 3.6  # convert km/h to m/s
+    leader_velocities = np.maximum((velocities + relative_velocities) / 3.6, 0)  # convert km/h to m/s
 
     for i in range(1, len(times)):
         # keep track of driving distance from start
@@ -71,7 +71,10 @@ if __name__ == '__main__':
     total_time = times[-1] - times[0]
     print(f'Total trajectory time: {round(total_time)}s')
 
-    time_step, leader_positions, _ = load_data()
+    time_step, leader_positions, leader_velocities = load_data()
+    positions_from_velocity = [leader_positions[0]]
+    for vel in leader_velocities[:-1]:
+        positions_from_velocity.append(positions_from_velocity[-1] + vel * 0.1)
 
     # plot ego and leader velocities
     plt.figure()
@@ -104,6 +107,7 @@ if __name__ == '__main__':
     plt.figure()
     plt.plot(times - times[0], leader_positions - space_gaps, label='Ego')
     plt.plot(times - times[0], leader_positions, label='Leader')
+    plt.plot(times - times[0], positions_from_velocity, label='Leader from velocities')
     plt.xlabel('Time (s)')
     plt.ylabel('Position (m)')
     plt.legend()

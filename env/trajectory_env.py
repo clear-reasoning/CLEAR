@@ -22,6 +22,10 @@ class TrajectoryEnv(object):
         self.max_headway = config.get('max_headway', 70)  # TODO maybe do both max time headway for high speeds and space headway for low speeds
 
         self.time_step, self.leader_positions, self.leader_speeds = load_data()
+        # for now get positions from velocities to ignore in-lane-changes
+        self.leader_positions = [self.leader_positions[0]]
+        for vel in self.leader_speeds[:-1]:
+            positions_from_velocity.append(self.leader_positions[-1] + vel * self.time_step)
         assert(len(self.leader_positions) == len(self.leader_speeds))
 
         self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
@@ -68,16 +72,6 @@ class TrajectoryEnv(object):
     def step(self, action):
         self.env_step += 1
         self.traj_idx += 1
-
-        # handle lane changes
-        # if last position of AV crashes with new position of leader, teleport AV backwards
-        lpos = self.leader_positions[self.traj_idx]
-        last_lpos = self.leader_positions[self.traj_idx - 1]
-        if lpos < last_lpos:
-            delta_pos = lpos - last_lpos
-            self.av['pos'] += delta_pos
-            for idm in self.idm_followers:
-                idm['pos'] += delta_pos
 
         # get av accel
         action = float(action)
