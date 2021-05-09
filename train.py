@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     exp_config = {
         'run_or_experiment': 'PPO',
-        'name': 'trajectory_v0',
+        'name': args.expname,
         'config': {
             'env': TrajectoryEnv,
             'env_config': {
@@ -25,13 +25,19 @@ if __name__ == '__main__':
             },
             'num_gpus': 0,
             'model': {
-                'vf_share_layers': False,
+                'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
+                'use_lstm': True,
             },
+            'vf_loss_coeff': 1e-5,
             'lr': 1e-4,
-            'gamma': 0.9,
+            'gamma': 0.95,
             'num_workers': 2, 
             'framework': 'torch',
+            'train_batch_size': 10000,
+            'batch_mode': 'complete_episodes',
+            'explore': True,
+
         },
         'stop': {
             'training_iteration': args.iters,

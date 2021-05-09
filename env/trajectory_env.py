@@ -25,7 +25,7 @@ class TrajectoryEnv(object):
         # for now get positions from velocities to ignore in-lane-changes
         self.leader_positions = [self.leader_positions[0]]
         for vel in self.leader_speeds[:-1]:
-            positions_from_velocity.append(self.leader_positions[-1] + vel * self.time_step)
+            self.leader_positions.append(self.leader_positions[-1] + vel * self.time_step)
         assert(len(self.leader_positions) == len(self.leader_speeds))
 
         self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
@@ -73,7 +73,7 @@ class TrajectoryEnv(object):
         # get av accel
         action = float(action)
         # action *= self.max_accel if action > 0 else self.max_decel
-        self.follower_stopper.v_des += action * self.time_step
+        self.follower_stopper.v_des += action # * self.time_step
         # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
         accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
                                                 self.leader_positions[self.traj_idx] - self.av['pos'],
