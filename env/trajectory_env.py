@@ -35,9 +35,16 @@ class TrajectoryEnv(object):
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
 
-        self.init_env()
-
-    def init_env(self):
+        self.reset()
+    
+    def get_state(self):
+        speed = self.av['speed'] / 50.0
+        leader_speed = self.leader_speeds[self.traj_idx] / 50.0
+        headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / 100.0
+        state = np.array([speed, leader_speed, headway])
+        return state
+    
+    def reset(self):
         # start at random time in trajectory
         total_length = len(self.leader_positions)
         self.traj_idx = 6500 #randint(0, total_length - self.horizon - 1)
@@ -57,16 +64,6 @@ class TrajectoryEnv(object):
             'last_accel': -1,
         } for i in range(5)]
 
-    
-    def get_state(self):
-        speed = self.av['speed'] / 50.0
-        leader_speed = self.leader_speeds[self.traj_idx] / 50.0
-        headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / 100.0
-        state = np.array([speed, leader_speed, headway])
-        return state
-    
-    def reset(self):
-        self.init_env()
         return self.get_state()
 
     def step(self, action):
