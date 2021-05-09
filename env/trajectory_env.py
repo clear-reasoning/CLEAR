@@ -5,6 +5,7 @@ import numpy as np
 
 from env.data_loader import load_data
 from env.idm import IDMController
+from env.TimeHeadwayFollowerStopper import TimeHeadwayFollowerStopper
 from env.energy import PFMMidsizeSedan
 
 
@@ -27,6 +28,7 @@ class TrajectoryEnv(object):
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
 
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel)
+        self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
 
         self.init_env()
@@ -79,8 +81,13 @@ class TrajectoryEnv(object):
 
         # get av accel
         action = float(action)
-        action *= self.max_accel if action > 0 else self.max_decel
-        self.av['last_accel'] = action
+        # action *= self.max_accel if action > 0 else self.max_decel
+        self.follower_stopper.v_des += action * self.time_step
+        # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
+        accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
+                                                self.leader_positions[self.traj_idx] - self.av['pos'],
+                                                self)
+        self.av['last_accel'] = accel
 
         # compute idms accels
         for i, idm in enumerate(self.idm_followers):
