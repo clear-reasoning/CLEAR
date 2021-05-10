@@ -3,6 +3,7 @@ import ray
 from env.trajectory_env import TrajectoryEnv
 from args import parse_args
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from ray.tune import grid_search
@@ -39,15 +40,12 @@ class PlotTrajectoryCallback(DefaultCallbacks):
             speed = observations[:, 0] * 50.0
             lead_speed = observations[:, 1] * 50.0
 
-            plt.figure(figsize=(5, 10))
-            plt.tight_layout()
-
             if observations.shape[-1] == 4:
-                num_plots = 4
-                plt.figure(figsize=(5, 13))
+                num_plots = 5
+                plt.figure(figsize=(5, 16))
                 plt.tight_layout()
             else:
-                plt.figure(figsize=(5, 10))
+                plt.figure(figsize=(5, 13))
                 plt.tight_layout()
                 num_plots = 4
 
@@ -66,8 +64,17 @@ class PlotTrajectoryCallback(DefaultCallbacks):
             plt.plot(range(1, len(lead_speed) + 1), lead_speed)
             plt.title("time-step vs. lead speed")
 
-            if num_plots == 4:
-                plt.subplot(num_plots, 1, 4)
+            plt.subplot(num_plots, 1, 4)
+            plt.cla()
+            plt.plot(range(1, len(actions) + 1), actions, label='action')
+            plt.plot(range(1, len(actions) + 1), 0.5 * (actions ** 2), label='action penalty')
+            print('action penalty was ', np.sum(0.5 * (actions ** 2)))
+            ax = plt.gca()
+            ax.legend(loc="upper right")
+            plt.title("time-step vs. lead speed")
+
+            if num_plots == 5:
+                plt.subplot(num_plots, 1, 5)
                 plt.cla()
                 plt.plot(range(1, len(lead_speed) + 1), observations[:, 3] * 50.0, label='v_des')
                 plt.plot(range(1, len(speed) + 1), speed, label='speed')
@@ -120,7 +127,7 @@ if __name__ == '__main__':
             'training_iteration': args.iters,
         },
         'local_dir': './ray_results',
-        'checkpoint_freq': 100,
+        'checkpoint_freq': 20,
         'checkpoint_at_end': True,
         'verbose': 1,
         'log_to_file': False,

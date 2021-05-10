@@ -7,6 +7,7 @@ from env.data_loader import load_data
 from env.idm import IDMController
 from env.TimeHeadwayFollowerStopper import TimeHeadwayFollowerStopper
 from env.energy import PFMMidsizeSedan
+from env.failsafes import safe_velocity
 
 
 
@@ -94,6 +95,11 @@ class TrajectoryEnv(object):
                                                     self)
         else:
             accel = action
+            v_safe = safe_velocity(self.av['speed'], self.leader_speeds[self.traj_idx],
+                                self.leader_positions[self.traj_idx] - self.av['pos'], self.max_decel, self.time_step)
+            v_next = accel * self.time_step + self.av['speed']
+            if v_next > v_safe:
+                accel = np.clip((v_safe - self.av['speed']) / self.time_step, -np.abs(self.max_decel), self.max_accel)
 
         self.av['last_accel'] = accel
 
@@ -132,6 +138,6 @@ class TrajectoryEnv(object):
         if self.env_step >= self.horizon:
             done = True
 
-        reward -= (action ** 2) * 3
+        reward -= (action ** 2) * 0.5
 
         return self.get_state(), reward, done, {}

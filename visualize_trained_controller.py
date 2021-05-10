@@ -7,6 +7,7 @@ from ray.rllib.agents import ppo
 from ray.rllib.models import ModelCatalog
 from model import MyFullyConnectedNetwork
 import numpy as np
+from env.failsafes import safe_velocity
 
 class Model(object):
     def __init__(self, ckpt_path):
@@ -52,12 +53,15 @@ class Model(object):
         action = self.policy.compute_actions([state])
         return action[0][0][0]  # other interesting things in there
 
-cp = './ray_results/alpha_v0.1/PPO_SimpleRoad_98e53_00000_0_2021-05-04_12-15-06/checkpoint_001000/checkpoint-1000'
+cp = '/Users/eugenevinitsky/Desktop/Research/Code/trajectory_training/ray_results/trajectory_env/PPO_TrajectoryEnv_0c5a2_00000_0_2021-05-10_14-17-58/checkpoint_001000/checkpoint-1000'
 model = Model(cp)
 
 import matplotlib.pyplot as plt
 
 ego_speed = 5
+max_decel = 3.0
+max_accel = 1.5
+sim_step = 0.1
 lead_speed_range = np.linspace(0, 10, 50)
 headway_range = np.linspace(0, 30, 50)
 
@@ -67,6 +71,13 @@ accels = np.zeros_like(lead_speeds)
 for i in range(lead_speeds.shape[0]):
     for j in range(lead_speeds.shape[1]):
         accels[-1-i,j] = model.act(ego_speed, lead_speeds[i,j], headways[i,j])
+
+        v_safe = safe_velocity(ego_speed, lead_speeds[i,j],
+                               headways[i,j], max_decel, sim_step)
+        v_next = accels[-1-i,j] * sim_step + ego_speed
+        if v_next > v_safe:
+            accel = np.clip((v_safe - ego_speed) / sim_step, -np.abs(max_decel), max_accel)
+            accels[-1-i, j] = accel
 
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
