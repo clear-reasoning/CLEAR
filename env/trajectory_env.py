@@ -11,7 +11,7 @@ from env.failsafes import safe_velocity
 
 
 
-class TrajectoryEnv(object):
+class TrajectoryEnv(gym.Env):
     def __init__(self, config):
         self.max_accel = config.get('max_accel', 1.5)
         self.max_decel = config.get('max_decel', 3.0)
@@ -21,7 +21,7 @@ class TrajectoryEnv(object):
         self.max_speed = config.get('max_speed', 40)
         self.use_fs = config.get('use_fs')
 
-        self.max_headway = config.get('max_headway', 70)  # TODO maybe do both max time headway for high speeds and space headway for low speeds
+        self.max_headway = config.get('max_headway', 80)  # TODO maybe do both max time headway for high speeds and space headway for low speeds
 
         self.time_step, self.leader_positions, self.leader_speeds = load_data()
         # for now get positions from velocities to ignore in-lane-changes
@@ -57,7 +57,7 @@ class TrajectoryEnv(object):
     def reset(self):
         # start at random time in trajectory
         total_length = len(self.leader_positions)
-        self.traj_idx = 6500 #randint(0, total_length - self.horizon - 1)
+        self.traj_idx = randint(0, total_length - self.horizon - 1)
         self.env_step = 0
 
         # create av behind leader
@@ -84,9 +84,10 @@ class TrajectoryEnv(object):
 
         # get av accel
         action = float(action)
+        # action = np.clip(action, -1, 1)
         # action *= self.max_accel if action > 0 else self.max_decel
         if self.use_fs:
-            self.follower_stopper.v_des += action # * self.time_step
+            self.follower_stopper.v_des += action
             self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
             self.follower_stopper.v_des = min(self.follower_stopper.v_des, self.max_speed)
             # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
