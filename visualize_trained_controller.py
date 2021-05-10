@@ -1,58 +1,56 @@
 # TODO
 
-from env import SimpleRoad
+from env.trajectory_env import TrajectoryEnv
 import ray
 from ray.rllib.agents import ppo
 
-from ray.rllib.models import ModelCatalog
-from model import MyFullyConnectedNetwork
 import numpy as np
 
 class Model(object):
     def __init__(self, ckpt_path):
         ray.init()
-        ModelCatalog.register_custom_model('my_fcnet', MyFullyConnectedNetwork)
 
         self.config = {
-            'env': SimpleRoad,
+            'env': TrajectoryEnv,
             'env_config': {
                 'max_accel': 1.5,
                 'max_decel': 3.0,
-                'road_length': 1000,
-                'sim_step': 0.3,
+                'horizon': 500,
+                'min_speed': 0,
+                'max_speed': 40,
+                'max_headway': 70,
             },
             'num_gpus': 0,
             'model': {
-                'custom_model': 'my_fcnet',
-                'vf_share_layers': False,
+                'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
+                'use_lstm': True,
             },
+            'vf_loss_coeff': 1e-5,
             'lr': 1e-4,
-            'gamma': 0.9,
+            'gamma': 0.95,
             'num_workers': 2, 
             'framework': 'torch',
+            'train_batch_size': 5000,
+            'batch_mode': 'complete_episodes',
+            'explore': True,
         }
 
-        agent = ppo.PPOTrainer(self.config, env=SimpleRoad)
+        agent = ppo.PPOTrainer(self.config, env=TrajectoryEnv)
         agent.restore(ckpt_path)
-        self.policy = agent.workers.local_worker().get_policy()
-
-    def get_state(self):
-        av_speed = self.av.speed / 30.0
-        leader_speed = self.leader.speed / 30.0
-        headway = (self.leader.pos - self.av.pos) / self.road_length
-        state = np.array([av_speed, leader_speed, headway])
-        return state
+        self.agent = agent
+        # self.policy = agent.workers.local_worker().get_policy()
 
     def act(self, speed, leader_speed, headway):
-        state = np.array([speed / 30.0, leader_speed / 30.0, headway / self.config['env_config']['road_length']])
+        state = np.array([speed / 50.0, leader_speed / 50.0, headway / 100])
         return self._act(state)
 
     def _act(self, state):
-        action = self.policy.compute_actions([state])
+        # with lstm cf https://github.com/ray-project/ray/issues/9220
+        action = self.agent.compute_action(state)
         return action[0][0][0]  # other interesting things in there
 
-cp = './ray_results/alpha_v0.1/PPO_SimpleRoad_98e53_00000_0_2021-05-04_12-15-06/checkpoint_001000/checkpoint-1000'
+cp = './ray_results/test5/PPO_TrajectoryEnv_53d74_00000_0_2021-05-09_20-49-47/checkpoint_000200/checkpoint-200'
 model = Model(cp)
 
 import matplotlib.pyplot as plt
