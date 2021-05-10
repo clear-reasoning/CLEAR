@@ -48,7 +48,7 @@ class TrajectoryEnv(object):
         leader_speed = self.leader_speeds[self.traj_idx] / 50.0
         headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / 100.0
         if self.use_fs:
-            state = np.array([speed, leader_speed, headway, self.follower_stopper.v_des])
+            state = np.array([speed, leader_speed, headway, self.follower_stopper.v_des / 50.0])
         else:
             state = np.array([speed, leader_speed, headway])
         return state
@@ -87,6 +87,7 @@ class TrajectoryEnv(object):
         if self.use_fs:
             self.follower_stopper.v_des += action # * self.time_step
             self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
+            self.follower_stopper.v_des = min(self.follower_stopper.v_des, self.max_speed)
             # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
             accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
                                                     self.leader_positions[self.traj_idx] - self.av['pos'],
@@ -130,5 +131,7 @@ class TrajectoryEnv(object):
 
         if self.env_step >= self.horizon:
             done = True
+
+        reward -= (action ** 2) * 3
 
         return self.get_state(), reward, done, {}

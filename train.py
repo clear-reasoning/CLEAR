@@ -36,26 +36,44 @@ class PlotTrajectoryCallback(DefaultCallbacks):
             actions = samples['actions']
             observations = samples['obs']
             headway = observations[:, 2] * 100.0
-            speed = observations[:, 0] * 100.0
-            lead_speed = observations[:, 1] * 100.0
+            speed = observations[:, 0] * 50.0
+            lead_speed = observations[:, 1] * 50.0
 
             plt.figure(figsize=(5, 10))
             plt.tight_layout()
 
-            plt.subplot(3, 1, 1)
+            if observations.shape[-1] == 4:
+                num_plots = 4
+                plt.figure(figsize=(5, 13))
+                plt.tight_layout()
+            else:
+                plt.figure(figsize=(5, 10))
+                plt.tight_layout()
+                num_plots = 4
+
+            plt.subplot(num_plots, 1, 1)
             plt.cla()
             plt.plot(range(1, len(headway) + 1), headway)
             plt.title("time-step vs. headway")
 
-            plt.subplot(3, 1, 2)
+            plt.subplot(num_plots, 1, 2)
             plt.cla()
             plt.plot(range(1, len(speed) + 1), speed)
             plt.title("time-step vs. speed")
 
-            plt.subplot(3, 1, 3)
+            plt.subplot(num_plots, 1, 3)
             plt.cla()
             plt.plot(range(1, len(lead_speed) + 1), lead_speed)
             plt.title("time-step vs. lead speed")
+
+            if num_plots == 4:
+                plt.subplot(num_plots, 1, 4)
+                plt.cla()
+                plt.plot(range(1, len(lead_speed) + 1), observations[:, 3] * 50.0, label='v_des')
+                plt.plot(range(1, len(speed) + 1), speed, label='speed')
+                ax = plt.gca()
+                ax.legend(loc="upper right")
+                plt.title("time-step vs. v._des")
 
             local_lr = worker.creation_args()['policy_config']['lr']
             path = './figs/env_trajectory/test.png'
@@ -84,20 +102,19 @@ if __name__ == '__main__':
             },
             'num_gpus': 0,
             'model': {
-                'vf_share_layers': False,
+                # 'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
-                'use_lstm': False,
+                # 'use_lstm': True,
             },
             # 'vf_loss_coeff': 1e-5,
-            'lr': 1e-4,
-            'gamma': 0.95,
-            'num_workers': 1,
-            'vf_clip_param': 100,
+            'lr': 5e-5,
+            'gamma': 0.99,
+            'num_workers': 3,
+            # 'vf_clip_param': 100,
             'framework': 'torch',
-            'train_batch_size': 10000,
+            # 'train_batch_size': 10000,
             'batch_mode': 'complete_episodes',
             'explore': True,
-            'callbacks': PlotTrajectoryCallback,
         },
         'stop': {
             'training_iteration': args.iters,
@@ -121,8 +138,13 @@ if __name__ == '__main__':
             'episode_len_mean': 'ep len mean',
             'info/learner/default_policy/learner_stats/policy_loss': 'policy loss',
             'info/learner/default_policy/learner_stats/vf_loss': 'vf loss',
+            'info/learner/default_policy/learner_stats/kl': 'kl',
+            'info/learner/default_policy/learner_stats/entropy': 'entropy',
         }),
     }
+
+    if args.plot_trajectory:
+        exp_config['config']['callbacks'] = PlotTrajectoryCallback
 
     ray.init()
     ray.tune.run(**exp_config)
