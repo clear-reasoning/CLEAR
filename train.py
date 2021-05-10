@@ -26,9 +26,6 @@ class PlotTrajectoryCallback(DefaultCallbacks):
 
         self.max_reward = []
 
-        plt.figure(figsize=(5, 10))
-        plt.tight_layout()
-
         super().__init__(legacy_callbacks_dict)
 
     def on_sample_end(self, *, worker, samples, **kwargs):
@@ -39,17 +36,34 @@ class PlotTrajectoryCallback(DefaultCallbacks):
             actions = samples['actions']
             observations = samples['obs']
             headway = observations[:, 2] * 100.0
+            speed = observations[:, 0] * 100.0
+            lead_speed = observations[:, 1] * 100.0
 
-            plt.subplot(1, 1, 1)
+            plt.figure(figsize=(5, 10))
+            plt.tight_layout()
+
+            plt.subplot(3, 1, 1)
             plt.cla()
             plt.plot(range(1, len(headway) + 1), headway)
             plt.title("time-step vs. headway")
 
+            plt.subplot(3, 1, 2)
+            plt.cla()
+            plt.plot(range(1, len(speed) + 1), speed)
+            plt.title("time-step vs. speed")
+
+            plt.subplot(3, 1, 3)
+            plt.cla()
+            plt.plot(range(1, len(lead_speed) + 1), lead_speed)
+            plt.title("time-step vs. lead speed")
+
             local_lr = worker.creation_args()['policy_config']['lr']
-            path = './figs/trajectory_data/test.png'
+            path = './figs/env_trajectory/test.png'
             plt.savefig(path)
 
-            plt.pause(0.05)
+            plt.close()
+
+            # plt.pause(0.05)
 
 if __name__ == '__main__':
     args = parse_args()
