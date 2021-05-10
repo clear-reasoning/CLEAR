@@ -56,6 +56,7 @@ class TrajectoryEnv(object):
             'speed': self.leader_speeds[self.traj_idx],
             'last_accel': -1,
         }
+        self.follower_stopper.v_des = self.leader_speeds[self.traj_idx]
 
         # create idm followers behind av
         self.idm_followers = [{
@@ -74,10 +75,12 @@ class TrajectoryEnv(object):
         action = float(action)
         # action *= self.max_accel if action > 0 else self.max_decel
         self.follower_stopper.v_des += action # * self.time_step
+        self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
         # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
         accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
                                                 self.leader_positions[self.traj_idx] - self.av['pos'],
                                                 self)
+
         self.av['last_accel'] = accel
 
         # compute idms accels
