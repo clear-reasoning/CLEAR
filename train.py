@@ -110,9 +110,9 @@ if __name__ == '__main__':
             },
             'num_gpus': 0,
             'model': {
-                # 'vf_share_layers': True,
+                'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
-                # 'use_lstm': True,
+                'use_lstm': False,
             },
             # 'vf_loss_coeff': 1e-5,
             'lr': 5e-5,
