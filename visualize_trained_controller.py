@@ -24,9 +24,9 @@ class Model(object):
             },
             'num_gpus': 0,
             'model': {
-                # 'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
-                # 'use_lstm': True,
+                'vf_share_layers': True,
+                'use_lstm': False,
             },
             'vf_loss_coeff': 1e-5,
             'lr': 1e-4,
@@ -50,9 +50,9 @@ class Model(object):
     def _act(self, state):
         # with lstm cf https://github.com/ray-project/ray/issues/9220
         action = self.agent.compute_action(state, explore=False)
-        return action[0]  # other interesting things in there
+        return action[0][0][0]  # other interesting things in there
 
-cp = '/Users/eugenevinitsky/Desktop/Research/Code/trajectory_training/ray_results/trajectory_env/PPO_TrajectoryEnv_0c5a2_00000_0_2021-05-10_14-17-58/checkpoint_000100/checkpoint-100'
+cp = './ray_results/test5/PPO_TrajectoryEnv_53d74_00000_0_2021-05-09_20-49-47/checkpoint_000200/checkpoint-200'
 model = Model(cp)
 
 ego_speed = 15
