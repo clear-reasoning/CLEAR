@@ -3,9 +3,67 @@ import ray
 from env.trajectory_env import TrajectoryEnv
 from args import parse_args
 
+import matplotlib.pyplot as plt
+
 from ray.tune import grid_search
 from progress_reporter import CLIReporter
 
+from ray.rllib.agents.callbacks import DefaultCallbacks
+
+
+class PlotTrajectoryCallback(DefaultCallbacks):
+
+    def __init__(self, legacy_callbacks_dict=None):
+
+        self.rewards_1 = []
+        self.rewards_2 = []
+
+        self.exploit_1 = []
+        self.exploit_2 = []
+
+        self.play_pref_1 = []
+        self.play_pref_2 = []
+
+        self.max_reward = []
+
+        super().__init__(legacy_callbacks_dict)
+
+    def on_sample_end(self, *, worker, samples, **kwargs):
+
+        if worker.worker_index == 0 or worker.worker_index == 1:
+
+            rewards = samples['rewards']
+            actions = samples['actions']
+            observations = samples['obs']
+            headway = observations[:, 2] * 100.0
+            speed = observations[:, 0] * 100.0
+            lead_speed = observations[:, 1] * 100.0
+
+            plt.figure(figsize=(5, 10))
+            plt.tight_layout()
+
+            plt.subplot(3, 1, 1)
+            plt.cla()
+            plt.plot(range(1, len(headway) + 1), headway)
+            plt.title("time-step vs. headway")
+
+            plt.subplot(3, 1, 2)
+            plt.cla()
+            plt.plot(range(1, len(speed) + 1), speed)
+            plt.title("time-step vs. speed")
+
+            plt.subplot(3, 1, 3)
+            plt.cla()
+            plt.plot(range(1, len(lead_speed) + 1), lead_speed)
+            plt.title("time-step vs. lead speed")
+
+            local_lr = worker.creation_args()['policy_config']['lr']
+            path = './figs/env_trajectory/test.png'
+            plt.savefig(path)
+
+            plt.close()
+
+            # plt.pause(0.05)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -22,22 +80,24 @@ if __name__ == '__main__':
                 'min_speed': 0,
                 'max_speed': 40,
                 'max_headway': 70,
+                'use_fs': args.use_fs,
             },
             'num_gpus': 0,
             'model': {
-                'vf_share_layers': True,
+                'vf_share_layers': False,
                 'fcnet_hiddens': [64, 64],
-                'use_lstm': True,
+                'use_lstm': False,
             },
-            'vf_loss_coeff': 1e-5,
+            # 'vf_loss_coeff': 1e-5,
             'lr': 1e-4,
             'gamma': 0.95,
-            'num_workers': 2, 
+            'num_workers': 1,
+            'vf_clip_param': 100,
             'framework': 'torch',
             'train_batch_size': 10000,
             'batch_mode': 'complete_episodes',
             'explore': True,
-
+            'callbacks': PlotTrajectoryCallback,
         },
         'stop': {
             'training_iteration': args.iters,
@@ -62,7 +122,7 @@ if __name__ == '__main__':
             'info/learner/default_policy/learner_stats/policy_loss': 'policy loss',
             'info/learner/default_policy/learner_stats/vf_loss': 'vf loss',
         }),
-    }       
+    }
 
     ray.init()
     ray.tune.run(**exp_config)

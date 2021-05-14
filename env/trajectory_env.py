@@ -18,6 +18,7 @@ class TrajectoryEnv(object):
 
         self.min_speed = config.get('min_speed', 0)
         self.max_speed = config.get('max_speed', 40)
+        self.use_fs = config.get('use_fs')
 
         self.max_headway = config.get('max_headway', 70)  # TODO maybe do both max time headway for high speeds and space headway for low speeds
 
@@ -29,10 +30,15 @@ class TrajectoryEnv(object):
         assert(len(self.leader_positions) == len(self.leader_speeds))
 
         self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
+
+        if self.use_fs:
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32)
+        else:
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
 
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel)
-        self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
+        if self.use_fs:
+            self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
 
         self.reset()
@@ -41,7 +47,10 @@ class TrajectoryEnv(object):
         speed = self.av['speed'] / 50.0
         leader_speed = self.leader_speeds[self.traj_idx] / 50.0
         headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / 100.0
-        state = np.array([speed, leader_speed, headway])
+        if self.use_fs:
+            state = np.array([speed, leader_speed, headway, self.follower_stopper.v_des])
+        else:
+            state = np.array([speed, leader_speed, headway])
         return state
     
     def reset(self):
@@ -56,7 +65,8 @@ class TrajectoryEnv(object):
             'speed': self.leader_speeds[self.traj_idx],
             'last_accel': -1,
         }
-        self.follower_stopper.v_des = self.leader_speeds[self.traj_idx]
+        if self.use_fs:
+            self.follower_stopper.v_des = self.leader_speeds[self.traj_idx]
 
         # create idm followers behind av
         self.idm_followers = [{
@@ -74,12 +84,15 @@ class TrajectoryEnv(object):
         # get av accel
         action = float(action)
         # action *= self.max_accel if action > 0 else self.max_decel
-        self.follower_stopper.v_des += action # * self.time_step
-        self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
-        # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
-        accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
-                                                self.leader_positions[self.traj_idx] - self.av['pos'],
-                                                self)
+        if self.use_fs:
+            self.follower_stopper.v_des += action # * self.time_step
+            self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
+            # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
+            accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
+                                                    self.leader_positions[self.traj_idx] - self.av['pos'],
+                                                    self)
+        else:
+            accel = action
 
         self.av['last_accel'] = accel
 
