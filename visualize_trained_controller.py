@@ -4,7 +4,9 @@ from env.trajectory_env import TrajectoryEnv
 import ray
 from ray.rllib.agents import ppo
 
+import matplotlib.pyplot as plt
 import numpy as np
+from env.failsafes import safe_velocity
 
 class Model(object):
     def __init__(self, ckpt_path):
@@ -22,9 +24,9 @@ class Model(object):
             },
             'num_gpus': 0,
             'model': {
-                'vf_share_layers': True,
                 'fcnet_hiddens': [64, 64],
-                'use_lstm': True,
+                'vf_share_layers': True,
+                'use_lstm': False,
             },
             'vf_loss_coeff': 1e-5,
             'lr': 1e-4,
@@ -47,17 +49,18 @@ class Model(object):
 
     def _act(self, state):
         # with lstm cf https://github.com/ray-project/ray/issues/9220
-        action = self.agent.compute_action(state)
+        action = self.agent.compute_action(state, explore=False)
         return action[0][0][0]  # other interesting things in there
 
 cp = './ray_results/test5/PPO_TrajectoryEnv_53d74_00000_0_2021-05-09_20-49-47/checkpoint_000200/checkpoint-200'
 model = Model(cp)
 
-import matplotlib.pyplot as plt
-
-ego_speed = 5
-lead_speed_range = np.linspace(0, 10, 50)
-headway_range = np.linspace(0, 30, 50)
+ego_speed = 15
+max_decel = 3.0
+max_accel = 1.5
+sim_step = 0.1
+lead_speed_range = np.linspace(20, 10, 50)
+headway_range = np.linspace(0, 100, 100)
 
 lead_speeds, headways = np.meshgrid(lead_speed_range, headway_range)
 
@@ -66,13 +69,20 @@ for i in range(lead_speeds.shape[0]):
     for j in range(lead_speeds.shape[1]):
         accels[-1-i,j] = model.act(ego_speed, lead_speeds[i,j], headways[i,j])
 
+        # v_safe = safe_velocity(ego_speed, lead_speeds[i,j],
+        #                        headways[i,j], max_decel, sim_step)
+        # v_next = accels[-1-i,j] * sim_step + ego_speed
+        # if v_next > v_safe:
+        #     accel = np.clip((v_safe - ego_speed) / sim_step, -np.abs(max_decel), max_accel)
+        #     accels[-1-i, j] = accel
+
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
 
 im = ax.imshow(accels, cmap=plt.cm.RdBu, interpolation='bilinear')
 fig.colorbar(im, ax=ax)
 
-ax.set_title(f'Ego speed 5 m/s')
+ax.set_title(f'Ego speed {ego_speed} m/s')
 ax.set_xlabel('Leader speed (m/s)')
 ax.set_ylabel('Headway (m)')
 

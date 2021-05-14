@@ -99,13 +99,13 @@ class TimeHeadwayFollowerStopper(object):
                                              env.time_step)
         v_safe = self.maximum_safe_stop_speed(headway + brake_distance - min_gap, this_vel, env.time_step)
 
-        if this_vel > v_safe:
-            if self.display_warnings:
-                print(
-                    "=====================================\n"
-                    "Speed of vehicle {} is greater than safe speed. Safe velocity "
-                    "clipping applied.\n"
-                    "=====================================".format(self.veh_id))
+        # if this_vel > v_safe:
+        #     if self.display_warnings:
+        #         print(
+        #             "=====================================\n"
+        #             "Speed of vehicle {} is greater than safe speed. Safe velocity "
+        #             "clipping applied.\n"
+        #             "=====================================".format(self.veh_id))
 
         return v_safe
 
