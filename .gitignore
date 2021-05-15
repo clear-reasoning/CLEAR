@@ -1,4 +1,5 @@
 __pycache__
 ray_results
 *.txt
+*.png
 .DS_STORE
