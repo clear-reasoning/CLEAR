@@ -1,5 +1,6 @@
 import ray
 
+from callbacks import MPGCallback
 from env.trajectory_env import TrajectoryEnv
 from args import parse_args
 
@@ -105,7 +106,7 @@ if __name__ == '__main__':
                 'horizon': 500,
                 'min_speed': 0,
                 'max_speed': 40,
-                'max_headway': 80,
+                'max_headway': 120,
                 'use_fs': args.use_fs,
             },
             'num_gpus': 0,
@@ -114,7 +115,7 @@ if __name__ == '__main__':
                 'fcnet_hiddens': [64, 64],
                 'use_lstm': False,
             },
-            # 'vf_loss_coeff': 1e-5,
+            'vf_loss_coeff': 1e-7,
             'lr': 5e-5,
             'gamma': 0.99,
             'num_workers': 3,
@@ -127,7 +128,8 @@ if __name__ == '__main__':
             'explore': True,
             'normalize_actions': True,
             'clip_actions': True,
-            "grad_clip": 40.0
+            "grad_clip": 40.0,
+            "callbacks": MPGCallback,
         },
         'stop': {
             'training_iteration': args.iters,
@@ -153,6 +155,7 @@ if __name__ == '__main__':
             'info/learner/default_policy/learner_stats/vf_loss': 'vf loss',
             'info/learner/default_policy/learner_stats/kl': 'kl',
             'info/learner/default_policy/learner_stats/entropy': 'entropy',
+            'custom_metrics/avg_mpg_mean': 'avg_mpg'
         }),
     }
 

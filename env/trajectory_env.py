@@ -139,6 +139,6 @@ class TrajectoryEnv(gym.Env):
         if self.env_step >= self.horizon:
             done = True
 
-        reward -= (action ** 2) * 0.5
+        # reward -= (action ** 2) * 0.5
 
         return self.get_state(), reward, done, {}
