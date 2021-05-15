@@ -9,6 +9,8 @@ from env.TimeHeadwayFollowerStopper import TimeHeadwayFollowerStopper
 from env.energy import PFMMidsizeSedan
 from env.failsafes import safe_velocity
 
+DISTANCE_SCALE = 100
+SPEED_SCALE = 50
 
 
 class TrajectoryEnv(gym.Env):
@@ -22,6 +24,8 @@ class TrajectoryEnv(gym.Env):
         self.use_fs = config.get('use_fs')
 
         self.max_headway = config.get('max_headway', 80)  # TODO maybe do both max time headway for high speeds and space headway for low speeds
+
+        self.whole_trajectory = config.get('whole_trajectory', False)
 
         self.time_step, self.leader_positions, self.leader_speeds = load_data()
         # for now get positions from velocities to ignore in-lane-changes
@@ -45,9 +49,9 @@ class TrajectoryEnv(gym.Env):
         self.reset()
     
     def get_state(self):
-        speed = self.av['speed'] / 50.0
-        leader_speed = self.leader_speeds[self.traj_idx] / 50.0
-        headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / 100.0
+        speed = self.av['speed'] / SPEED_SCALE
+        leader_speed = self.leader_speeds[self.traj_idx] / SPEED_SCALE
+        headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / DISTANCE_SCALE
         if self.use_fs:
             state = np.array([speed, leader_speed, headway, self.follower_stopper.v_des / 50.0])
         else:
@@ -57,12 +61,15 @@ class TrajectoryEnv(gym.Env):
     def reset(self):
         # start at random time in trajectory
         total_length = len(self.leader_positions)
-        self.traj_idx = randint(0, total_length - self.horizon - 1)
+        if self.whole_trajectory:
+            self.traj_idx = 0
+        else:
+            self.traj_idx = randint(0, total_length - self.horizon - 1)
         self.env_step = 0
 
         # create av behind leader
         self.av = {
-            'pos': self.leader_positions[self.traj_idx] - 50, 
+            'pos': self.leader_positions[self.traj_idx] - 20, 
             'speed': self.leader_speeds[self.traj_idx],
             'last_accel': -1,
         }
@@ -136,8 +143,12 @@ class TrajectoryEnv(gym.Env):
             # headway penalty
             reward -= 10
 
-        if self.env_step >= self.horizon:
-            done = True
+        if self.whole_trajectory:
+            if self.traj_idx >= len(self.leader_positions) - 1:
+                done = True
+        else:
+            if self.env_step >= self.horizon:
+                done = True
 
         # reward -= (action ** 2) * 0.5
 
