@@ -1,12 +1,14 @@
 # TODO
 
-from env.trajectory_env import TrajectoryEnv
 import ray
 from ray.rllib.agents import ppo
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from env.failsafes import safe_velocity
+from env.trajectory_env import TrajectoryEnv
+
 
 class Model(object):
     def __init__(self, ckpt_path):

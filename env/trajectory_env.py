@@ -4,9 +4,8 @@ from gym.spaces import Discrete, Box
 import numpy as np
 
 from env.data_loader import load_data
-from env.idm import IDMController
-from env.TimeHeadwayFollowerStopper import TimeHeadwayFollowerStopper
-from env.energy import PFMMidsizeSedan
+from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
+from env.energy_models import PFMMidsizeSedan
 from env.failsafes import safe_velocity
 
 DISTANCE_SCALE = 100
