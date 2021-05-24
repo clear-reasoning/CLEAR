@@ -9,11 +9,13 @@ from env.energy_models import PFMMidsizeSedan
 from env.failsafes import safe_velocity
 
 DISTANCE_SCALE = 100
-SPEED_SCALE = 50
+SPEED_SCALE = 40
 
 
 class TrajectoryEnv(gym.Env):
     def __init__(self, config):
+        self.config = config
+
         self.max_accel = config.get('max_accel', 1.5)
         self.max_decel = config.get('max_decel', 3.0)
         self.horizon = config.get('horizon', 1000)
@@ -52,7 +54,8 @@ class TrajectoryEnv(gym.Env):
         leader_speed = self.leader_speeds[self.traj_idx] / SPEED_SCALE
         headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / DISTANCE_SCALE
         if self.use_fs:
-            state = np.array([speed, leader_speed, headway, self.follower_stopper.v_des / 50.0])
+            vdes = self.follower_stopper.v_des / SPEED_SCALE
+            state = np.array([speed, leader_speed, headway, vdes])
         else:
             state = np.array([speed, leader_speed, headway])
         return state
@@ -85,9 +88,6 @@ class TrajectoryEnv(gym.Env):
         return self.get_state()
 
     def step(self, action):
-        self.env_step += 1
-        self.traj_idx += 1
-
         # get av accel
         action = float(action)
         # action = np.clip(action, -1, 1)
@@ -131,8 +131,16 @@ class TrajectoryEnv(gym.Env):
         # compute reward/done
         av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
         done = False
-        reward = sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
-                        for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
+        # reward = sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
+        #                 for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
+        
+        reward = - self.energy_model.get_instantaneous_fuel_consumption(self.av['last_accel'], self.av['speed'], grade=0) / 10
+
+        reward -= self.reward_regularisation_coeff * (np.abs(av_headway) ** 0.2)
+        reward -= self.accel_regularisation_coeff * (action ** 2)
+
+        self.env_step += 1
+        self.traj_idx += 1
 
         if av_headway <= 0:
             # crash
