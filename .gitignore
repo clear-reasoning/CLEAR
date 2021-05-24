@@ -4,3 +4,4 @@ ray_results
 *.png
 .DS_STORE
 s3
+events.out*
