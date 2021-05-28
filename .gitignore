@@ -3,3 +3,6 @@ ray_results
 *.txt
 *.png
 .DS_STORE
+s3
+events.out*
+logs

@@ -1,6 +1,5 @@
 from env.trajectory_env import TrajectoryEnv, DISTANCE_SCALE, SPEED_SCALE
-from env.idm import IDMController
-from env.TimeHeadwayFollowerStopper import TimeHeadwayFollowerStopper
+from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 
 import matplotlib.pyplot as plt
 import numpy as np
