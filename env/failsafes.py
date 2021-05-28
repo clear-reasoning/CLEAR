@@ -100,7 +100,7 @@ def maximum_safe_stop_speed_euler(brake_distance, sim_step, max_decel):
         maximum speed that can be travelled at without crashing
     """
     if brake_distance <= 0:
-    return 0.0
+        return 0.0
 
     speed_reduction = max_decel * sim_step
 

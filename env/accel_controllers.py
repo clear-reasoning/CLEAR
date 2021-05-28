@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from failsafes import safe_velocity
+from env.failsafes import safe_velocity
 
 
 class IDMController(object):
@@ -65,7 +65,7 @@ class TimeHeadwayFollowerStopper(object):
         self.max_accel = max_accel
         self.max_deaccel = max_deaccel
 
-    def get_accel(self, this_vel, lead_vel, headway, env):
+    def get_accel(self, this_vel, lead_vel, headway, time_step):
         """See parent class."""
 
         dx = headway
@@ -86,10 +86,10 @@ class TimeHeadwayFollowerStopper(object):
         else:
           v_cmd = self.v_des
 
-        v_safe = safe_velocity(this_vel, lead_vel, headway, env.time_step)
-        desired_accel = np.clip((v_cmd - this_vel) / env.time_step, -np.abs(self.max_deaccel), self.max_accel)
-        v_next = desired_accel * env.time_step + this_vel
+        v_safe = safe_velocity(this_vel, lead_vel, headway, self.max_deaccel, time_step)
+        desired_accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+        v_next = desired_accel * time_step + this_vel
         if v_next > v_safe:
-          return np.clip((v_safe - this_vel) / env.time_step, -np.abs(self.max_deaccel), self.max_accel)
+          return np.clip((v_safe - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
         else:
-          return np.clip((v_cmd - this_vel) / env.time_step, -np.abs(self.max_deaccel), self.max_accel)
+          return np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)

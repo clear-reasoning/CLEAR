@@ -5,3 +5,4 @@ ray_results
 .DS_STORE
 s3
 events.out*
+logs
