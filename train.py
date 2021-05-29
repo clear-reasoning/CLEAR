@@ -32,6 +32,8 @@ if __name__ == '__main__':
         'min_speed': 0,
         'max_speed': 40,
         'max_headway': 120,
+        'discrete': args.env_discrete,
+        'num_actions': args.env_num_actions
         # 'use_fs': args.use_fs,
     }
 
