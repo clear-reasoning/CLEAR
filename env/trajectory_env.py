@@ -36,7 +36,14 @@ class TrajectoryEnv(gym.Env):
             self.leader_positions.append(self.leader_positions[-1] + vel * self.time_step)
         assert(len(self.leader_positions) == len(self.leader_speeds))
 
-        self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        if config.get('discrete'):
+            self.use_discrete = True
+            self.num_actions = config.get('num_actions', 7)
+            self.action_space = Discrete(self.num_actions)
+            self.action_set = np.linspace(-1, 1, self.num_actions)
+        else:
+            self.use_discrete = False
+            self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
 
         if self.use_fs:
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32)
@@ -96,7 +103,7 @@ class TrajectoryEnv(gym.Env):
 
         return self.get_state()
 
-    def step(self, action):
+    def step(self, actions):
         # get av accel
 
         # additional trajectory data that will be plotted in tensorboard
@@ -106,8 +113,10 @@ class TrajectoryEnv(gym.Env):
 
         # assert self.action_space.contains(action), f'Action {action} not in action space'
         # careful should not be rescaled when this method is called for IDM/FS baseline in callback
-
-        action = float(action)
+        if self.use_discrete and isinstance(actions, int):
+            action = self.action_set[actions]
+        else:
+            action = float(actions)
         
         # action = np.clip(action, -1, 1)
         # action *= self.max_accel if action > 0 else self.max_decel

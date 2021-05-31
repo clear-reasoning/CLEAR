@@ -50,7 +50,10 @@ def parse_args():
         help='Discount factor.')
 
     # env params
-    # TODO
+    parser.add_argument('--env_discrete', type=int, default=0,
+        help='If true, the environment has a discrete action space.')
+    parser.add_argument('--env_num_actions', type=int, default=7,
+                        help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
 
     args = parser.parse_args()
     return args

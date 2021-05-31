@@ -102,8 +102,14 @@ class TensorboardCallback(BaseCallback):
             observations = self.locals['obs_tensor'][0]
             for i in range(self.n_states):
                 self.rollout_info[f'state_{i}'].append(observations[i])
-            self.rollout_info[f'action'].append(self.locals['actions'][0][0])
-            self.rollout_info[f'clipped_action'].append(self.locals['clipped_actions'][0][0])
+
+            # check if we have a discrete action space
+            if len(self.locals['actions'].shape) == 1:
+                unwrap_func = lambda x: x[0]
+            else:
+                unwrap_func = lambda x: x[0][0]
+            self.rollout_info[f'action'].append(unwrap_func(self.locals['actions']))
+            self.rollout_info[f'clipped_action'].append(unwrap_func(self.locals['clipped_actions']))
             self.rollout_info[f'value'].append(self.locals['values'][0][0])
             self.rollout_info[f'log_prob'].append(self.locals['log_probs'][0])
             self.rollout_info[f'reward'].append(self.locals['rewards'][0])
@@ -161,7 +167,10 @@ class TensorboardCallback(BaseCallback):
 
             while not done:
                 if controller == 'rl':
-                    action = self.model.predict(state, deterministic=True)[0][0]
+                    if test_env.use_discrete:
+                        action = self.model.predict(state, deterministic=True)[0]
+                    else:
+                        action = self.model.predict(state, deterministic=True)[0][0]
                 elif controller == 'idm':
                     s = test_env.parse_state(state)
                     action = idm.get_accel(s['speed'], s['leader_speed'], s['headway'])
