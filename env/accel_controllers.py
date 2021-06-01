@@ -4,13 +4,14 @@ from env.failsafes import safe_velocity
 
 
 class IDMController(object):
-    def __init__(self, v0=30, T=1, a=1.3, b=2.0, delta=4, s0=2):
+    def __init__(self, v0=30, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3):
         self.v0 = v0
         self.T = T
         self.a = a
         self.b = b
         self.delta = delta
         self.s0 = s0
+        self.noise = noise
 
     def get_accel(self, this_vel, lead_vel, headway):
         """See parent class."""
@@ -25,7 +26,11 @@ class IDMController(object):
                 0, this_vel * self.T + this_vel * (this_vel - lead_vel) /
                 (2 * np.sqrt(self.a * self.b)))
 
-        return self.a * (1 - (this_vel / self.v0)**self.delta - (s_star / headway)**2)
+        accel = self.a * (1 - (this_vel / self.v0)**self.delta - (s_star / headway)**2)
+
+        if self.noise > 0:
+            accel += np.sqrt(0.1) * np.random.normal(0, self.noise)
+        return accel
 
 
 class TimeHeadwayFollowerStopper(object):
