@@ -21,7 +21,7 @@ class TrajectoryEnv(gym.Env):
 
         self.max_accel = config['max_accel']
         self.max_decel = config['max_decel']
-        self.horizon = config['horizon']
+        self.horizon = config.get('horizon', 500)
 
         self.min_speed = config.get('min_speed', 0)
         self.max_speed = config.get('max_speed', 40)
