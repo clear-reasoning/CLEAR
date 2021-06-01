@@ -148,39 +148,118 @@ class TensorboardCallback(BaseCallback):
             figure = plt.figure()
             figure.add_subplot().plot(self.rollout_info[key])
             self.logger.record(f'rollout/{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-            plt.close()        
+            plt.close()
 
     def log_trajectory_stats(self):
         for controller in ['rl', 'idm', 'fs_leader']:
-            test_env = TrajectoryEnv(config=self.training_env.envs[0].config)
-            test_env.whole_trajectory = True
+            # create test env from config
+            config = dict(self.training_env.envs[0].config)
+            config['whole_trajectory'] = True
+            if controller != 'rl':
+                config['use_fs'] = False
+                config['discrete'] = False
+            test_env = TrajectoryEnv(config=config)
 
-            state = test_env.reset()
-            done = False
-
-            if controller == 'idm':
+            # set controller
+            if controller == 'rl':
+                if test_env.use_discrete:
+                    def get_action(state):
+                        return self.model.predict(state, deterministic=True)[0]
+                else:
+                    def get_action(state):
+                        return self.model.predict(state, deterministic=True)[0][0]
+                    
+            elif controller == 'idm':
                 idm = IDMController(a=test_env.max_accel, b=test_env.max_decel)
-                test_env.use_fs = False
+                def get_action(state):
+                    s = test_env.unnormalize_state(state)
+                    return idm.get_accel(s['speed'], s['leader_speed'], s['headway'])
+
             elif controller == 'fs_leader':
                 fs = TimeHeadwayFollowerStopper(max_accel=test_env.max_accel, max_deaccel=test_env.max_decel)
-                test_env.use_fs = False
-
-            while not done:
-                if controller == 'rl':
-                    if test_env.use_discrete:
-                        action = self.model.predict(state, deterministic=True)[0]
-                    else:
-                        action = self.model.predict(state, deterministic=True)[0][0]
-                elif controller == 'idm':
-                    s = test_env.parse_state(state)
-                    action = idm.get_accel(s['speed'], s['leader_speed'], s['headway'])
-                elif controller == 'fs_leader':
-                    s = test_env.parse_state(state)
+                def get_action(state):
+                    s = test_env.unnormalize_state(state)
                     fs.v_des = s['leader_speed']
-                    action = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
-                # if test_env.use_failsafe: action = failsafe(action)...
-                
+                    return fs.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
+
+            # execute controller on traj
+            data = []
+            state = test_env.reset()
+            done = False
+            while not done:
+                action = get_action(state)
                 state, reward, done, infos = test_env.step(action)
+                data.append((state, action, reward, done, infos))
+        
+            # plot data
+            data_plot = defaultdict(list)
+
+            for state in [test_env.unnormalize_state(x[0]) for x in data]:
+                for k, v in state.items():
+                    data_plot[k].append(v)
+
+            data_plot['actions'] = [x[1] for x in data]
+            data_plot['rewards'] = [x[2] for x in data]
+            data_plot['dones'] = [x[3] for x in data]
+
+            for info in [x[4] for x in data]:
+                for k, v in info.items():
+                    data_plot[k].append(v)
+
+            data_plot['speeds'] = {
+                'av': data_plot['speed'],
+                'leader': data_plot['leader_speed'],
+            }
+
+            data_plot['episode_reward'].append(data_plot['rewards'][0])
+            for rwd in data_plot['rewards'][1:]:
+                data_plot['episode_reward'].append(data_plot['episode_reward'][-1] + rwd)
+
+            mpg = (sum(data_plot['speed']) / 1609.34) / (sum(data_plot['energy_consumption']) / 3600 + 1e-6)
+            self.logger.record(f'trajectory_{controller}/mpg', mpg)
+            self.logger.record(f'trajectory_{controller}/total_reward', data_plot['episode_reward'][-1])
+
+            del data_plot['speed'], data_plot['leader_speed']
+
+            for key, values_lst in data_plot.items():
+                figure = plt.figure()
+                subplot = figure.add_subplot()
+                if type(values_lst) is dict:
+                    for label, values in values_lst.items():
+                        subplot.plot(values, label=label)
+                        subplot.legend()
+                else:
+                    subplot.plot(values_lst)
+                self.logger.record(f'trajectory_{controller}/{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+                plt.close()
+
+            # colormap
+            ego_speed = 5
+            lead_speed_range = np.arange(0, 10, 0.5)
+            headway_range = np.arange(0, 30, 0.5)
+            lead_speeds, headways = np.meshgrid(lead_speed_range, headway_range)
+            accels = np.zeros_like(lead_speeds)
+            for i in range(lead_speeds.shape[0]):
+                for j in range(lead_speeds.shape[1]):
+                    accels[-1-i,j] = get_action(test_env.normalize_state({
+                        'speed': ego_speed,
+                        'leader_speed': lead_speeds[i,j],
+                        'headway': headways[i,j],
+                    }))
+            extent = np.min(lead_speed_range), np.max(lead_speed_range), np.min(headway_range), np.max(headway_range)
+            figure = plt.figure(figsize=(3,3))
+            figure.tight_layout()
+            subplot = figure.add_subplot()
+            im = subplot.imshow(accels, extent=extent, cmap=plt.cm.RdBu, interpolation='bilinear', vmin=np.min(accels), vmax=np.max(accels))
+            extent = im.get_extent()
+            subplot.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/1.0)
+            figure.colorbar(im, ax=subplot)
+            subplot.set_xlabel('Leader speed (m/s)')
+            subplot.set_ylabel('Headway (m)')
+            figure.tight_layout()
+
+            self.logger.record(f'trajectory_{controller}/accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+            plt.close()            
 
 
 class CheckpointCallback(BaseCallback):

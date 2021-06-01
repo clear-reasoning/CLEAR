@@ -26,6 +26,7 @@ class TrajectoryEnv(gym.Env):
         self.min_speed = config.get('min_speed', 0)
         self.max_speed = config.get('max_speed', 40)
         self.use_fs = config.get('use_fs')
+        self.max_headway = config.get('max_headway', 120)
 
         self.whole_trajectory = config.get('whole_trajectory', False)
 
@@ -47,6 +48,8 @@ class TrajectoryEnv(gym.Env):
 
         if self.use_fs:
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32)
+            self.state_names = ['speed', 'leader_speed', 'headway', 'vdes']
+            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE]
         else:
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
             self.state_names = ['speed', 'leader_speed', 'headway']
@@ -59,22 +62,25 @@ class TrajectoryEnv(gym.Env):
 
         self.reset()
 
-    def parse_state(self, state):
-        return {
-            self.state_names[i]: state[i] * self.state_scales[i]
-            for i in range(len(state))
-        }
+    def normalize_state(self, state):
+        return np.array([state[name] / scale 
+                         for name, scale in zip(self.state_names, self.state_scales)])
+
+    def unnormalize_state(self, state):
+        return {name: state[i] * scale
+                for i, (name, scale) in enumerate(zip(self.state_names, self.state_scales))}
     
     def get_state(self):
-        speed = self.av['speed'] / SPEED_SCALE
-        leader_speed = self.leader_speeds[self.traj_idx] / SPEED_SCALE
-        headway = (self.leader_positions[self.traj_idx] - self.av['pos']) / DISTANCE_SCALE
+        state = {
+            'speed': self.av['speed'],
+            'leader_speed': self.leader_speeds[self.traj_idx],
+            'headway': self.leader_positions[self.traj_idx] - self.av['pos'],
+        }
+
         if self.use_fs:
-            vdes = self.follower_stopper.v_des / SPEED_SCALE
-            state = np.array([speed, leader_speed, headway, vdes])
-        else:
-            state = np.array([speed, leader_speed, headway])
-        return state
+            state['vdes'] = self.follower_stopper.v_des
+
+        return self.normalize_state(state)
     
     def reset(self):
         # start at random time in trajectory
@@ -108,7 +114,7 @@ class TrajectoryEnv(gym.Env):
 
         # additional trajectory data that will be plotted in tensorboard
         infos = {
-
+            'test': 2,
         }
 
         # assert self.action_space.contains(action), f'Action {action} not in action space'
@@ -127,7 +133,7 @@ class TrajectoryEnv(gym.Env):
             # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
             accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
                                                     self.leader_positions[self.traj_idx] - self.av['pos'],
-                                                    self)
+                                                    self.time_step)
         else:
             accel = action
             v_safe = safe_velocity(self.av['speed'], self.leader_speeds[self.traj_idx],
@@ -159,17 +165,17 @@ class TrajectoryEnv(gym.Env):
         # compute reward/done
         av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
         done = False
-        # reward = sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
-        #                 for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
+        reward = sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
+                        for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
         
         energy_consumption = self.energy_model.get_instantaneous_fuel_consumption(self.av['last_accel'], self.av['speed'], grade=0)
-        reward = - energy_consumption / 10
+        # reward = - energy_consumption / 10
 
         infos['energy_consumption'] = energy_consumption
 
 
-        reward -= 1.0 * (np.abs(av_headway) ** 0.2)
-        reward -= 0.1 * (action ** 2)
+        # reward -= 1.0 * (np.abs(av_headway) ** 0.2)
+        # reward -= 0.1 * (action ** 2)
 
         self.env_step += 1
         self.traj_idx += 1
@@ -178,9 +184,9 @@ class TrajectoryEnv(gym.Env):
             # crash
             reward -= 50
             done = True
-        # elif av_headway >= self.max_headway:
-        #     # headway penalty
-        #     reward -= 10
+        elif av_headway >= self.max_headway:
+            # headway penalty
+            reward -= 10
 
         if self.whole_trajectory:
             if self.traj_idx >= len(self.leader_positions) - 1:

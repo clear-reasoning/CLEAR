@@ -6,3 +6,5 @@ ray_results
 s3
 events.out*
 logs
+*.zip
+*.json

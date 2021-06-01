@@ -33,7 +33,7 @@ if __name__ == '__main__':
         'max_speed': 40,
         'max_headway': 120,
         'discrete': args.env_discrete,
-        'num_actions': args.env_num_actions
+        'num_actions': args.env_num_actions,
         # 'use_fs': args.use_fs,
     }
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         'batch_size': args.batch_size,  #64 # minibatch size
         'n_epochs': args.n_epochs,  # num sgd iter
         'gamma': args.gamma,  # discount factor
-        'gae_lambda': 0.95,  # factor for trade-off of bias vs variance for Generalized Advantage Estimator
+        'gae_lambda': args.gae_lambda,  # factor for trade-off of bias vs variance for Generalized Advantage Estimator
         'clip_range': 0.2,  # clipping param (*)
         'clip_range_vf': None,  # clipping param for the vf (*)
         'ent_coef': 0.0,  # entropy coef in loss function

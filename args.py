@@ -48,9 +48,11 @@ def parse_args():
         help='Number of SGD iterations per training iteration.')
     parser.add_argument('--gamma', type=float, default=0.99,
         help='Discount factor.')
+    parser.add_argument('--gae_lambda', type=float, default=0.99,
+        help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
     # env params
-    parser.add_argument('--env_discrete', type=int, default=0,
+    parser.add_argument('--env_discrete', action='store_true', default=False,
         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_actions', type=int, default=7,
                         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
