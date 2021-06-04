@@ -15,60 +15,60 @@ from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 from env.energy_models import PFMMidsizeSedan
 
 
-#     def on_episode_end(self, *, worker: RolloutWorker, base_env: BaseEnv,
-#                        policies: Dict[str, Policy], episode: MultiAgentEpisode,
-#                        env_index: int, **kwargs):
-#         env = base_env.get_unwrapped()[0]
-
-#         for controller in ['rl', 'idm']:
-#             test_env = TrajectoryEnv(config=env.config)
-#             test_env.whole_trajectory = True
-#             state = test_env.reset()
-#             done = False
-#             total_reward = 0
-#             total_distance = 0
-#             total_energy = 0
-
-#             actions = []
-#             headways = []
-#             speed_deltas = []
-
-#             if controller == 'idm':
-#                 idm = IDMController(a=env.max_accel, b=env.max_decel)
-#                 test_env.use_fs = False  # for IDM only
-
-#             while not done:
-#                 if controller == 'rl':
-#                     action = policies['default_policy'].compute_single_action(state, clip_actions=True, explore=False)[0][0]
-#                 elif controller == 'idm':
-#                     action = idm.get_accel(state[0] * SPEED_SCALE, state[1] * SPEED_SCALE, state[2] * DISTANCE_SCALE)
-#                 state, reward, done, _ = test_env.step(action)
-
-#                 actions.append(action)
-#                 headways.append(state[2] * DISTANCE_SCALE)
-#                 speed_deltas.append( np.abs(state[0] - state[1]) * SPEED_SCALE )
-
-#                 total_reward += reward
-#                 total_distance += test_env.av['speed']
-#                 total_energy += test_env.energy_model.get_instantaneous_fuel_consumption(test_env.av['last_accel'], test_env.av['speed'], grade=0)
-
-#             episode.custom_metrics[f"{controller}_traj_mpg"] = (total_distance / 1609.34) / (total_energy / 3600 + 1e-6)
-#             episode.custom_metrics[f"{controller}_traj_reward"] = total_reward
-
-#             episode.custom_metrics[f"{controller}_avg_abs_action"] = np.mean(np.abs(actions))
-#             episode.custom_metrics[f"{controller}_std_abs_action"] = np.std(np.abs(actions))
-#             episode.custom_metrics[f"{controller}_min_action"] = np.min(actions)
-#             episode.custom_metrics[f"{controller}_max_action"] = np.max(actions)
-
-#             episode.custom_metrics[f"{controller}_avg_headway"] = np.mean(headways)
-#             episode.custom_metrics[f"{controller}_std_headway"] = np.std(headways)
-#             episode.custom_metrics[f"{controller}_min_headway"] = np.min(headways)
-#             episode.custom_metrics[f"{controller}_max_headway"] = np.max(headways)
-
-#             episode.custom_metrics[f"{controller}_avg_speed_delta"] = np.mean(speed_deltas)
-#             episode.custom_metrics[f"{controller}_std_speed_delta"] = np.std(speed_deltas)
-#             episode.custom_metrics[f"{controller}_min_speed_delta"] = np.min(speed_deltas)
-#             episode.custom_metrics[f"{controller}_max_speed_delta"] = np.max(speed_deltas)
+    # def on_episode_end(self, *, worker: RolloutWorker, base_env: BaseEnv,
+    #                    policies: Dict[str, Policy], episode: MultiAgentEpisode,
+    #                    env_index: int, **kwargs):
+    #     env = base_env.get_unwrapped()[0]
+    #
+    #     for controller in ['rl', 'idm']:
+    #         test_env = TrajectoryEnv(config=env.config)
+    #         test_env.whole_trajectory = True
+    #         state = test_env.reset()
+    #         done = False
+    #         total_reward = 0
+    #         total_distance = 0
+    #         total_energy = 0
+    #
+    #         actions = []
+    #         headways = []
+    #         speed_deltas = []
+    #
+    #         if controller == 'idm':
+    #             idm = IDMController(a=env.max_accel, b=env.max_decel)
+    #             test_env.use_fs = False  # for IDM only
+    #
+    #         while not done:
+    #             if controller == 'rl':
+    #                 action = policies['default_policy'].compute_single_action(state, clip_actions=True, explore=False)[0][0]
+    #             elif controller == 'idm':
+    #                 action = idm.get_accel(state[0] * SPEED_SCALE, state[1] * SPEED_SCALE, state[2] * DISTANCE_SCALE)
+    #             state, reward, done, _ = test_env.step(action)
+    #
+    #             actions.append(action)
+    #             headways.append(state[2] * DISTANCE_SCALE)
+    #             speed_deltas.append( np.abs(state[0] - state[1]) * SPEED_SCALE )
+    #
+    #             total_reward += reward
+    #             total_distance += test_env.av['speed']
+    #             total_energy += test_env.energy_model.get_instantaneous_fuel_consumption(test_env.av['last_accel'], test_env.av['speed'], grade=0)
+    #
+    #         episode.custom_metrics[f"{controller}_traj_mpg"] = (total_distance / 1609.34) / (total_energy / 3600 + 1e-6)
+    #         episode.custom_metrics[f"{controller}_traj_reward"] = total_reward
+    #
+    #         episode.custom_metrics[f"{controller}_avg_abs_action"] = np.mean(np.abs(actions))
+    #         episode.custom_metrics[f"{controller}_std_abs_action"] = np.std(np.abs(actions))
+    #         episode.custom_metrics[f"{controller}_min_action"] = np.min(actions)
+    #         episode.custom_metrics[f"{controller}_max_action"] = np.max(actions)
+    #
+    #         episode.custom_metrics[f"{controller}_avg_headway"] = np.mean(headways)
+    #         episode.custom_metrics[f"{controller}_std_headway"] = np.std(headways)
+    #         episode.custom_metrics[f"{controller}_min_headway"] = np.min(headways)
+    #         episode.custom_metrics[f"{controller}_max_headway"] = np.max(headways)
+    #
+    #         episode.custom_metrics[f"{controller}_avg_speed_delta"] = np.mean(speed_deltas)
+    #         episode.custom_metrics[f"{controller}_std_speed_delta"] = np.std(speed_deltas)
+    #         episode.custom_metrics[f"{controller}_min_speed_delta"] = np.min(speed_deltas)
+    #         episode.custom_metrics[f"{controller}_max_speed_delta"] = np.max(speed_deltas)
 
 
 # can also plot vdes
@@ -99,21 +99,37 @@ class TensorboardCallback(BaseCallback):
         # TODO can probably get all these info at the end from replay buffer
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # get information about rollout for one of the actors
-            observations = self.locals['obs_tensor'][0]
+            try:
+                observations = self.locals['obs_tensor'][0]
+            except:
+                observations = self.locals['new_obs'][0]
             for i in range(self.n_states):
                 self.rollout_info[f'state_{i}'].append(observations[i])
 
             # check if we have a discrete action space
-            if len(self.locals['actions'].shape) == 1:
+            if 'actions' in self.locals:
+                valid_key = 'actions'
+            else:
+                valid_key = 'action'
+
+            if len(self.locals[valid_key].shape) == 1:
                 unwrap_func = lambda x: x[0]
             else:
                 unwrap_func = lambda x: x[0][0]
-            self.rollout_info[f'action'].append(unwrap_func(self.locals['actions']))
-            self.rollout_info[f'clipped_action'].append(unwrap_func(self.locals['clipped_actions']))
-            self.rollout_info[f'value'].append(self.locals['values'][0][0])
-            self.rollout_info[f'log_prob'].append(self.locals['log_probs'][0])
-            self.rollout_info[f'reward'].append(self.locals['rewards'][0])
-            self.rollout_info[f'done'].append(int(self.locals['dones'][0]))
+            self.rollout_info[f'action'].append(unwrap_func(self.locals[valid_key]))
+            # self.rollout_info[f'clipped_action'].append(unwrap_func(self.locals['clipped_actions']))
+            # self.rollout_info[f'value'].append(self.locals['values'][0][0])
+            # self.rollout_info[f'log_prob'].append(self.locals['log_probs'][0])
+            if 'rewards' in self.locals:
+                valid_key = 'rewards'
+            else:
+                valid_key = 'reward'
+            self.rollout_info[f'reward'].append(self.locals[valid_key][0])
+            if 'dones' in self.locals:
+                valid_key = 'dones'
+            else:
+                valid_key = 'done'
+            self.rollout_info[f'done'].append(int(self.locals[valid_key][0]))
             for k, v in self.locals['infos'][0].items():
                 if k not in ['episode', 'terminal_observation']:
                     self.rollout_info[k].append(v)
@@ -235,13 +251,14 @@ class TensorboardCallback(BaseCallback):
 
             # colormap
             ego_speed = 5
-            lead_speed_range = np.arange(0, 10, 0.5)
-            headway_range = np.arange(0, 30, 0.5)
+            lead_speed_range = np.arange(0, 40, 2)
+            headway_range = np.arange(0, 100, 5)
             lead_speeds, headways = np.meshgrid(lead_speed_range, headway_range)
             accels = np.zeros_like(lead_speeds)
             for i in range(lead_speeds.shape[0]):
                 for j in range(lead_speeds.shape[1]):
                     accels[-1-i,j] = get_action(test_env.normalize_state({
+                        'vdes': 10.0,
                         'speed': ego_speed,
                         'leader_speed': lead_speeds[i,j],
                         'headway': headways[i,j],

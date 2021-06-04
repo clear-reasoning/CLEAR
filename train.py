@@ -6,9 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-from stable_baselines3 import PPO
+from stable_baselines3.ppo import PPO
+from stable_baselines3.td3 import TD3
+from algos.ppo.policies import PopArtActorCriticPolicy
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.policies import (
+    register_policy,
+)
 
 from datetime import datetime
 import os.path
@@ -28,13 +33,13 @@ if __name__ == '__main__':
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
-        'horizon': 500,
+        'horizon': 200,
         'min_speed': 0,
         'max_speed': 40,
-        'max_headway': 120,
+        'max_headway': 80,
         'discrete': args.env_discrete,
         'num_actions': args.env_num_actions,
-        # 'use_fs': args.use_fs,
+        'use_fs': args.use_fs,
     }
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=args.n_envs, env_kwargs=dict(config=env_config))
@@ -52,6 +57,8 @@ if __name__ == '__main__':
         LoggingCallback(),
     ])
 
+    register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
+
     algorithm = {
         'ppo': PPO,
     }[args.algorithm.lower()]
@@ -64,14 +71,14 @@ if __name__ == '__main__':
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
 
         # policy params
-        'policy': 'MlpPolicy',
+        'policy': PopArtActorCriticPolicy,
         'policy_kwargs': {
             'activation_fn': {
                 'tanh': torch.nn.Tanh,
                 'relu': torch.nn.ReLU,
             }[args.activation.lower()],
             'net_arch': [{
-                'pi': args.hidden_layers, 
+                'pi': args.hidden_layers,
                 'vf': args.hidden_layers,
             }],
             'optimizer_class': {
@@ -93,6 +100,48 @@ if __name__ == '__main__':
         'max_grad_norm': 0.5,  # max value of grad clipping
         # (*) can be a function of the current progress remaining (from 1 to 0)
     }
+
+    # algorithm = TD3
+    #
+    # train_config = {
+    #     'env': multi_env,
+    #     'tensorboard_log': exp_logdir,
+    #     'verbose': 1,  # 0 no output, 1 info, 2 debug
+    #     'seed': None,  # only concerns PPO and not the environment
+    #     'device': 'cpu',  # 'cpu', 'cuda', 'auto'
+    #
+    #     # policy params
+    #     'policy': 'MlpPolicy',
+    #     # 'policy_kwargs': {
+    #     #     'activation_fn': {
+    #     #         'tanh': torch.nn.Tanh,
+    #     #         'relu': torch.nn.ReLU,
+    #     #     }[args.activation.lower()],
+    #     #     'net_arch': [{
+    #     #         'pi': args.hidden_layers,
+    #     #         'vf': args.hidden_layers,
+    #     #     }],
+    #     #     'optimizer_class': {
+    #     #         'adam': torch.optim.Adam,
+    #     #     }[args.optimizer.lower()],
+    #     # },
+    #
+    #     # PPO params
+    #     'learning_rate': 0.001,  # lr (*)
+    #     'policy_delay': 8,
+    #     # 'n_steps': args.n_steps,
+    #     # rollout size is n_steps * n_envs (distinct from env horizon which can span across several rollouts)
+    #     'batch_size': args.batch_size,  # 64 # minibatch size
+    #     # 'n_epochs': args.n_epochs,  # num sgd iter
+    #     # 'gamma': args.gamma,  # discount factor
+    #     # 'gae_lambda': args.gae_lambda,  # factor for trade-off of bias vs variance for Generalized Advantage Estimator
+    #     # 'clip_range': 0.2,  # clipping param (*)
+    #     # 'clip_range_vf': None,  # clipping param for the vf (*)
+    #     # 'ent_coef': 0.0,  # entropy coef in loss function
+    #     # 'vf_coef': 0.5,  # vf coef in loss function
+    #     # 'max_grad_norm': 0.5,  # max value of grad clipping
+    #     # (*) can be a function of the current progress remaining (from 1 to 0)
+    # }
 
     learn_config = {
         'total_timesteps': args.iters * args.n_steps * args.n_envs,

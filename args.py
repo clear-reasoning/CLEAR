@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--algorithm', type=str, default='PPO',
         help='RL algorithm to train with. Available options: PPO.')
 
-    parser.add_argument('--hidden_layers', type=int, nargs='+', default=[32, 32],
+    parser.add_argument('--hidden_layers', type=int, nargs='+', default=[64, 64, 64, 64],
         help='Hidden layers to use for the policy and value function networks.')
     parser.add_argument('--activation', type=str, default='tanh',
         help='Non-linear activation function to use. Available options: Tanh, ReLU.')
@@ -56,6 +56,8 @@ def parse_args():
         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_actions', type=int, default=7,
                         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
+    parser.add_argument('--use_fs', default=0, type=int,
+        help='If true, use follower stopper wrapper.')
 
     args = parser.parse_args()
     return args
