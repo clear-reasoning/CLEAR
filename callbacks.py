@@ -156,8 +156,11 @@ class TensorboardCallback(BaseCallback):
     def log_rollout_stats(self):
         state_names = self.training_env.envs[0].state_names
         state_scales = self.training_env.envs[0].state_scales
-        assert (len(state_names) == self.n_states and len(state_scales) == self.n_states)
-        for i in range(self.n_states):
+        # try:
+        #     assert (len(state_names) == self.n_states and len(state_scales) == self.n_states)
+        # except:
+        #     import ipdb; ipdb.set_trace()
+        for i in range(len(state_names)):
             self.rollout_info[state_names[i]] = [x * state_scales[i] for x in self.rollout_info[f'state_{i}']]
             del self.rollout_info[f'state_{i}']
         for key in self.rollout_info:
@@ -203,7 +206,10 @@ class TensorboardCallback(BaseCallback):
             state = test_env.reset()
             done = False
             while not done:
-                action = get_action(state)
+                try:
+                    action = get_action(state)
+                except:
+                    import ipdb; ipdb.set_trace()
                 state, reward, done, infos = test_env.step(action)
                 data.append((state, action, reward, done, infos))
         
@@ -257,12 +263,17 @@ class TensorboardCallback(BaseCallback):
             accels = np.zeros_like(lead_speeds)
             for i in range(lead_speeds.shape[0]):
                 for j in range(lead_speeds.shape[1]):
-                    accels[-1-i,j] = get_action(test_env.normalize_state({
+                    state = test_env.normalize_state({
                         'vdes': 10.0,
                         'speed': ego_speed,
                         'leader_speed': lead_speeds[i,j],
                         'headway': headways[i,j],
-                    }))
+                    })
+                    if test_env.extra_obs:
+                        extra_obs_shape = int(test_env.observation_space.low.shape[0] / 2)
+                        state = np.concatenate((state, np.zeros(extra_obs_shape)))
+
+                    accels[-1-i,j] = get_action(state)
             extent = np.min(lead_speed_range), np.max(lead_speed_range), np.min(headway_range), np.max(headway_range)
             figure = plt.figure(figsize=(3,3))
             figure.tight_layout()

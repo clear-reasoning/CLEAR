@@ -9,6 +9,7 @@ import torch
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 from algos.ppo.policies import PopArtActorCriticPolicy
+from algos.ppo.ppo import PPO as AugmentedPPO
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import (
@@ -33,13 +34,14 @@ if __name__ == '__main__':
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
-        'horizon': 200,
+        'horizon': 2000,
         'min_speed': 0,
         'max_speed': 40,
         'max_headway': 80,
         'discrete': args.env_discrete,
         'num_actions': args.env_num_actions,
         'use_fs': args.use_fs,
+        'extra_obs': args.augment_vf,
     }
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=args.n_envs, env_kwargs=dict(config=env_config))
@@ -57,11 +59,19 @@ if __name__ == '__main__':
         LoggingCallback(),
     ])
 
-    register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
+    if args.augment_vf:
+        from algos.ppo.policies import SplitActorCriticPolicy
+        policy = SplitActorCriticPolicy
+    else:
+        register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
+        policy = PopArtActorCriticPolicy
 
-    algorithm = {
-        'ppo': PPO,
-    }[args.algorithm.lower()]
+    if args.augment_vf:
+        algorithm = AugmentedPPO
+    else:
+        algorithm = {
+            'ppo': PPO,
+        }[args.algorithm.lower()]
 
     train_config = {
         'env': multi_env,
@@ -71,7 +81,7 @@ if __name__ == '__main__':
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
 
         # policy params
-        'policy': PopArtActorCriticPolicy,
+        'policy': policy,
         'policy_kwargs': {
             'activation_fn': {
                 'tanh': torch.nn.Tanh,

@@ -27,6 +27,7 @@ class TrajectoryEnv(gym.Env):
         self.max_speed = config.get('max_speed', 40)
         self.use_fs = config.get('use_fs')
         self.max_headway = config.get('max_headway', 120)
+        self.extra_obs = config.get('extra_obs')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -48,11 +49,17 @@ class TrajectoryEnv(gym.Env):
             self.action_space = Box(low=-3.0, high=1.5, shape=(1,), dtype=np.float32)
 
         if self.use_fs:
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32)
+            obs_shape = 4
+            if self.extra_obs:
+                obs_shape *= 2
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
             self.state_names = ['speed', 'leader_speed', 'headway', 'vdes']
             self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE]
         else:
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
+            obs_shape = 3
+            if self.extra_obs:
+                obs_shape *= 2
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
             self.state_names = ['speed', 'leader_speed', 'headway']
             self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE]
 
@@ -99,6 +106,7 @@ class TrajectoryEnv(gym.Env):
             'last_accel': -1,
         }
         self.init_pos = self.av['pos']
+        self.init_leader_pos = self.leader_positions[self.traj_idx]
         self.accumulated_headway = 0
         self.energy_consumption = 0
         self.accumulated_pos = 0
@@ -113,7 +121,10 @@ class TrajectoryEnv(gym.Env):
             'last_accel': -1,
         } for i in range(5)]
 
-        return self.get_state()
+        if self.extra_obs:
+            return np.concatenate((self.get_state(), np.zeros(int(self.observation_space.low.shape[0] / 2))))
+        else:
+            return self.get_state()
 
     def step(self, actions):
         # get av accel
@@ -150,11 +161,14 @@ class TrajectoryEnv(gym.Env):
 
         # if (self.leader_speeds[self.traj_idx] - self.av['speed']) > 10 or (self.leader_positions[self.traj_idx] - self.av['pos']) > 160:
         #     accel = self.max_accel
+        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
+
+        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
+        if time_headway < 1.5:
+            accel = -np.abs(self.max_decel)
+
         self.av['last_accel'] = accel
-        self.average_speed += self.leader_speeds[self.traj_idx]
         #
-        idm_accel = self.idm_controller.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
-                                                    self.leader_positions[self.traj_idx] - self.av['pos'])
         # reward = -0.01 * np.exp(-self.step_num * 0.0002) * (idm_accel - accel) ** 2
         # reward += sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
         #                 for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
@@ -164,8 +178,6 @@ class TrajectoryEnv(gym.Env):
         # reward = -(self.follower_stopper.v_des - self.leader_speeds[self.traj_idx]) **2
         self.energy_consumption -= sum([- self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
                         for car in [self.av] + self.idm_followers]) / (1 + len(self.idm_followers))
-        self.accumulated_headway += self.leader_positions[self.traj_idx] - self.av['pos']
-        self.accumulated_pos = self.av['pos'] - self.init_pos
 
         # compute idms accels
         for i, idm in enumerate(self.idm_followers):
@@ -206,6 +218,7 @@ class TrajectoryEnv(gym.Env):
         self.env_step += 1
         self.traj_idx += 1
 
+        reward = 0
         if av_headway <= 0:
             # crash
             reward -= 50
@@ -221,20 +234,27 @@ class TrajectoryEnv(gym.Env):
             if self.env_step >= self.horizon:
                 done = True
 
-        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
-        reward = 0
-        if time_headway < 2.0:
-            reward -= 3.0
-
         # we have travelled at least 0.9 times as far as the lead car did
-        if self.env_step >= self.horizon and self.accumulated_pos > 0.9 * self.time_step * (self.average_speed):
+        leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
+        if (self.env_step % self.horizon == 0):
+            print(self.av['pos'] - self.init_pos,
+                  (0.95 * (1 - np.exp(-self.step_num / 500.0)) * leader_pos_change),
+                  0.95 * leader_pos_change)
+        if (self.env_step % self.horizon == 0 and
+                self.av['pos'] - self.init_pos > (0.95 * (1 - np.exp(-self.step_num / 500.0)) * leader_pos_change)):
             reward = ((self.av['pos'] - self.init_pos) / 1609.34) / (
                         np.maximum(self.energy_consumption, 0.01) / 3600 + 1e-6)
             reward /= self.time_step
             # reward -= 0.002 * (self.accumulated_headway)
 
-            self.accumulated_pos = 0
             self.init_pos = self.av['pos']
 
         # reward -= (action ** 2) * 0.5
-        return self.get_state(), reward, done, infos
+        returned_state = self.get_state()
+        if self.extra_obs:
+            vec = np.zeros(int(self.observation_space.low.shape[0] / 2))
+            vec[0] = self.env_step
+            # vec[1] = self.av['pos'] - self.init_pos
+            # vec[2] = leader_pos_change
+            returned_state = np.concatenate((returned_state, vec))
+        return returned_state, reward, done, infos
