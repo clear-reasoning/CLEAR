@@ -62,7 +62,7 @@ if __name__ == '__main__':
         i += 1
         if controller == 'idm':
             s = env.unnormalize_state(state)
-            accel = idm.get_accel(s['speed'], s['leader_speed'], s['headway'])
+            accel = idm.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_leader':
             s = env.unnormalize_state(state)
             dmax = max(dmax, abs(fs.v_des - s['leader_speed']))  # dmax = 1.3933480995153147
