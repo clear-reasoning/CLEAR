@@ -296,8 +296,11 @@ class CheckpointCallback(BaseCallback):
 
 class LoggingCallback(BaseCallback):
     """Callback for logging additional information."""
-    def __init__(self):
+    def __init__(self, log_metrics=False, grid_search_config={}):
         super(LoggingCallback, self).__init__()
+
+        self.grid_search_config = grid_search_config
+        self.log_metrics = log_metrics
 
     def _on_rollout_end(self):
         # log current training progress 
@@ -309,6 +312,41 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/goal_timesteps', total_timesteps_rounded)
         self.logger.record('time/goal_iters', total_iters)
         self.logger.record('time/training_progress', progress_percentage)
+
+        if self.log_metrics:
+            metrics = self.logger.get_log_dict()
+            gs_str = ', '.join([f'{k} = {v}' for k, v in self.grid_search_config.items()])
+            print(f'\nEnd of rollout for grid search: {gs_str}')
+
+            key2str = {}
+            tag = None
+            for (key, value) in sorted(metrics.items()):
+                if isinstance(value, float):
+                    value_str = f'{value:<8.3g}'
+                else:
+                    value_str = str(value)
+
+                if key.find('/') > 0: 
+                    tag = key[: key.find('/') + 1]
+                    key2str[tag] = ''
+                if tag is not None and tag in key:
+                    key = str("   " + key[len(tag) :])
+
+                key2str[key] = value_str
+
+            key_width = max(map(len, key2str.keys()))
+            val_width = max(map(len, key2str.values()))
+
+            dashes = '-' * (key_width + val_width + 7)
+            lines = [dashes]
+            for key, value in key2str.items():
+                key_space = ' ' * (key_width - len(key))
+                val_space = ' ' * (val_width - len(value))
+                lines.append(f'| {key}{key_space} | {value}{val_space} |')
+            lines.append(dashes)
+            print('\n'.join(lines) + '\n')
+
+
 
     def _on_step(self):
         return True
