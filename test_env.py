@@ -5,9 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 import os
+from env.failsafes import safe_velocity
+
+PLOT_HEATMAPS = False
+PLOT_PLOTS = False
 
 if __name__ == '__main__':
     controller = 'idm'
+
+    custom_cp_path = None # './checkpoints/01_beats_idm_03Jun21/checkpoints/iter_300_7680000steps'
 
     metrics = defaultdict(list)
 
@@ -26,6 +32,12 @@ if __name__ == '__main__':
     env = TrajectoryEnv(env_config)
     idm = IDMController(a=env.max_accel, b=env.max_decel)
     fs = TimeHeadwayFollowerStopper(max_accel=env.max_accel, max_deaccel=env.max_decel)
+
+    if custom_cp_path is not None:
+        from stable_baselines3 import PPO
+        # from stable
+        from stable_baselines3.common.policies import ActorCriticPolicy
+        model = PPO.load(custom_cp_path, env=env) #, custom_objects={'policy_class': ActorCriticPolicy})
 
     state = env.reset()
 
@@ -78,6 +90,19 @@ if __name__ == '__main__':
             delta_max = 0.05
             fs.v_des += min(max(s['leader_speed'] - fs.v_des, -delta_max), delta_max)
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
+        elif controller == 'fs_leader_late':
+            s = env.unnormalize_state(state)
+            delta_max = 1
+            fs.v_des = min(max(fs.v_des, s['leader_speed'] - delta_max), s['leader_speed'] + delta_max)
+            accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
+        elif controller == 'fs_fixed':
+            s = env.unnormalize_state(state)
+            fs.v_des = 50
+            accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
+        elif controller == 'constant_accel':
+            accel = 1.0
+        elif controller == 'custom_cp_path':
+            accel, _ = model.predict(state, deterministic=True)
         else:
             raise ValueError
 
@@ -137,7 +162,7 @@ if __name__ == '__main__':
         k: [positions[k][i] - max_pos * i / N for i in range(N)] for k in positions
     }
 
-    if True:
+    if PLOT_PLOTS:
         for k in range(12):
             start = k * (N // 12)
             end = (k + 1) * (N // 12)
@@ -158,3 +183,52 @@ if __name__ == '__main__':
                 os.makedirs(save_path, exist_ok=True)
                 plt.savefig(f'{save_path}/{k}.png')
                 plt.close()
+
+    if PLOT_HEATMAPS and custom_cp_path is not None:
+        # also write some accel heatmaps
+        for failsafe in [True, False]:
+            for ego_speed in range(5, 30, 2):
+                lead_speed_diff_range = np.arange(-10, 10.5, 0.5)
+                headway_range = np.arange(0, 101, 1)
+                lead_speed_diffs, headways = np.meshgrid(lead_speed_diff_range, headway_range)
+                accels = np.zeros_like(lead_speed_diffs)
+                for i in range(lead_speed_diffs.shape[0]):
+                    for j in range(lead_speed_diffs.shape[1]):
+                        leader_speed = ego_speed + lead_speed_diffs[i,j]
+                        headway = headways[i,j]
+
+                        state = env.normalize_state({
+                            'speed': ego_speed,
+                            'leader_speed': leader_speed,
+                            'headway': headway,
+                        })
+                        accel, _ = model.predict(state, deterministic=True)
+
+                        if failsafe:
+                            time_step = 0.1
+                            max_accel = 1.5
+                            max_decel = 3.0
+                            v_safe = safe_velocity(ego_speed, leader_speed, headway, max_decel, time_step)
+                            v_next = accel * time_step + ego_speed
+                            if v_next > v_safe:
+                                accel = np.clip((v_safe - ego_speed) / time_step, -np.abs(max_decel), max_accel)
+
+                        accels[-1-i,j] = accel
+                extent = np.min(lead_speed_diff_range), np.max(lead_speed_diff_range), np.min(headway_range), np.max(headway_range)
+                figure = plt.figure() #figsize=(3,3))
+                # figure.tight_layout()
+                subplot = figure.add_subplot()
+                im = subplot.imshow(accels, extent=extent, cmap=plt.cm.RdBu, interpolation='bilinear', vmin=-3, vmax=1.5)
+                extent = im.get_extent()
+                subplot.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/1.0)
+                figure.colorbar(im, ax=subplot)
+                subplot.set_xlabel('Leader speed delta (m/s)')
+                subplot.set_ylabel('Headway (m)')
+                # figure.tight_layout()
+                failsafe_str = 'with failsafe' if failsafe else 'no failsafe'
+                subplot.set_title(f'Ego speed {ego_speed}m/s ({failsafe_str})')
+                save_path = f'figs/test_env/{controller}/accel_heatmaps'
+                os.makedirs(save_path, exist_ok=True)
+                failsafe_str = '_failsafe' if failsafe else ''
+                plt.savefig(f'{save_path}/ego_speed_{ego_speed}{failsafe_str}.png')
+                plt.close() 

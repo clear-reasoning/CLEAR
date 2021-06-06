@@ -245,8 +245,8 @@ class TensorboardCallback(BaseCallback):
             for i in range(num_veh):
                 mpg += (sum(data_plot['speed_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)
             mpg /= num_veh
-            self.logger.record(f'trajectory_{controller}/mpg', mpg)
-            self.logger.record(f'trajectory_{controller}/total_reward', data_plot['episode_reward'][-1])
+            self.logger.record(f'trajectory/{controller}_mpg', mpg)
+            self.logger.record(f'trajectory/{controller}_total_reward', data_plot['episode_reward'][-1])
 
             del data_plot['speed'], data_plot['leader_speed']
 
@@ -259,7 +259,7 @@ class TensorboardCallback(BaseCallback):
                         subplot.legend()
                 else:
                     subplot.plot(values_lst)
-                self.logger.record(f'trajectory_{controller}/{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+                self.logger.record(f'trajectory/{controller}_{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
                 plt.close()
 
             # colormap
@@ -293,8 +293,8 @@ class TensorboardCallback(BaseCallback):
             subplot.set_ylabel('Headway (m)')
             figure.tight_layout()
 
-            self.logger.record(f'trajectory_{controller}/accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-            plt.close()            
+            self.logger.record(f'trajectory/{controller}_accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+            plt.close()       
 
 
 class CheckpointCallback(BaseCallback):
@@ -331,8 +331,11 @@ class CheckpointCallback(BaseCallback):
 
 class LoggingCallback(BaseCallback):
     """Callback for logging additional information."""
-    def __init__(self):
+    def __init__(self, log_metrics=False, grid_search_config={}):
         super(LoggingCallback, self).__init__()
+
+        self.grid_search_config = grid_search_config
+        self.log_metrics = log_metrics
 
     def _on_rollout_end(self):
         # log current training progress 
@@ -341,9 +344,57 @@ class LoggingCallback(BaseCallback):
         total_timesteps_rounded = timesteps_per_iter * total_iters
         progress_percentage = round(100 * self.num_timesteps / total_timesteps_rounded, 1)
 
+        if self.log_metrics:
+            self.logger.record('time/timesteps', self.num_timesteps)
+            self.logger.record('time/iters', self.num_timesteps // timesteps_per_iter)
+                
         self.logger.record('time/goal_timesteps', total_timesteps_rounded)
         self.logger.record('time/goal_iters', total_iters)
         self.logger.record('time/training_progress', progress_percentage)
+
+        if self.log_metrics:
+            self.print_metrics()
+
+    def _on_training_end(self):
+        if self.log_metrics:
+            self.print_metrics()
+
+    def print_metrics(self):
+        metrics = self.logger.get_log_dict()
+        gs_str = ', '.join([f'{k} = {v}' for k, v in self.grid_search_config.items()])
+        print(f'\nEnd of rollout for grid search: {gs_str}')
+
+        key2str = {}
+        tag = None
+        for (key, value) in sorted(metrics.items()):
+            
+
+            if isinstance(value, float):
+                value_str = f'{value:<8.3g}'
+            elif isinstance(value, int) or isinstance(value, str):
+                value_str = str(value)
+            else:
+                continue  # plt figure
+
+            if key.find('/') > 0: 
+                tag = key[: key.find('/') + 1]
+                key2str[tag] = ''
+            if tag is not None and tag in key:
+                key = str("   " + key[len(tag) :])
+
+            key2str[key] = value_str
+
+        key_width = max(map(len, key2str.keys()))
+        val_width = max(map(len, key2str.values()))
+
+        dashes = '-' * (key_width + val_width + 7)
+        lines = [dashes]
+        for key, value in key2str.items():
+            key_space = ' ' * (key_width - len(key))
+            val_space = ' ' * (val_width - len(value))
+            lines.append(f'| {key}{key_space} | {value}{val_space} |')
+        lines.append(dashes)
+        print('\n'.join(lines))
 
     def _on_step(self):
         return True
