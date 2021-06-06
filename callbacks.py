@@ -189,7 +189,7 @@ class TensorboardCallback(BaseCallback):
                         return self.model.predict(state, deterministic=True)[0][0]
                     
             elif controller == 'idm':
-                idm = IDMController(a=test_env.max_accel, b=test_env.max_decel)
+                idm = IDMController(a=test_env.max_accel, b=test_env.max_decel, noise=0.0)
                 def get_action(state):
                     s = test_env.unnormalize_state(state)
                     return idm.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
@@ -237,7 +237,10 @@ class TensorboardCallback(BaseCallback):
             for rwd in data_plot['rewards'][1:]:
                 data_plot['episode_reward'].append(data_plot['episode_reward'][-1] + rwd)
 
-            num_veh = len(test_env.idm_followers) + 1
+            if test_env.include_idm_mpg:
+                num_veh = len(test_env.idm_followers) + 1
+            else:
+                num_veh = 1
             mpg = 0
             for i in range(num_veh):
                 mpg += (sum(data_plot['speed_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)

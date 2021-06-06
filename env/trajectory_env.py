@@ -31,8 +31,9 @@ class TrajectoryEnv(gym.Env):
         self.max_headway = config.get('max_headway', 120)
         self.extra_obs = config.get('extra_obs')
         # what percentage of the leaders trajectory we need to have covered to get the final reward
-        self.closing_gap = config.get('closing_gap')
         self.minimal_time_headway = config.get('minimal_time_headway')
+        # if false, we only include the AVs mpg in the calculation
+        self.include_idm_mpg = config.get('include_idm_mpg')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -100,7 +101,8 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.traj_idx = 0
         else:
-            self.traj_idx = randint(0, total_length - self.horizon - 1)
+            # cut off the beginnings which might contain on-ramp merges
+            self.traj_idx = randint(500, total_length - self.horizon - 1 - 500)
         self.env_step = 0
 
         # create av behind leader
@@ -118,13 +120,17 @@ class TrajectoryEnv(gym.Env):
 
         # create idm followers behind av
         self.idm_followers = [{
-            'pos': self.av['pos'] - 20 * (i + 1),
+            'pos': self.av['pos'] - 20 * (i + 1),#- max(2 * self.av['speed'] + 20 * (-0.5 + np.random.uniform(low=0, high=1)), 20) * (i + 1),
             'speed': self.av['speed'],
             'last_accel': -1,
         } for i in range(5)]
 
-        self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
-        self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
+        if self.include_idm_mpg:
+            self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
+            self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
+        else:
+            self.energy_consumption = [0 for _ in range(1)]
+            self.init_pos = [car['pos'] for car in [self.av]]
 
         if self.extra_obs:
             return np.concatenate((self.get_state(), np.zeros(int(self.observation_space.low.shape[0] / 2))))
@@ -164,15 +170,13 @@ class TrajectoryEnv(gym.Env):
             if v_next > v_safe:
                 accel = np.clip((v_safe - self.av['speed']) / self.time_step, -np.abs(self.max_decel), self.max_accel)
 
-        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
-
-        # forcibly prevent the car from getting within a headway
-        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
-        if time_headway < 1.5:
-            accel = -np.abs(self.max_decel)
         self.av['last_accel'] = accel
 
-        for i, car in enumerate([self.av] + self.idm_followers):
+        if self.include_idm_mpg:
+            car_list = [self.av] + self.idm_followers
+        else:
+            car_list = [self.av]
+        for i, car in enumerate(car_list):
             curr_consumption = self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
             self.energy_consumption[i] += curr_consumption
             infos['energy_consumption_{}'.format(i)] = curr_consumption
@@ -208,6 +212,8 @@ class TrajectoryEnv(gym.Env):
             # crash
             reward -= 50
             done = True
+        if av_headway > self.max_headway:
+            reward -= 3.0
 
         if self.whole_trajectory:
             if self.traj_idx >= len(self.leader_positions) - 1:
@@ -218,26 +224,40 @@ class TrajectoryEnv(gym.Env):
 
         # we have travelled at least 0.9 times as far as the lead car did
         leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
-        reward = 0
-        if (self.env_step % int(self.horizon) == 0 and
-                self.av['pos'] - self.init_pos[0] > (self.closing_gap * leader_pos_change)):
-            reward += np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
+        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
+
+        # forcibly prevent the car from getting within a headway
+        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
+        if time_headway < self.minimal_time_headway:
+            reward -= np.abs(self.max_decel)
+
+        if (self.env_step % int(self.horizon) == 0): #and
+        #         self.av['pos'] - self.init_pos[0] > (self.closing_gap * leader_pos_change)):
+            if self.include_idm_mpg:
+                car_list = [self.av] + self.idm_followers
+            else:
+                car_list = [self.av]
+            avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
                         np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6)
-                           for i, car in enumerate([self.av] + self.idm_followers)])
+                           for i, car in enumerate(car_list)])
+            reward += avg_mpg
             reward /= self.time_step
             # reward -= 0.002 * (self.accumulated_headway)
             self.env_step = 0
-            self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
-            self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
+            self.energy_consumption = [0 for _ in range(len(car_list))]
+            self.init_pos = [car['pos'] for car in car_list]
+            infos['avg_horizon_mpg'] = avg_mpg
+        # else:
+        #     infos['success'] = 0.0
 
         # reward -= (action ** 2) * 0.5
         returned_state = self.get_state()
         if self.extra_obs:
             vec = np.zeros(int(self.observation_space.low.shape[0] / 2))
             # do the feature engineering: is the episode over, have we satisfied the criterion
-            vec[0] = ((self.env_step / self.horizon) >= 1)
+            vec[0] = self.env_step / self.horizon
             # vec[1] = (self.av['pos'] - self.init_pos) / (0.95 * leader_pos_change) - 1
-            vec[1] = self.av['pos'] / 1000.0
-            vec[2] = leader_pos_change / 1000.0
+            # vec[1] = max(time_headway, 10.0)
+            # vec[2] = leader_pos_change / 1000.0
             returned_state = np.concatenate((returned_state, vec))
         return returned_state, reward, done, infos
