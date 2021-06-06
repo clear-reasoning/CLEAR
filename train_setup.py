@@ -44,15 +44,15 @@ def start_training(args):
         'horizon': 300,
         'min_speed': 0,
         'max_speed': 40,
-        'max_headway': 80,
+        'max_headway': 120,
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
         'use_fs': config['use_fs'],
         'extra_obs': config['augment_vf'],
-        # how close we need to be at the end to get the reward
-        'closing_gap': .85,
         # if we get closer then this time headway we are forced to break with maximum decel
-        'minimal_time_headway': 1.5
+        'minimal_time_headway': 1.5,
+        # if false, we only include the AVs mpg in the calculation
+        'include_idm_mpg': 1
     }
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
