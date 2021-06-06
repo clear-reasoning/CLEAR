@@ -2,6 +2,7 @@ from random import randint
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
+from collections import defaultdict
 
 from dataset.data_loader import load_data
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
@@ -60,6 +61,10 @@ class TrajectoryEnv(gym.Env):
             self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
 
+        self.generate_emissions = False
+        if self.generate_emissions:
+            self.emissions_data = defaultdict(list)
+
         self.reset()
 
     def normalize_state(self, state):
@@ -107,7 +112,36 @@ class TrajectoryEnv(gym.Env):
             'last_accel': -1,
         } for i in range(5)]
 
+        if self.generate_emissions:
+            self.emissions_data = defaultdict(list)
+            self.step_emissions()
+
         return self.get_state()
+
+    def step_emissions(self):
+
+        veh_types = ['idm'] * len(self.idm_followers) + ['av'] + ['leader']
+        veh_positions = [idm['pos'] for idm in self.idm_followers] + [self.av['pos']] + [self.leader_positions[self.traj_idx]]
+        veh_speeds = [idm['speed'] for idm in self.idm_followers] + [self.av['speed']] + [self.leader_speeds[self.traj_idx]]
+
+        step_dict = {
+            'time': round(self.env_step * self.time_step, 3),
+            'env_step': self.env_step,
+            'trajectory_index': self.traj_idx,
+            'veh_types': ';'.join(veh_types),
+            'veh_positions': ';'.join(map(str, veh_positions)),
+            'veh_speeds': ';'.join(map(str, veh_speeds)),
+        }
+
+        for k, v in step_dict.items():
+            self.emissions_data[k].append(v)
+
+    def generate_emissions(self):
+        import pandas as pd
+        path = 'test.csv'
+        print(f'Saving emissions at {path}')
+        df = pd.DataFrame(self.emissions_data)  # {key: pd.Series(value) for key, value in dictmap.items()})
+        df.to_csv(path, encoding='utf-8', index=False)
 
     def step(self, actions):
         # get av accel
@@ -194,6 +228,11 @@ class TrajectoryEnv(gym.Env):
         else:
             if self.env_step >= self.horizon:
                 done = True
+
+        if self.generate_emissions:
+            self.step_emissions()
+            if done:
+                self.generate_emissions()
 
         # reward -= (action ** 2) * 0.5
 
