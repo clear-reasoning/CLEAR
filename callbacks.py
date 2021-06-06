@@ -192,7 +192,7 @@ class TensorboardCallback(BaseCallback):
                 idm = IDMController(a=test_env.max_accel, b=test_env.max_decel)
                 def get_action(state):
                     s = test_env.unnormalize_state(state)
-                    return idm.get_accel(s['speed'], s['leader_speed'], s['headway'])
+                    return idm.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
 
             elif controller == 'fs_leader':
                 fs = TimeHeadwayFollowerStopper(max_accel=test_env.max_accel, max_deaccel=test_env.max_decel)
@@ -237,7 +237,11 @@ class TensorboardCallback(BaseCallback):
             for rwd in data_plot['rewards'][1:]:
                 data_plot['episode_reward'].append(data_plot['episode_reward'][-1] + rwd)
 
-            mpg = (sum(data_plot['speed']) / 1609.34) / (sum(data_plot['energy_consumption']) / 3600 + 1e-6)
+            num_veh = len(test_env.idm_followers) + 1
+            mpg = 0
+            for i in range(num_veh):
+                mpg += (sum(data_plot['speed_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)
+            mpg /= num_veh
             self.logger.record(f'trajectory_{controller}/mpg', mpg)
             self.logger.record(f'trajectory_{controller}/total_reward', data_plot['episode_reward'][-1])
 

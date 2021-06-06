@@ -34,7 +34,7 @@ if __name__ == '__main__':
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
-        'horizon': 2000,
+        'horizon': 300,
         'min_speed': 0,
         'max_speed': 40,
         'max_headway': 80,
@@ -42,6 +42,10 @@ if __name__ == '__main__':
         'num_actions': args.env_num_actions,
         'use_fs': args.use_fs,
         'extra_obs': args.augment_vf,
+        # how close we need to be at the end to get the reward
+        'closing_gap': .85,
+        # if we get closer then this time headway we are forced to break with maximum decel
+        'minimal_time_headway': 1.5
     }
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=args.n_envs, env_kwargs=dict(config=env_config))
