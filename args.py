@@ -58,6 +58,9 @@ def parse_args():
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
         help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
+    parser.add_argument('--augment_vf', type=int, default=0, nargs='+',
+                        help='If true, the value function will be augmented with info stored in the extra_obs'
+                             'key of the info dict.')
     # env params
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
         help='If true, the environment has a discrete action space.')

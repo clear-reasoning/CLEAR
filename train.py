@@ -6,9 +6,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-from stable_baselines3 import PPO
+from stable_baselines3.ppo import PPO
+from stable_baselines3.td3 import TD3
+from algos.ppo.policies import PopArtActorCriticPolicy
+from algos.ppo.ppo import PPO as AugmentedPPO
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.policies import (
+    register_policy,
+)
 
 from datetime import datetime
 import os.path
@@ -103,13 +109,18 @@ if __name__ == '__main__':
         env_config = {
             'max_accel': 1.5,
             'max_decel': 3.0,
-            'horizon': 500,
+            'horizon': 300,
             'min_speed': 0,
             'max_speed': 40,
-            'max_headway': 120,
+            'max_headway': 80,
             'discrete': config['env_discrete'],
             'num_actions': config['env_num_actions'],
             'use_fs': config['use_fs'],
+            'extra_obs': config['augment_vf'],
+            # how close we need to be at the end to get the reward
+            'closing_gap': .85,
+            # if we get closer then this time headway we are forced to break with maximum decel
+            'minimal_time_headway': 1.5
         }
 
         multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
@@ -133,9 +144,19 @@ if __name__ == '__main__':
         ]
         callbacks = CallbackList(callbacks)
 
-        algorithm = {
-            'ppo': PPO,
-        }[args.algorithm.lower()]
+        if config['augment_vf']:
+            from algos.ppo.policies import SplitActorCriticPolicy
+            policy = SplitActorCriticPolicy
+        else:
+            register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
+            policy = PopArtActorCriticPolicy
+
+        if config['augment_vf']:
+            algorithm = AugmentedPPO
+        else:
+            algorithm = {
+                'ppo': PPO,
+            }[args.algorithm.lower()]
 
         train_config = {
             'env': multi_env,
@@ -145,7 +166,7 @@ if __name__ == '__main__':
             'device': 'cpu',  # 'cpu', 'cuda', 'auto'
 
             # policy params
-            'policy': 'MlpPolicy',
+            'policy': policy,
             'policy_kwargs': {
                 'activation_fn': {
                     'tanh': torch.nn.Tanh,

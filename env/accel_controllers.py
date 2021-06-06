@@ -13,7 +13,7 @@ class IDMController(object):
         self.s0 = s0
         self.noise = noise
 
-    def get_accel(self, this_vel, lead_vel, headway):
+    def get_accel(self, this_vel, lead_vel, headway, sim_step):
         """See parent class."""
         # in order to deal with ZeroDivisionError
         if abs(headway) < 1e-3:
@@ -29,7 +29,7 @@ class IDMController(object):
         accel = self.a * (1 - (this_vel / self.v0)**self.delta - (s_star / headway)**2)
 
         if self.noise > 0:
-            accel += np.sqrt(0.1) * np.random.normal(0, self.noise)
+            accel += np.sqrt(sim_step) * np.random.normal(0, self.noise)
         return accel
 
 
