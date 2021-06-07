@@ -9,7 +9,7 @@ import torch
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 from algos.ppo.policies import PopArtActorCriticPolicy
-# from algos.ppo.ppo import PPO as AugmentedPPO
+from algos.ppo.ppo import PPO as AugmentedPPO
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import (
