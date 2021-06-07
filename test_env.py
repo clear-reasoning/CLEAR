@@ -22,11 +22,17 @@ if __name__ == '__main__':
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
+        'horizon': 300,
         'min_speed': 0,
         'max_speed': 40,
-        'max_headway': 120,
-        'whole_trajectory': True,
+        'max_headway': 80,
         'use_fs': False,
+        'extra_obs': False,
+        # how close we need to be at the end to get the reward
+        'closing_gap': .85,
+        # if we get closer then this time headway we are forced to break with maximum decel
+        'minimal_time_headway': 1.5,
+        'whole_trajectory': True,
     }
 
     env = TrajectoryEnv(env_config)
