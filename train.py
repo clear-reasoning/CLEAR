@@ -104,9 +104,13 @@ if __name__ == '__main__':
             print(f'Saved git diff to {fp.name}')
     print()
 
-    with multiprocessing.Pool(processes=fixed_config['n_processes']) as pool:
-        pool.map(start_training, zip(configs, [exp_logdir] * len(configs)))
-    pool.close()
-    pool.join()
+    if len(configs) == 1:
+        start_training((configs[0], exp_logdir))
+    else:
+        print(f'Starting training with {fixed_config["n_processes"]} parallel processes')
+        with multiprocessing.Pool(processes=fixed_config['n_processes']) as pool:
+            pool.map(start_training, zip(configs, [exp_logdir] * len(configs)))
+        pool.close()
+        pool.join()
 
     print('\nTraining terminated')
