@@ -1,4 +1,4 @@
-from args import parse_args
+from args import parse_args_train
 from env.trajectory_env import TrajectoryEnv
 from callbacks import CheckpointCallback, TensorboardCallback, ProgressBarCallback, LoggingCallback
 
@@ -41,18 +41,19 @@ def start_training(args):
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
-        'horizon': 200,
+        'horizon': 500,
         'min_speed': 0,
         'max_speed': 40,
-        'max_headway': 120,
+        'max_headway': 80,
+        'whole_trajectory': False,
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
         'use_fs': config['use_fs'],
         'extra_obs': config['augment_vf'],
         # if we get closer then this time headway we are forced to break with maximum decel
-        'minimal_time_headway': 1.5,
+        'minimal_time_headway': 1.0,
         # if false, we only include the AVs mpg in the calculation
-        'include_idm_mpg': 1
+        'include_idm_mpg': 0
     }
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))

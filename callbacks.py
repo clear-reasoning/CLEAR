@@ -186,7 +186,14 @@ class TensorboardCallback(BaseCallback):
                         return self.model.predict(state, deterministic=True)[0]
                 else:
                     def get_action(state):
-                        return self.model.predict(state, deterministic=True)[0][0]
+                        action =  self.model.predict(state, deterministic=True)[0][0]
+                        # s = test_env.unnormalize_state(state)
+                        # if s['headway'] / max(s['speed'], 0.01) < test_env.minimal_time_headway:
+                        #     action = -np.abs(test_env.max_decel)
+                        # if s['headway'] > test_env.max_headway:
+                        #     action = test_env.max_accel
+                        return action
+
                     
             elif controller == 'idm':
                 idm = IDMController(noise=0.0)

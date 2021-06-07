@@ -188,7 +188,6 @@ class TrajectoryEnv(gym.Env):
         else:
             action = float(actions)
         
-        # action = np.clip(action, -1, 1)
         # action *= self.max_accel if action > 0 else self.max_decel
         if self.use_fs:
             self.follower_stopper.v_des += action
@@ -205,6 +204,8 @@ class TrajectoryEnv(gym.Env):
             v_next = accel * self.time_step + self.av['speed']
             if v_next > v_safe:
                 accel = np.clip((v_safe - self.av['speed']) / self.time_step, -np.abs(self.max_decel), self.max_accel)
+
+        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
 
         self.av['last_accel'] = accel
 
@@ -248,8 +249,15 @@ class TrajectoryEnv(gym.Env):
             # crash
             reward -= 50
             done = True
+
+        # forcibly prevent the car from getting within a headway
+        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
+        if time_headway < self.minimal_time_headway:
+            reward -= 2.0
+
         if av_headway > self.max_headway:
-            reward -= 3.0
+            reward -= 2.0
+
 
         if self.whole_trajectory:
             if self.traj_idx >= len(self.leader_positions) - 1:
@@ -263,43 +271,37 @@ class TrajectoryEnv(gym.Env):
             if done:
                 self.generate_emissions()
 
-        # reward -= (action ** 2) * 0.5
         # we have travelled at least 0.9 times as far as the lead car did
         leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
-        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
 
-        # forcibly prevent the car from getting within a headway
-        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
-        if time_headway < self.minimal_time_headway:
-            reward -= np.abs(self.max_decel)
-
-        if (self.env_step % int(self.horizon) == 0): #and
-        #         self.av['pos'] - self.init_pos[0] > (self.closing_gap * leader_pos_change)):
+        if (self.env_step % int(self.horizon) == 0):
             if self.include_idm_mpg:
                 car_list = [self.av] + self.idm_followers
             else:
                 car_list = [self.av]
             avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
-                        np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6)
+                        np.maximum(self.energy_consumption[i], 1.0) / 3600 + 1e-6)
                            for i, car in enumerate(car_list)])
+            avg_mpg /= self.time_step
             reward += avg_mpg
-            reward /= self.time_step
             # reward -= 0.002 * (self.accumulated_headway)
-            self.env_step = 0
             self.energy_consumption = [0 for _ in range(len(car_list))]
             self.init_pos = [car['pos'] for car in car_list]
             infos['avg_horizon_mpg'] = avg_mpg
         # else:
         #     infos['success'] = 0.0
 
-        # reward -= (action ** 2) * 0.5
+        # reward -= np.abs(accel) * 0.1
         returned_state = self.get_state()
         if self.extra_obs:
             vec = np.zeros(int(self.observation_space.low.shape[0] / 2))
             # do the feature engineering: is the episode over, have we satisfied the criterion
             vec[0] = self.env_step / self.horizon
-            # vec[1] = (self.av['pos'] - self.init_pos) / (0.95 * leader_pos_change) - 1
+            vec[1] = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34)
+                           for i, car in enumerate(car_list)])
             # vec[1] = max(time_headway, 10.0)
-            # vec[2] = leader_pos_change / 1000.0
+            vec[2] = np.mean([(
+                        np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6)
+                           for i, car in enumerate(car_list)])
             returned_state = np.concatenate((returned_state, vec))
         return returned_state, reward, done, infos
