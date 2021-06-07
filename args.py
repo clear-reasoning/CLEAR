@@ -1,7 +1,7 @@
 import argparse
 
 
-def parse_args():
+def parse_args_train():
     parser = argparse.ArgumentParser(description='Train on the I-24 trajectory env.')
 
     # exp params
@@ -68,6 +68,29 @@ def parse_args():
         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
         help='If true, use a FollowerStopper wrapper.')
+
+    args = parser.parse_args()
+    return args
+
+def parse_args_savio():
+    parser = argparse.ArgumentParser(
+        description='Run an experiment on Savio.',
+        epilog=f'Example usage: python savio.py --jobname test --mail user@coolmail.com "echo hello world"')
+
+    parser.add_argument('command', type=str, help='Command to run the experiment.')
+    parser.add_argument('--jobname', type=str, default='test',
+        help='Name for the job.')
+    parser.add_argument('--logdir', type=str, default='slurm_logs',
+        help='Logdir for experiment logs.')
+    parser.add_argument('--mail', type=str, default=None,
+        help='Email address where to send experiment status (started, failed, finished).'
+             'Leave to None to receive no emails.')
+    parser.add_argument('--partition', type=str, default='savio',
+        help='Partition to run the experiment on.')
+    parser.add_argument('--account', type=str, default='ac_mixedav',
+        help='Account to use for running the experiment.')
+    parser.add_argument('--time', type=str, default='24:00:00',
+        help='Maximum running time of the experiment in hh:mm:ss format, maximum 72:00:00.')
 
     args = parser.parse_args()
     return args

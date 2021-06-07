@@ -1,4 +1,4 @@
-from args import parse_args
+from args import parse_args_train
 from env.trajectory_env import TrajectoryEnv
 from callbacks import CheckpointCallback, TensorboardCallback, ProgressBarCallback, LoggingCallback
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     if platform.system() == 'Darwin':
         multiprocessing.set_start_method('spawn')
 
-    args = parse_args()
+    args = parse_args_train()
 
     # parse command line args to separate grid searches from regular values
     fixed_config = {}
@@ -103,9 +103,13 @@ if __name__ == '__main__':
             print(f'Saved git diff to {fp.name}')
     print()
 
-    with multiprocessing.Pool(processes=fixed_config['n_processes']) as pool:
-        pool.map(start_training, zip(configs, [exp_logdir] * len(configs)))
-    pool.close()
-    pool.join()
+    if len(configs) == 1:
+        start_training((configs[0], exp_logdir))
+    else:
+        print(f'Starting training with {fixed_config["n_processes"]} parallel processes')
+        with multiprocessing.Pool(processes=fixed_config['n_processes']) as pool:
+            pool.map(start_training, zip(configs, [exp_logdir] * len(configs)))
+        pool.close()
+        pool.join()
 
     print('\nTraining terminated')

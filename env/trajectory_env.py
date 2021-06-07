@@ -74,8 +74,8 @@ class TrajectoryEnv(gym.Env):
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
 
-        self.generate_emissions = False
-        if self.generate_emissions:
+        self.emissions = False
+        if self.emissions:
             self.emissions_data = defaultdict(list)
 
         self.reset()
@@ -106,6 +106,7 @@ class TrajectoryEnv(gym.Env):
         total_length = len(self.leader_positions)
         if self.whole_trajectory:
             self.traj_idx = 0
+            self.horizon = total_length - 1
         else:
             # cut off the beginnings which might contain on-ramp merges
             self.traj_idx = randint(500, total_length - self.horizon - 1 - 500)
@@ -138,7 +139,7 @@ class TrajectoryEnv(gym.Env):
             self.energy_consumption = [0 for _ in range(1)]
             self.init_pos = [car['pos'] for car in [self.av]]
             
-        if self.generate_emissions:
+        if self.emissions:
             self.emissions_data = defaultdict(list)
             self.step_emissions()
 
@@ -257,7 +258,7 @@ class TrajectoryEnv(gym.Env):
             if self.env_step % int(self.horizon) == 0:
                 done = True
 
-        if self.generate_emissions:
+        if self.emissions:
             self.step_emissions()
             if done:
                 self.generate_emissions()
