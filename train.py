@@ -79,10 +79,12 @@ if __name__ == '__main__':
                 git_branch = branch[2:]
                 break
         git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf8').split()[0]
+        whoami = subprocess.check_output(['whoami']).decode('utf8').split()[0]
         
         exp_dict = {
             'full_command': 'python ' + ' '.join(sys.argv),
             'timestamp': datetime.timestamp(datetime.now()),
+            'user': whoami,
             'git_branch': git_branch,
             'git_commit': git_commit,
             'args': vars(args),
