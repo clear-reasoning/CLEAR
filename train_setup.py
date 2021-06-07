@@ -41,7 +41,7 @@ def start_training(args):
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
-        'horizon': 300,
+        'horizon': 200,
         'min_speed': 0,
         'max_speed': 40,
         'max_headway': 120,

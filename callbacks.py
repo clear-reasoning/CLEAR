@@ -189,10 +189,12 @@ class TensorboardCallback(BaseCallback):
                         return self.model.predict(state, deterministic=True)[0][0]
                     
             elif controller == 'idm':
-                idm = IDMController(a=test_env.max_accel, b=test_env.max_decel, noise=0.0)
+                idm = IDMController(noise=0.0)
                 def get_action(state):
                     s = test_env.unnormalize_state(state)
-                    return idm.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
+                    idm_accel = idm.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
+                    idm_accel = np.clip(idm_accel, -np.abs(test_env.max_decel), test_env.max_accel)
+                    return idm_accel
 
             elif controller == 'fs_leader':
                 fs = TimeHeadwayFollowerStopper(max_accel=test_env.max_accel, max_deaccel=test_env.max_decel)
