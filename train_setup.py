@@ -1,4 +1,3 @@
-from args import parse_args
 from env.trajectory_env import TrajectoryEnv
 from callbacks import CheckpointCallback, TensorboardCallback, ProgressBarCallback, LoggingCallback
 
