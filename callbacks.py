@@ -309,6 +309,7 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/time_this_iter', duration_to_str(t - self.rollout_t0))
         time_left = (t - self.training_t0) / progress_fraction
         self.logger.record('time/estimated_time_left', duration_to_str(time_left))
+        self.logger.record('time/timesteps_per_second', round(self.num_timesteps / (t - self.training_t0), 1))
 
         if self.log_metrics:
             self.print_metrics()
