@@ -309,10 +309,9 @@ class LoggingCallback(BaseCallback):
         if self.log_metrics:
             self.print_metrics()
 
-        self.rollout_t0 = time.time()
-
     def _on_training_start(self):
         self.training_t0 = time.time()
+        self.rollout_t0 = time.time()
 
     def _on_training_end(self):
         if self.log_metrics:
