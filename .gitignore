@@ -8,3 +8,4 @@ events.out*
 logs
 *.zip
 *.json
+slurm_logs*
