@@ -272,8 +272,6 @@ class LoggingCallback(BaseCallback):
 
         self.grid_search_config = grid_search_config
         self.log_metrics = log_metrics
-
-    def _on_rollout_start(self):
         self.rollout_t0 = time.time()
 
     def _on_rollout_end(self):
@@ -310,6 +308,8 @@ class LoggingCallback(BaseCallback):
 
         if self.log_metrics:
             self.print_metrics()
+
+        self.rollout_t0 = time.time()
 
     def _on_training_start(self):
         self.training_t0 = time.time()
