@@ -281,7 +281,7 @@ class LoggingCallback(BaseCallback):
         timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
         total_iters = math.ceil(self.locals['total_timesteps'] / timesteps_per_iter)
         total_timesteps_rounded = timesteps_per_iter * total_iters
-        progress_percentage = round(100 * self.num_timesteps / total_timesteps_rounded, 1)
+        progress_fraction = self.num_timesteps / total_timesteps_rounded
 
         if self.log_metrics:
             self.logger.record('time/timesteps', self.num_timesteps)
@@ -289,11 +289,11 @@ class LoggingCallback(BaseCallback):
                 
         self.logger.record('time/goal_timesteps', total_timesteps_rounded)
         self.logger.record('time/goal_iters', total_iters)
-        self.logger.record('time/training_progress', progress_percentage)
+        self.logger.record('time/training_progress', f'{round(100 * progress_fraction, 1)}%')
 
-        def get_time_diff(t0):
-            t = time.time()
-            delta_t = int(t - t0)
+        def duration_to_str(delta_t):
+            """Convert a duration (in seconds) into a human-readable string."""
+            delta_t = int(delta_t)
             s_out = ''
             for time_s, unit in [(86400, 'd'), (3600, 'h'), (60, 'm'), (1, 's')]:
                 count = delta_t // time_s
@@ -302,8 +302,11 @@ class LoggingCallback(BaseCallback):
                     s_out += f'{count}{unit}'
             return s_out
 
-        self.logger.record('time/time_since_start', get_time_diff(self.training_t0))
-        self.logger.record('time/time_this_iter', get_time_diff(self.rollout_t0))
+        t = time.time()
+        self.logger.record('time/time_since_start', duration_to_str(t - self.training_t0))
+        self.logger.record('time/time_this_iter', duration_to_str(t - self.rollout_t0))
+        time_left = (t - self.training_t0) / progress_fraction
+        self.logger.record('time/estimated_time_left', duration_to_str(time_left))
 
         if self.log_metrics:
             self.print_metrics()
