@@ -2,6 +2,7 @@ import numpy as np
 import os
 import math
 from tqdm import tqdm
+import time
 
 import matplotlib.pyplot as plt
 import os, os.path
@@ -272,6 +273,9 @@ class LoggingCallback(BaseCallback):
         self.grid_search_config = grid_search_config
         self.log_metrics = log_metrics
 
+    def _on_rollout_start(self):
+        self.rollout_t0 = time.time()
+
     def _on_rollout_end(self):
         # log current training progress 
         timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
@@ -287,8 +291,25 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/goal_iters', total_iters)
         self.logger.record('time/training_progress', progress_percentage)
 
+        def get_time_diff(t0):
+            t = time.time()
+            delta_t = int(t - t0)
+            s_out = ''
+            for time_s, unit in [(86400, 'd'), (3600, 'h'), (60, 'm'), (1, 's')]:
+                count = delta_t // time_s
+                delta_t %= time_s
+                if count > 0:
+                    s_out += f'{count}{unit}'
+            return s_out
+
+        self.logger.record('time/time_since_start', get_time_diff(self.training_t0))
+        self.logger.record('time/time_this_iter', get_time_diff(self.rollout_t0))
+
         if self.log_metrics:
             self.print_metrics()
+
+    def _on_training_start(self):
+        self.training_t0 = time.time()
 
     def _on_training_end(self):
         if self.log_metrics:
