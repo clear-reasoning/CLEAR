@@ -63,7 +63,7 @@ def start_training(args):
     callbacks += [
         TensorboardCallback(
             eval_freq=config['eval_frequency'],
-            eval_at_start=True,
+            eval_at_start=False,
             eval_at_end=True),
         LoggingCallback(
             grid_search_config=grid_search_config,
