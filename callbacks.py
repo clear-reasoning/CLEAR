@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('agg')
+
 import numpy as np
 import os
 import math
@@ -104,8 +107,9 @@ class TensorboardCallback(BaseCallback):
             del self.rollout_info[f'state_{i}']
         for key in self.rollout_info:
             figure = plt.figure()
-            figure.add_subplot().plot(self.rollout_info[key])
+            plt.plot(self.rollout_info[key])
             self.logger.record(f'rollout/{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+            plt.clf()
             plt.close()
 
     def log_trajectory_stats(self):
@@ -188,14 +192,14 @@ class TensorboardCallback(BaseCallback):
 
             for key, values_lst in data_plot.items():
                 figure = plt.figure()
-                subplot = figure.add_subplot()
                 if type(values_lst) is dict:
                     for label, values in values_lst.items():
-                        subplot.plot(values, label=label)
-                        subplot.legend()
+                        plt.plot(values, label=label)
+                        plt.legend()
                 else:
-                    subplot.plot(values_lst)
+                    plt.plot(values_lst)
                 self.logger.record(f'trajectory/{controller}_{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+                plt.clf()
                 plt.close()
 
             # colormap
@@ -229,9 +233,9 @@ class TensorboardCallback(BaseCallback):
             subplot.set_ylabel('Headway (m)')
             figure.tight_layout()
 
-            self.logger.record(f'trajectory/{controller}_accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-            plt.close()       
-
+            # self.logger.record(f'trajectory/{controller}_accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+            plt.clf()
+            plt.close()
 
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
