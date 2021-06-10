@@ -8,81 +8,40 @@ from stable_baselines3.common.policies import BasePolicy, ContinuousCritic, regi
 from stable_baselines3.common.preprocessing import get_action_dim
 from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
-    CombinedExtractor,
     FlattenExtractor,
     NatureCNN,
     create_mlp,
     get_actor_critic_arch,
 )
 from stable_baselines3.common.type_aliases import Schedule
+from stable_baselines3.td3.policies import Actor, TD3Policy
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
-class Actor(BasePolicy):
+class FirstHalfFeatureExtractor(BaseFeaturesExtractor):
     """
-    Actor network (policy) for TD3.
-    :param observation_space: Obervation space
-    :param action_space: Action space
-    :param net_arch: Network architecture
-    :param features_extractor: Network to extract features
-        (a CNN when using images, a nn.Flatten() layer otherwise)
-    :param features_dim: Number of features
-    :param activation_fn: Activation function
-    :param normalize_images: Whether to normalize images or not,
-         dividing by 255.0 (True by default)
+    Base class that represents a features extractor.
+
+    :param observation_space:
+    :param features_dim: Number of features extracted.
     """
 
-    def __init__(
-        self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
-        net_arch: List[int],
-        features_extractor: nn.Module,
-        features_dim: int,
-        activation_fn: Type[nn.Module] = nn.ReLU,
-        normalize_images: bool = True,
-    ):
-        super(Actor, self).__init__(
-            observation_space,
-            action_space,
-            features_extractor=features_extractor,
-            normalize_images=normalize_images,
-            squash_output=True,
-        )
+    def __init__(self, observation_space: gym.Space, features_dim: int = 0):
+        super(BaseFeaturesExtractor, self).__init__()
+        assert features_dim > 0
+        self._observation_space = observation_space
+        self._features_dim = features_dim
 
-        self.net_arch = net_arch
-        self.features_dim = features_dim
-        self.activation_fn = activation_fn
+    @property
+    def features_dim(self) -> int:
+        return self._features_dim
 
-        action_dim = get_action_dim(self.action_space)
-        actor_net = create_mlp(features_dim, action_dim, net_arch, activation_fn, squash_output=True)
-        # Deterministic action
-        self.mu = nn.Sequential(*actor_net)
-
-    def _get_constructor_parameters(self) -> Dict[str, Any]:
-        data = super()._get_constructor_parameters()
-
-        data.update(
-            dict(
-                net_arch=self.net_arch,
-                features_dim=self.features_dim,
-                activation_fn=self.activation_fn,
-                features_extractor=self.features_extractor,
-            )
-        )
-        return data
-
-    def forward(self, obs: th.Tensor) -> th.Tensor:
-        # assert deterministic, 'The TD3 actor only outputs deterministic actions'
-        features = self.extract_features(obs)
-        return self.mu(features)
-
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        # Note: the deterministic deterministic parameter is ignored in the case of TD3.
-        #   Predictions are always deterministic.
-        return self.forward(observation)
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        first_half, _ = th.split(observations, self._features_dim, dim=1)
+        return first_half
 
 
-class TD3Policy(BasePolicy):
+class CustomTD3Policy(BasePolicy):
     """
     Policy class (with both actor and critic) for TD3.
     :param observation_space: Observation space
@@ -119,7 +78,7 @@ class TD3Policy(BasePolicy):
         n_critics: int = 2,
         share_features_extractor: bool = True,
     ):
-        super(TD3Policy, self).__init__(
+        super(CustomTD3Policy, self).__init__(
             observation_space,
             action_space,
             features_extractor_class,
@@ -166,25 +125,16 @@ class TD3Policy(BasePolicy):
     def _build(self, lr_schedule: Schedule) -> None:
         # Create actor and target
         # the features extractor should not be shared
-        self.actor = self.make_actor(features_extractor=None)
-        self.actor_target = self.make_actor(features_extractor=None)
+        self.actor = self.make_actor(features_extractor=FirstHalfFeatureExtractor(self.observation_space, self.observation_space.low.shape[0] // 2))
+        self.actor_target = self.make_actor(features_extractor=FirstHalfFeatureExtractor(self.observation_space, self.observation_space.low.shape[0] // 2))
         # Initialize the target to have the same weights as the actor
         self.actor_target.load_state_dict(self.actor.state_dict())
 
         self.actor.optimizer = self.optimizer_class(self.actor.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
-        if self.share_features_extractor:
-            self.critic = self.make_critic(features_extractor=self.actor.features_extractor)
-            # Critic target should not share the features extactor with critic
-            # but it can share it with the actor target as actor and critic are sharing
-            # the same features_extractor too
-            # NOTE: as a result the effective poliak (soft-copy) coefficient for the features extractor
-            # will be 2 * tau instead of tau (updated one time with the actor, a second time with the critic)
-            self.critic_target = self.make_critic(features_extractor=self.actor_target.features_extractor)
-        else:
-            # Create new features extractor for each network
-            self.critic = self.make_critic(features_extractor=None)
-            self.critic_target = self.make_critic(features_extractor=None)
+        # Create new features extractor for each network
+        self.critic = self.make_critic(features_extractor=None)
+        self.critic_target = self.make_critic(features_extractor=None)
 
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic.optimizer = self.optimizer_class(self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
@@ -224,115 +174,4 @@ class TD3Policy(BasePolicy):
         return self.actor(observation)
 
 
-MlpPolicy = TD3Policy
-
-
-class CnnPolicy(TD3Policy):
-    """
-    Policy class (with both actor and critic) for TD3.
-    :param observation_space: Observation space
-    :param action_space: Action space
-    :param lr_schedule: Learning rate schedule (could be constant)
-    :param net_arch: The specification of the policy and value networks.
-    :param activation_fn: Activation function
-    :param features_extractor_class: Features extractor to use.
-    :param features_extractor_kwargs: Keyword arguments
-        to pass to the features extractor.
-    :param normalize_images: Whether to normalize images or not,
-         dividing by 255.0 (True by default)
-    :param optimizer_class: The optimizer to use,
-        ``th.optim.Adam`` by default
-    :param optimizer_kwargs: Additional keyword arguments,
-        excluding the learning rate, to pass to the optimizer
-    :param n_critics: Number of critic networks to create.
-    :param share_features_extractor: Whether to share or not the features extractor
-        between the actor and the critic (this saves computation time)
-    """
-
-    def __init__(
-        self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
-        lr_schedule: Schedule,
-        net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
-        activation_fn: Type[nn.Module] = nn.ReLU,
-        features_extractor_class: Type[BaseFeaturesExtractor] = NatureCNN,
-        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
-        normalize_images: bool = True,
-        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
-        optimizer_kwargs: Optional[Dict[str, Any]] = None,
-        n_critics: int = 2,
-        share_features_extractor: bool = True,
-    ):
-        super(CnnPolicy, self).__init__(
-            observation_space,
-            action_space,
-            lr_schedule,
-            net_arch,
-            activation_fn,
-            features_extractor_class,
-            features_extractor_kwargs,
-            normalize_images,
-            optimizer_class,
-            optimizer_kwargs,
-            n_critics,
-            share_features_extractor,
-        )
-
-
-class MultiInputPolicy(TD3Policy):
-    """
-    Policy class (with both actor and critic) for TD3 to be used with Dict observation spaces.
-    :param observation_space: Observation space
-    :param action_space: Action space
-    :param lr_schedule: Learning rate schedule (could be constant)
-    :param net_arch: The specification of the policy and value networks.
-    :param activation_fn: Activation function
-    :param features_extractor_class: Features extractor to use.
-    :param features_extractor_kwargs: Keyword arguments
-        to pass to the features extractor.
-    :param normalize_images: Whether to normalize images or not,
-         dividing by 255.0 (True by default)
-    :param optimizer_class: The optimizer to use,
-        ``th.optim.Adam`` by default
-    :param optimizer_kwargs: Additional keyword arguments,
-        excluding the learning rate, to pass to the optimizer
-    :param n_critics: Number of critic networks to create.
-    :param share_features_extractor: Whether to share or not the features extractor
-        between the actor and the critic (this saves computation time)
-    """
-
-    def __init__(
-        self,
-        observation_space: gym.spaces.Dict,
-        action_space: gym.spaces.Space,
-        lr_schedule: Schedule,
-        net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
-        activation_fn: Type[nn.Module] = nn.ReLU,
-        features_extractor_class: Type[BaseFeaturesExtractor] = CombinedExtractor,
-        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
-        normalize_images: bool = True,
-        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
-        optimizer_kwargs: Optional[Dict[str, Any]] = None,
-        n_critics: int = 2,
-        share_features_extractor: bool = True,
-    ):
-        super(MultiInputPolicy, self).__init__(
-            observation_space,
-            action_space,
-            lr_schedule,
-            net_arch,
-            activation_fn,
-            features_extractor_class,
-            features_extractor_kwargs,
-            normalize_images,
-            optimizer_class,
-            optimizer_kwargs,
-            n_critics,
-            share_features_extractor,
-        )
-
-
-register_policy("MlpPolicy", MlpPolicy)
-register_policy("CnnPolicy", CnnPolicy)
-register_policy("MultiInputPolicy", MultiInputPolicy)
+register_policy("CustomTD3Policy", CustomTD3Policy)

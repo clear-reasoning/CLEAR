@@ -250,6 +250,9 @@ class TrajectoryEnv(gym.Env):
             reward -= 50
             done = True
 
+        if av_headway <= self.minimal_headway:
+            reward -= 2
+
         # forcibly prevent the car from getting within a headway
         time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
         if time_headway < self.minimal_time_headway:

@@ -272,7 +272,7 @@ class TensorboardCallback(BaseCallback):
                 plt.close()
 
             # colormap
-            ego_speed = 5
+            ego_speed = 20
             lead_speed_range = np.arange(0, 40, 2)
             headway_range = np.arange(0, 100, 5)
             lead_speeds, headways = np.meshgrid(lead_speed_range, headway_range)
@@ -347,9 +347,16 @@ class LoggingCallback(BaseCallback):
         self.log_metrics = log_metrics
 
     def _on_rollout_end(self):
-        # log current training progress 
-        timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
-        total_iters = math.ceil(self.locals['total_timesteps'] / timesteps_per_iter)
+        # log current training progress
+        if hasattr(self.model, 'n_steps'):
+            # for PPO
+            timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
+            total_iters = math.ceil(self.locals['total_timesteps'] / timesteps_per_iter)
+        else:
+            # for TD3
+            timesteps_per_iter = self.training_env.num_envs * self.model.train_freq.frequency
+            total_iters = math.ceil(self.locals['total_timesteps'][0] / timesteps_per_iter)
+
         total_timesteps_rounded = timesteps_per_iter * total_iters
         progress_percentage = round(100 * self.num_timesteps / total_timesteps_rounded, 1)
 
