@@ -1,0 +1,192 @@
+import itertools
+import numpy as np
+import pandas as pd
+from pathlib import Path
+import random
+import sys
+
+from env.accel_controllers import IDMController
+from env.energy_models import PFMMidsizeSedan
+from env.simulation import Simulation
+from env.utils import lat_long_distance, moving_sum, pairwise, counter
+from visualize.plotter import Plotter
+
+
+class DataLoader(object):
+    def __init__(self):
+        self.trajectories = [{
+                'path': fp,
+                'timestep': round(data['Time'][1] - data['Time'][0], 3),
+                'duration': round(data['Time'].max() - data['Time'].min(), 3),
+                'size': len(data['Time']),
+                'times': np.array(data['Time']) - data['Time'][0],
+                'positions': np.array(data['DistanceGPS']),
+                'velocities': np.array(data['Velocity']) / 3.6,
+                'accelerations': np.array(data['Acceleration'])
+            } for fp, data in self.get_raw_data()]
+
+    def get_raw_data(self):
+        file_paths = list(Path('dataset/data_v2_preprocessed').glob('**/*.csv'))
+        data = map(pd.read_csv, file_paths)
+        return zip(file_paths, data)
+
+    def get_all_trajectories(self):
+        return iter(self.trajectories)
+
+    def get_trajectories(self, chunk_size=None, count=None):
+        for _ in counter(count):
+            traj = random.sample(self.trajectories, k=1)[0]
+            if chunk_size is None:
+                yield dict(traj)
+            start_idx = random.randint(0, traj['size'] - chunk_size)
+            yield {
+                k: v[start_idx:start_idx+chunk_size] if isinstance(v, np.ndarray) else v
+                for k, v in traj.items()
+            }
+
+
+###################################################################################################
+
+
+def _preprocess_data():
+    """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
+    file_paths = list(Path('dataset/data_v2').glob('**/*.csv'))
+    for fp in file_paths:
+        print(fp)
+
+        # load
+        df = pd.read_csv(fp, index_col=0)
+        df = df.reset_index(drop=True)
+
+        # sometimes there are missing timesteps
+        # fix that by doing linear interpolation on the missing timesteps
+        dt = 0.1
+        for i in range(1, len(df['Time'])):
+            timestep = df['Time'][i] - df['Time'][i-1]
+            if abs(timestep - dt) > 1e-3:
+                missing = int(round(timestep / dt, 3))
+                for k in range(1, missing):
+                    idx = round(i - 1 / (k + 1), 3)
+                    df.loc[idx] = df.loc[i - 1] + (df.loc[i] - df.loc[i - 1]) * k / missing
+                    df.loc[idx]['Time'] = round(df.loc[idx]['Time'], 3)
+        df = df.sort_index().reset_index(drop=True)
+        assert(all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(data['Time'])))
+        
+        # compute total ego distances traveled from GPS coordinates
+        distances = itertools.accumulate(
+            pairwise(zip(df['LatitudeGPS'], df['LongitudeGPS'])),
+            func=lambda dist, x: dist + lat_long_distance(*x), 
+            initial=0
+        )
+        df['DistanceGPS'] = list(distances)
+
+        # save
+        df.to_csv(str(fp).replace('data_v2', 'data_v2_preprocessed'), encoding='utf-8', index=True, index_label='index')
+
+
+if __name__ == '__main__':
+    data_loader = DataLoader()
+
+    if 'preprocess' in sys.argv:
+        print('Preprocessing trajectory files')
+        _preprocess_data()
+
+    if 'plot_raw' in sys.argv:  # plot all columns in the CSVs
+        plotter = Plotter('figs/dataset/raw')
+        print('Plotting raw trajectory data')
+        for fp, data in data_loader.get_raw_data():
+            for key in data:
+                plotter.plot(data[key], title=key, grid=True)
+            plotter.save(fp.stem, log='\t')
+
+    if 'plot_data' in sys.argv:  # plot ego trajectories (positions, speeds, accels)
+        print('Plotting processed trajectory data')
+        plotter = Plotter('figs/dataset/processed')
+        for traj in data_loader.get_all_trajectories():
+            plotter.plot(traj['times'], traj['positions'], title='Ego positions', 
+                xlabel='time (s)', ylabel='position (m)', grid=True)
+            plotter.plot(traj['times'], traj['velocities'], title='Ego velocities', 
+                xlabel='time (s)', ylabel='speed (m/s)', grid=True)
+            plotter.plot(traj['times'], traj['accelerations'], title='Ego accelerations', 
+                xlabel='time (s)', ylabel='accel (m/$s^2$)', grid=True)
+            plotter.save(traj['path'].stem, log='\t')
+
+    if 'plot_sims' in sys.argv:  # plot mpg values for the trajectories, using different types of platoons
+        print('Computing MPG values for different platoons following the trajectories')
+        
+        for traj in data_loader.get_all_trajectories():
+            for num_idms, av_idm_params in [
+                (5, dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)),
+                # (5, dict(v0=35, T=1.5, a=5, b=0.1, delta=4, s0=2, noise=0.0)),
+                # (5, dict(v0=35, T=4, a=0.7, b=1.2, delta=4, s0=2, noise=0.0)),
+            ]:
+                plotter = Plotter('figs/dataset/', traj['path'].stem)
+                print(traj['path'])
+                sim = Simulation(timestep=traj['timestep'])
+                sim.add_vehicle(controller='trajectory',
+                    trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
+                sim.add_vehicle(controller='idm', gap=20, **av_idm_params)
+                for _ in range(num_idms):
+                    sim.add_vehicle(controller='idm', gap=20, **dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3))
+                sim.run()
+
+                # plot
+                with plotter.subplot(title='Positions', xlabel='Time (s)', ylabel='Position (m)', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        plotter.plot(vdata['times'], vdata['positions'], label=vid)
+                with plotter.subplot(title='Velocities', xlabel='Time (s)', ylabel='Speed (m/s)', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        plotter.plot(vdata['times'], vdata['speeds'], label=vid)
+                with plotter.subplot(title='Accelerations', xlabel='Time (s)', ylabel='Accel (m/s$^2$)', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        plotter.plot(vdata['times'], vdata['accels'], label=vid)
+                with plotter.subplot(title='Bumper-to-bumper gaps (to leader)', xlabel='Time (s)', ylabel='Gap (m)', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        plotter.plot(vdata['times'], vdata['headways'], label=vid)
+                with plotter.subplot(title='Velocity differences (to leader)', xlabel='Time (s)', ylabel='Speed diff (m/s)', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        plotter.plot(vdata['times'], vdata['speed_differences'], label=vid)
+                with plotter.subplot(title='Running MPGs over the last 100s', xlabel='Time (s)', ylabel='MPG average', grid=True, legend=True):
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        speeds = moving_sum(vdata['speeds'], chunk_size=1000)
+                        energies = moving_sum(vdata['instant_energy_consumptions'], chunk_size=1000)
+                        mpgs = (speeds / 1609.34) / (energies / 3600 + 1e-6)
+                        plotter.plot(vdata['times'][999:], mpgs, label=vid)
+                with plotter.subplot(title='MPGs (average doesn\'t account for trajectory vehicles)', xlabel='Time (s)', ylabel='Miles per gallon', grid=True, legend=True):
+                    mpgs = []
+                    for vid, vdata in sim.data_by_vehicle.items():
+                        mpg = (np.sum(vdata['speeds']) / 1609.34) / (np.sum(vdata['instant_energy_consumptions']) / 3600 + 1e-6)
+                        plotter.plot([0, 1], [mpg] * 2, label=f'{vid} ({round(mpg, 2)})')
+                        if 'trajectory' not in vid:
+                            mpgs.append(mpg)
+                    avg_mpg = np.mean(mpgs)
+                    plotter.plot([0, 1], [avg_mpg] * 2, label=f'average ({round(avg_mpg, 2)})', linewidth=3.0)
+                
+                idm_params_str = '_'.join([f'{k}={v}' for k, v in av_idm_params.items()])
+                plotter.save(f'platoon_{num_idms}idms_{idm_params_str}_{round(avg_mpg, 2)}mpg', log='\t')
+
+    if 'small_chunks' in sys.argv:  # compute different metrics on a lot of small chunks of trajectories
+        print('Running simulations with small chunks of trajectories')
+        
+        low_speed_mpgs = []
+        high_speed_mpgs = []
+        for i, traj in enumerate(data_loader.get_trajectories(chunk_size=600, count=100)):
+            print(i)
+            idm_params = dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)
+            sim = Simulation(timestep=traj['timestep'])
+            sim.add_vehicle(controller='trajectory',
+                trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
+            for _ in range(5):
+                sim.add_vehicle(controller='idm', gap=20, **idm_params)
+            sim.run()
+
+            mpgs = [(np.sum(vdata['speeds']) / 1609.34) / (np.sum(vdata['instant_energy_consumptions']) / 3600 + 1e-6)
+                    for vid, vdata in sim.data_by_vehicle.items()
+                    if 'trajectory' not in vid]
+            avg_speed = np.mean(sim.data_by_vehicle['0_trajectory']['speeds'])
+            if avg_speed > 18:
+                high_speed_mpgs += mpgs
+            else:
+                low_speed_mpgs += mpgs
+        print(f'\tLow speed average MPG: {np.mean(low_speed_mpgs)}')
+        print(f'\tHigh speed average MPG: {np.mean(high_speed_mpgs)}')

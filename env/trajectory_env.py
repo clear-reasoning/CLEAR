@@ -4,7 +4,7 @@ from gym.spaces import Discrete, Box
 import numpy as np
 from collections import defaultdict
 
-from dataset.data_loader import load_data
+from data_loader import DataLoader
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 from env.energy_models import PFMMidsizeSedan
 from env.failsafes import safe_velocity
@@ -38,13 +38,6 @@ class TrajectoryEnv(gym.Env):
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
 
-        self.time_step, self.leader_positions, self.leader_speeds = load_data()
-        # for now get positions from velocities to ignore in-lane-changes
-        self.leader_positions = [self.leader_positions[0]]
-        for vel in self.leader_speeds[:-1]:
-            self.leader_positions.append(self.leader_positions[-1] + vel * self.time_step)
-        assert(len(self.leader_positions) == len(self.leader_speeds))
-
         if config.get('discrete'):
             self.use_discrete = True
             self.num_actions = config.get('num_actions', 7)
@@ -72,6 +65,12 @@ class TrajectoryEnv(gym.Env):
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel, noise=0.5)
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
+
+        self.data_loader = DataLoader()
+        if self.whole_trajectory:
+            self.trajectories = self.data_loader.get_all_trajectories()
+        else:
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon)
 
         self.emissions = False
         if self.emissions:
@@ -102,13 +101,19 @@ class TrajectoryEnv(gym.Env):
     def reset(self):
         self.step_num += 1
         # start at random time in trajectory
-        total_length = len(self.leader_positions)
-        if self.whole_trajectory:
-            self.traj_idx = 0
-            self.horizon = total_length - 1
-        else:
-            self.traj_idx = randint(0, total_length - self.horizon - 1)
+
+
+        # total_length = len(self.leader_positions)
+        # if self.whole_trajectory:
+        #     self.traj_idx = 0
+        #     self.horizon = total_length - 1
+        # else:
+        #     self.traj_idx = randint(0, total_length - self.horizon - 1)
+        traj = next(self.trajectories)
+        self.leader_positions, self.leader_speeds = traj['positions'], traj['velocities']
+        self.traj_idx = 0
         self.env_step = 0
+        self.time_step = traj['timestep']
 
         # create av behind leader
         self.av = {
@@ -236,8 +241,6 @@ class TrajectoryEnv(gym.Env):
         av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
         done = False
 
-        self.env_step += 1
-        self.traj_idx += 1
 
         reward = 0
         if av_headway <= 0:
@@ -282,4 +285,8 @@ class TrajectoryEnv(gym.Env):
             vec[1] = self.av['pos'] / 1000.0
             vec[2] = leader_pos_change / 1000.0
             returned_state = np.concatenate((returned_state, vec))
+
+        self.env_step += 1
+        self.traj_idx += 1
+
         return returned_state, reward, done, infos
