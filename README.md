@@ -1,7 +1,8 @@
 # Trajectory Training
 
-## Usage
+## Installation
 
-Install libraries, cf. `setup.sh`
-
-See training params with `python train.py -h`
+```
+conda env create -f environment.yml
+conda activate trajectory
+```
