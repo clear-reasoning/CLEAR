@@ -70,12 +70,13 @@ def start_training(args):
         callbacks = []
         if len(grid_search_config) == 0:
             callbacks.append(ProgressBarCallback())
-
-        callbacks += [
-            TensorboardCallback(
+        
+        if not config['no_eval']:
+            callbacks.append(TensorboardCallback(
                 eval_freq=config['eval_frequency'],
                 eval_at_start=True,
-                eval_at_end=True),
+                eval_at_end=True))
+        callbacks += [
             LoggingCallback(
                 grid_search_config=grid_search_config,
                 log_metrics=len(grid_search_config) > 0),
