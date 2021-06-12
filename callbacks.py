@@ -180,10 +180,10 @@ class TensorboardCallback(BaseCallback):
                 for k, v in info.items():
                     data_plot[k].append(v)
 
-            data_plot['speeds'] = {
-                'av': data_plot['speed'],
-                'leader': data_plot['leader_speed'],
-            }
+            # data_plot['speeds'] = {
+            #     'av': data_plot['speed_0'],
+            #     'leader': data_plot['leader_speed_0'],
+            # }
 
             data_plot['episode_reward'].append(data_plot['rewards'][0])
             for rwd in data_plot['rewards'][1:]:
@@ -195,12 +195,12 @@ class TensorboardCallback(BaseCallback):
                 num_veh = 1
             mpg = 0
             for i in range(num_veh):
-                mpg += (sum(data_plot['speed_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)
+                mpg += (sum(data_plot['speed_car_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)
             mpg /= num_veh
             self.logger.record(f'trajectory/{controller}_mpg', mpg)
             self.logger.record(f'trajectory/{controller}_total_reward', data_plot['episode_reward'][-1])
 
-            del data_plot['speed'], data_plot['leader_speed']
+            del data_plot['speed_0'], data_plot['leader_speed_0']
 
             for key, values_lst in data_plot.items():
                 figure = plt.figure()
