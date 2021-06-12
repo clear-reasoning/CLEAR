@@ -46,7 +46,7 @@ def start_training(args):
         'min_speed': 0,
         'max_speed': 40,
         'max_headway': config['env_max_headway'],
-        'minimal_headway': 10,
+        'minimal_headway': 7,
         'whole_trajectory': False,
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
@@ -59,6 +59,9 @@ def start_training(args):
         'num_idm_cars': config['env_num_idm_cars'],
         'num_concat_states': config['env_num_concat_states']
     }
+    with open(os.path.join(os.path.join(exp_logdir, gs_str), 'env_config.json'), 'w') as fp:
+        print(f'saved env config to {fp.name}')
+        json.dump(env_config, fp)
 
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
 
@@ -165,20 +168,18 @@ def start_training(args):
             'policy': policy,
 
             # # TD3 params
-            # 'learning_rate': config['lr'],  # lr (*)
-            # 'n_steps': config['n_steps'],
-            # # rollout size is n_steps * n_envs (distinct from env horizon which can span across several rollouts)
-            # 'batch_size': config['batch_size'],  # 64 # minibatch size
-            # 'n_epochs': config['n_epochs'],  # num sgd iter
-            # 'gamma': config['gamma'],  # discount factor
-            # 'gae_lambda': config['gae_lambda'],
-            # # factor for trade-off of bias vs variance for Generalized Advantage Estimator
-            # 'clip_range': 0.2,  # clipping param (*)
-            # 'clip_range_vf': None,  # clipping param for the vf (*)
-            # 'ent_coef': 0.0,  # entropy coef in loss function
-            # 'vf_coef': 0.5,  # vf coef in loss function
-            # 'max_grad_norm': 0.5,  # max value of grad clipping
-            # (*) can be a function of the current progress remaining (from 1 to 0)
+            'gamma':0.99,
+            'learning_rate': 0.0003,
+            'buffer_size': 1000000,
+            'learning_starts': 100,
+            'train_freq': 100,
+            'gradient_steps': 100,
+            'batch_size': 128,
+            'tau': 0.005,
+            'policy_delay': 2,
+            'action_noise': None,
+            'target_policy_noise': 0.2,
+            'target_noise_clip': 0.5,
         }
 
 

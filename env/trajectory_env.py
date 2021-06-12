@@ -33,8 +33,14 @@ class TrajectoryEnv(gym.Env):
         self.extra_obs = config.get('extra_obs')
         # what percentage of the leaders trajectory we need to have covered to get the final reward
         self.minimal_time_headway = config.get('minimal_time_headway')
+        # how close the AV can get before we consider it a crash
+        self.minimal_headway = config.get('minimal_headway')
         # if false, we only include the AVs mpg in the calculation
         self.include_idm_mpg = config.get('include_idm_mpg')
+        # number of IDM cars to include
+        self.num_idm_cars = config.get('num_idm_cars')
+        # number of states to concatenate on
+        self.num_concat_states = config.get('num_concat_states')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -57,19 +63,30 @@ class TrajectoryEnv(gym.Env):
 
         if self.use_fs:
             obs_shape = 4
+            self.base_obs_shape = obs_shape
             if self.extra_obs:
                 obs_shape *= 2
+            obs_shape *= self.num_concat_states
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
-            self.state_names = ['speed', 'leader_speed', 'headway', 'vdes']
-            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE]
+            self.state_names = []
+            for i in range(self.num_concat_states):
+                self.state_names += [f'speed_{i}', f'leader_speed_{i}', f'headway_{i}', f'vdes_{i}']
+            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE] * self.num_concat_states
         else:
             obs_shape = 3
+            self.base_obs_shape = obs_shape
             if self.extra_obs:
                 obs_shape *= 2
+            obs_shape *= self.num_concat_states
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
-            self.state_names = ['speed', 'leader_speed', 'headway']
-            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE]
+            self.state_names = []
+            for i in range(self.num_concat_states):
+                self.state_names += [f'speed_{i}', f'leader_speed_{i}', f'headway_{i}']
+            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE] * self.num_concat_states
 
+        self.state_vec = np.zeros(len(self.state_names))
+
+        self.state_vec = np.zeros(self.observation_space.low.shape[0])
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel, noise=0.5)
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
@@ -89,16 +106,26 @@ class TrajectoryEnv(gym.Env):
                 for i, (name, scale) in enumerate(zip(self.state_names, self.state_scales))}
     
     def get_state(self):
-        state = {
-            'speed': self.av['speed'],
-            'leader_speed': self.leader_speeds[self.traj_idx],
-            'headway': self.leader_positions[self.traj_idx] - self.av['pos'],
-        }
+        # state = {
+        #     'speed': self.av['speed'],
+        #     'leader_speed': self.leader_speeds[self.traj_idx],
+        #     'headway': self.leader_positions[self.traj_idx] - self.av['pos'],
+        # }
+        #
+        # if self.use_fs:
+        #     state['vdes'] = self.follower_stopper.v_des
 
+        return self.normalize_state(self.convert_state_to_dict())
+
+    def convert_state_to_dict(self):
+        return {state_name: elem for  elem, state_name in zip(self.state_vec, self.state_names)}
+
+    def update_state_vec(self):
+        self.state_vec = np.roll(self.state_vec, self.base_obs_shape)
+        self.state_vec[0:3] = [self.av['speed'], self.leader_speeds[self.traj_idx],
+                               self.leader_positions[self.traj_idx] - self.av['pos']]
         if self.use_fs:
-            state['vdes'] = self.follower_stopper.v_des
-
-        return self.normalize_state(state)
+            self.state_vec[3] = self.follower_stopper.v_des
     
     def reset(self):
         self.step_num += 1
@@ -110,6 +137,7 @@ class TrajectoryEnv(gym.Env):
         else:
             # cut off the beginnings which might contain on-ramp merges
             self.traj_idx = randint(500, total_length - self.horizon - 1 - 500)
+
         self.env_step = 0
 
         # create av behind leader
@@ -143,6 +171,7 @@ class TrajectoryEnv(gym.Env):
             self.emissions_data = defaultdict(list)
             self.step_emissions()
 
+        self.update_state_vec()
         if self.extra_obs:
             return np.concatenate((self.get_state(), np.zeros(int(self.observation_space.low.shape[0] / 2))))
         else:
@@ -295,6 +324,7 @@ class TrajectoryEnv(gym.Env):
         #     infos['success'] = 0.0
 
         # reward -= np.abs(accel) * 0.1
+        self.update_state_vec()
         returned_state = self.get_state()
         if self.extra_obs:
             vec = np.zeros(int(self.observation_space.low.shape[0] / 2))
