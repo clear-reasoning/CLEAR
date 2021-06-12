@@ -58,12 +58,24 @@ def parse_args_train():
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
         help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
-    parser.add_argument('--augment_vf', type=int, default=0, nargs='+',
+    parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
                         help='If true, the value function will be augmented with info stored in the extra_obs'
                              'key of the info dict.')
     # env params
+    parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
+        help='This many past states will be concatenated ')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
         help='If true, the environment has a discrete action space.')
+    parser.add_argument('--env_num_idm_cars', type=int, default=5, nargs='+',
+        help='Number of IDM cars to place behind the AV.')
+    parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
+        help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
+    parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
+        help='Sets the training horizon.')
+    parser.add_argument('--env_max_headway', type=int, default=120, nargs='+',
+        help='Sets the headway above which we get penalized.')
+    parser.add_argument('--env_minimal_time_headway', type=float, default=1.0, nargs='+',
+        help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',

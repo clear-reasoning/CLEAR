@@ -1,42 +1,54 @@
+import json
+import os
+
 from env.trajectory_env import TrajectoryEnv
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
-import os
 from env.failsafes import safe_velocity
 
 PLOT_HEATMAPS = False
 PLOT_PLOTS = False
+LOAD_CONFIG = True
 
 if __name__ == '__main__':
-    controller = 'idm'
+    controller = 'custom_cp_path'
 
-    custom_cp_path = None # './checkpoints/01_beats_idm_03Jun21/checkpoints/iter_300_7680000steps'
+    custom_cp_path = '/Users/eugenevinitsky/Desktop/Research/Code/trajectory_training/log/test_08Jun21_17h50m15s/checkpoints/iter_600_15360000steps.zip'#None # './checkpoints/01_beats_idm_03Jun21/checkpoints/iter_300_7680000steps'
 
     metrics = defaultdict(list)
 
     os.makedirs('figs/test_env/', exist_ok=True)
 
-    env_config = {
-        'max_accel': 1.5,
-        'max_decel': 3.0,
-        'horizon': 300,
-        'min_speed': 0,
-        'max_speed': 40,
-        'max_headway': 80,
-        'use_fs': False,
-        'extra_obs': False,
-        # how close we need to be at the end to get the reward
-        'closing_gap': .85,
-        # if we get closer then this time headway we are forced to break with maximum decel
-        'minimal_time_headway': 1.5,
-        'whole_trajectory': True,
-    }
+    config_path = os.path.join('/'.join(custom_cp_path.split('/')[:-2]) ,'env_config.json')
+    if os.path.exists(config_path) and LOAD_CONFIG:
+        with open(config_path, 'r') as fp:
+            env_config = json.load(fp)
+    else:
+
+        env_config = {
+            'max_accel': 1.5,
+            'max_decel': 3.0,
+            'horizon': 300,
+            'min_speed': 0,
+            'max_speed': 40,
+            'max_headway': 160,
+            'use_fs': False,
+            'extra_obs': True,
+            # how close we need to be at the end to get the reward
+            'closing_gap': .85,
+            # if we get closer then this time headway we are forced to break with maximum decel
+            'minimal_time_headway': 1.0,
+            'whole_trajectory': True,
+            'num_concat_states': 1,
+            'num_idm_cars': 10,
+            'minimal_headway': 10.0
+        }
 
     env = TrajectoryEnv(env_config)
-    idm = IDMController(a=env.max_accel, b=env.max_decel)
+    idm = IDMController(a=env.max_accel, b=env.max_decel, noise=0.0)
     fs = TimeHeadwayFollowerStopper(max_accel=env.max_accel, max_deaccel=env.max_decel)
 
     if custom_cp_path is not None:
@@ -48,14 +60,13 @@ if __name__ == '__main__':
     state = env.reset()
 
     s = env.unnormalize_state(state)
-    fs.v_des =  s['leader_speed']
+    fs.v_des = s['leader_speed']
 
     dmax = 0
 
     done = False
     total_reward = 0
     total_distance = 0
-    total_energy = 0
 
     times = [0]
     positions = {
@@ -72,6 +83,30 @@ if __name__ == '__main__':
         'av': [0],
         **{f'idm_{k}': [0] for k in range(len(env.idm_followers))}
     }
+    energy = {
+        'av': [0],
+        **{f'idm_{k}': [0] for k in range(len(env.idm_followers))}
+    }
+    distance = {
+        'av': [0],
+        **{f'idm_{k}': [0] for k in range(len(env.idm_followers))}
+    }
+    mpg = {
+        'av': 0,
+        **{f'idm_{k}': 0 for k in range(len(env.idm_followers))}
+    }
+
+    low_speed_mpg = {
+        'av': 0,
+        **{f'idm_{k}': 0 for k in range(len(env.idm_followers))}
+    }
+
+    high_speed_mpg = {
+        'av': 0,
+        **{f'idm_{k}': 0 for k in range(len(env.idm_followers))}
+    }
+
+
 
     i = 0
     while not done:
@@ -131,21 +166,48 @@ if __name__ == '__main__':
         for k in range(len(env.idm_followers)):
             accels[f'idm_{k}'].append(env.idm_followers[k]['last_accel'])
 
-        for car in [env.av]: #, *env.idm_followers]:
-            total_distance += car['speed']
-            total_energy += env.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
+        distance['av'].append(speeds['av'][-1] * env.time_step)
+        energy['av'].append(env.energy_model.get_instantaneous_fuel_consumption(accels['av'][-1], speeds['av'][-1], grade=0))
+        for k in range(len(env.idm_followers)):
+            distance[f'idm_{k}'].append(speeds[f'idm_{k}'][-1] * env.time_step)
+            energy[f'idm_{k}'].append(env.energy_model.get_instantaneous_fuel_consumption(accels[f'idm_{k}'][-1],
+                                                                                      speeds[f'idm_{k}'][-1], grade=0))
 
     metrics['rewards'].append(total_reward)
-    metrics['mpg'].append(
-        (total_distance / 1609.34) / (total_energy / 3600 + 1e-6)
-    )
+    mpg['av'] = (np.sum(distance['av']) / 1609.34) / (np.sum(energy['av']) / 3600 + 1e-6) / env.time_step
+    for k in range(len(env.idm_followers)):
+        mpg[f'idm_{k}'] = (np.sum(distance[f'idm_{k}']) / 1609.34) / (np.sum(energy[f'idm_{k}']) / 3600 + 1e-6) / env.time_step
+
+    # compute low speed mpg
+    low_speeds = np.array(speeds['av']) < 20.0
+    high_speeds = np.array(speeds['av']) > 20.0
+    low_speed_mpg['av'] = (np.sum(np.array(distance['av'])[low_speeds]) / 1609.34) / \
+                          (np.sum(np.array(energy['av'])[low_speeds]) / 3600 + 1e-6) / env.time_step
+    for k in range(len(env.idm_followers)):
+        low_speed_mpg[f'idm_{k}'] = (np.sum(np.array(distance[f'idm_{k}'])[low_speeds]) / 1609.34) / \
+                                    (np.sum(np.array(energy[f'idm_{k}'])[low_speeds]) / 3600 + 1e-6) / env.time_step
+
+    high_speed_mpg['av'] = (np.sum(np.array(distance['av'])[high_speeds]) / 1609.34) / \
+                           (np.sum(np.array(energy['av'])[high_speeds]) / 3600 + 1e-6) / env.time_step
+    for k in range(len(env.idm_followers)):
+        high_speed_mpg[f'idm_{k}'] = (np.sum(np.array(distance[f'idm_{k}'])[high_speeds]) / 1609.34) / \
+                                    (np.sum(np.array(energy[f'idm_{k}'])[high_speeds]) / 3600 + 1e-6) / env.time_step
+
 
     # compute avg mpg
     avg_rwd = sum(metrics['rewards']) / len(metrics['rewards'])
-    avg_mpg = sum(metrics['mpg']) / len(metrics['mpg'])
+    avg_mpg = np.sum([val for val in mpg.values()]) / len(mpg)
+    avg_mpg_low = np.sum([val for val in low_speed_mpg.values()]) / len(mpg)
+    avg_mpg_high = np.sum([val for val in high_speed_mpg.values()]) / len(mpg)
 
     print(f'Avg rwd ', round(avg_rwd, 2))
-    print(f'Avg mpg ', round(avg_mpg, 2))
+    print(f'Avg mpg ', avg_mpg)
+    print(f'Avg mpg low ', avg_mpg_low)
+    print(f'Avg mpg high ', avg_mpg_high)
+
+    print(f' per car mpg ', mpg)
+    print(f' slow mpg ', low_speed_mpg)
+    print(f' high speed mpg ', high_speed_mpg)
 
     N = len(times)
 
@@ -185,12 +247,16 @@ if __name__ == '__main__':
                 plt.xlabel('Time (s)')
                 plt.ylabel(label)
                 plt.legend()
-                save_path = f'figs/test_env/{controller}/{label}'
+                if controller == 'custom_cp_path':
+                    log_name = custom_cp_path.split('/')[-3]
+                    save_path = f'figs/test_env/{controller}/{log_name}/{label}'
+                else:
+                    save_path = f'figs/test_env/{controller}/{label}'
                 os.makedirs(save_path, exist_ok=True)
                 plt.savefig(f'{save_path}/{k}.png')
                 plt.close()
 
-    if PLOT_HEATMAPS and custom_cp_path is not None:
+    if PLOT_HEATMAPS:
         # also write some accel heatmaps
         for failsafe in [True, False]:
             for ego_speed in range(5, 30, 2):
@@ -203,12 +269,19 @@ if __name__ == '__main__':
                         leader_speed = ego_speed + lead_speed_diffs[i,j]
                         headway = headways[i,j]
 
-                        state = env.normalize_state({
-                            'speed': ego_speed,
-                            'leader_speed': leader_speed,
-                            'headway': headway,
-                        })
+                        state_dict = {}
+                        for i in range(env.num_concat_states):
+                            state_dict.update({'vdes_{}'.format(i): 10.0,
+                                               'speed_{}'.format(i): ego_speed,
+                                               'leader_speed_{}'.format(i): leader_speed[i, j],
+                                               'headway_{}'.format(i): headways[i, j]})
+                        state = env.normalize_state(state_dict)
+                        if env.extra_obs:
+                            extra_obs_shape = int(env.observation_space.low.shape[0] / 2)
+                            state = np.concatenate((state, np.zeros(extra_obs_shape)))
                         accel, _ = model.predict(state, deterministic=True)
+                        # accel = idm.get_accel(ego_speed, leader_speed, headway, env.time_step)
+
 
                         if failsafe:
                             time_step = 0.1
@@ -233,7 +306,8 @@ if __name__ == '__main__':
                 # figure.tight_layout()
                 failsafe_str = 'with failsafe' if failsafe else 'no failsafe'
                 subplot.set_title(f'Ego speed {ego_speed}m/s ({failsafe_str})')
-                save_path = f'figs/test_env/{controller}/accel_heatmaps'
+                log_name = custom_cp_path.split('/')[-3]
+                save_path = f'figs/test_env/{controller}/{log_name}/accel_heatmaps'
                 os.makedirs(save_path, exist_ok=True)
                 failsafe_str = '_failsafe' if failsafe else ''
                 plt.savefig(f'{save_path}/ego_speed_{ego_speed}{failsafe_str}.png')
