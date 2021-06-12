@@ -36,3 +36,14 @@ def counter(limit=None):
         i += 1
         if limit is not None and i >= limit:
             break
+
+def duration_to_str(delta_t):
+    """Convert a duration (in seconds) into a human-readable string."""
+    delta_t = int(delta_t)
+    s_out = ''
+    for time_s, unit in [(86400, 'd'), (3600, 'h'), (60, 'm'), (1, 's')]:
+        count = delta_t // time_s
+        delta_t %= time_s
+        if count > 0 or unit == 's':
+            s_out += f'{count}{unit}'
+    return s_out

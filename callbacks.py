@@ -15,6 +15,7 @@ from collections import defaultdict
 
 from env.trajectory_env import TrajectoryEnv, SPEED_SCALE, DISTANCE_SCALE
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
+from env.utils import duration_to_str
 
 from env.energy_models import PFMMidsizeSedan
 
@@ -113,6 +114,7 @@ class TensorboardCallback(BaseCallback):
             plt.close()
 
     def log_trajectory_stats(self):
+        print('Running evaluation')
         for controller in ['rl', 'idm', 'fs_leader']:
             # create test env from config
             config = dict(self.training_env.envs[0].config)
@@ -290,7 +292,12 @@ class LoggingCallback(BaseCallback):
 
         self.grid_search_config = grid_search_config
         self.log_metrics = log_metrics
+
+    def _on_rollout_start(self):
+        self.logger.record('time/time_this_iter', duration_to_str(time.time() - self.iter_t0))
+
         self.rollout_t0 = time.time()
+        self.iter_t0 = time.time()
 
     def _on_rollout_end(self):
         # log current training progress
@@ -317,32 +324,19 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/goal_iters', total_iters)
         self.logger.record('time/training_progress', f'{round(100 * progress_fraction, 1)}%')
 
-        def duration_to_str(delta_t):
-            """Convert a duration (in seconds) into a human-readable string."""
-            delta_t = int(delta_t)
-            s_out = ''
-            for time_s, unit in [(86400, 'd'), (3600, 'h'), (60, 'm'), (1, 's')]:
-                count = delta_t // time_s
-                delta_t %= time_s
-                if count > 0:
-                    s_out += f'{count}{unit}'
-            return s_out
-
         t = time.time()
         self.logger.record('time/time_since_start', duration_to_str(t - self.training_t0))
-        self.logger.record('time/time_this_iter', duration_to_str(t - self.rollout_t0))
+        self.logger.record('time/time_this_rollout', duration_to_str(t - self.rollout_t0))
         time_left = (t - self.training_t0) / progress_fraction
         self.logger.record('time/estimated_time_left', duration_to_str(time_left))
         self.logger.record('time/timesteps_per_second', round(self.num_timesteps / (t - self.training_t0), 1))
-
-        self.rollout_t0 = time.time()
 
         if self.log_metrics:
             self.print_metrics()
 
     def _on_training_start(self):
         self.training_t0 = time.time()
-        self.rollout_t0 = time.time()
+        self.iter_t0 = time.time()
 
     def _on_training_end(self):
         if self.log_metrics:
