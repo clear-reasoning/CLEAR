@@ -290,19 +290,6 @@ class TrajectoryEnv(gym.Env):
         if av_headway > self.max_headway:
             reward -= 2.0
 
-
-        if self.whole_trajectory:
-            if self.traj_idx >= len(self.leader_positions) - 1:
-                done = True
-        else:
-            if self.env_step % int(self.horizon) == 0:
-                done = True
-
-        if self.emissions:
-            self.step_emissions()
-            if done:
-                self.generate_emissions()
-
         # we have travelled at least 0.9 times as far as the lead car did
         leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
 
@@ -340,5 +327,18 @@ class TrajectoryEnv(gym.Env):
 
         self.env_step += 1
         self.traj_idx += 1
+
+        if self.whole_trajectory:
+            if self.traj_idx >= len(self.leader_positions) - 1:
+                done = True
+        else:
+            if self.env_step % int(self.horizon) == 0:
+                done = True
+
+        if self.emissions:
+            self.step_emissions()
+            if done:
+                self.generate_emissions()
+
 
         return returned_state, reward, done, infos
