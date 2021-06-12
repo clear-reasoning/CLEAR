@@ -1,0 +1,38 @@
+import numpy as np
+from math import cos, sin, radians, atan2, sqrt
+import itertools
+
+
+def lat_long_distance(pos1, pos2):
+    """Returns distance in meters between two (latitude, longitude) points (Haversine formula)"""
+    (lat1, long1), (lat2, long2) = pos1, pos2
+    R = 6371e3  # radius of the Earth in meters
+    dlat = radians(lat2 - lat1)
+    dlong = radians(long2 - long1)
+    a = sin(dlat / 2) * sin(dlat / 2) \
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlong / 2) * sin(dlong / 2)
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return R * c
+
+def pairwise(iterable):
+    """Return successive overlapping pairs taken from the input iterable."""
+    # pairwise('ABCDEFG') --> AB BC CD DE EF FG
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+def moving_sum(array, chunk_size):
+    """Moving sum. Returns an array of size len(array) - chunk_size + 1."""
+    return np.convolve(array, np.ones(chunk_size), 'valid')
+
+def moving_average(array, chunk_size):
+    """Moving average. Returns an array of size len(array) - chunk_size + 1."""
+    return np.convolve(array, np.ones(chunk_size), 'valid') / chunk_size
+
+def counter(limit=None):
+    i = 0
+    while True:
+        yield i
+        i += 1
+        if limit is not None and i >= limit:
+            break

@@ -26,7 +26,7 @@ import multiprocessing
 import itertools
 import platform
 
-from train_setup import start_training
+from setup_train import start_training
 
 
 if __name__ == '__main__':
@@ -72,12 +72,18 @@ if __name__ == '__main__':
     print(f'Created experiment logdir at {exp_logdir}')
 
     with open(os.path.join(exp_logdir, 'params.json'), 'w') as fp:
-        git_branch = subprocess.check_output(['git', 'branch', '--show-current']).decode('utf8').split()[0]
+        git_branch = subprocess.check_output(['git', 'branch']).decode('utf8')
+        for branch in git_branch.split('\n'):
+            if branch.startswith('*'):
+                git_branch = branch[2:]
+                break
         git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf8').split()[0]
+        whoami = subprocess.check_output(['whoami']).decode('utf8').split()[0]
         
         exp_dict = {
             'full_command': 'python ' + ' '.join(sys.argv),
             'timestamp': datetime.timestamp(datetime.now()),
+            'user': whoami,
             'git_branch': git_branch,
             'git_commit': git_commit,
             'args': vars(args),
