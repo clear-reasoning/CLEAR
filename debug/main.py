@@ -11,11 +11,9 @@ class TimePerIterCallback(BaseCallback):
         self.t0 = time.time()
 
     def _on_rollout_start(self):
-        self.logger.record('time/iter_rollout_duration', time.time() - self.t0)
-        self.t0 = time.time()
+        self.logger.record('time/iter_sgd_duration', time.time() - self.t0)
 
     def _on_rollout_end(self):
-        self.logger.record('time/iter_sgd_duration', time.time() - self.t0)
         self.t0 = time.time()
 
     def _on_step(self):
