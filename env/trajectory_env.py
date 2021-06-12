@@ -32,8 +32,15 @@ class TrajectoryEnv(gym.Env):
         self.max_headway = config.get('max_headway', 120)
         self.extra_obs = config.get('extra_obs')
         # what percentage of the leaders trajectory we need to have covered to get the final reward
-        self.closing_gap = config.get('closing_gap')
         self.minimal_time_headway = config.get('minimal_time_headway')
+        # how close the AV can get before we consider it a crash
+        self.minimal_headway = config.get('minimal_headway')
+        # if false, we only include the AVs mpg in the calculation
+        self.include_idm_mpg = config.get('include_idm_mpg')
+        # number of IDM cars to include
+        self.num_idm_cars = config.get('num_idm_cars')
+        # number of states to concatenate on
+        self.num_concat_states = config.get('num_concat_states')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -49,19 +56,30 @@ class TrajectoryEnv(gym.Env):
 
         if self.use_fs:
             obs_shape = 4
+            self.base_obs_shape = obs_shape
             if self.extra_obs:
                 obs_shape *= 2
+            obs_shape *= self.num_concat_states
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
-            self.state_names = ['speed', 'leader_speed', 'headway', 'vdes']
-            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE]
+            self.state_names = []
+            for i in range(self.num_concat_states):
+                self.state_names += [f'speed_{i}', f'leader_speed_{i}', f'headway_{i}', f'vdes_{i}']
+            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE, SPEED_SCALE] * self.num_concat_states
         else:
             obs_shape = 3
+            self.base_obs_shape = obs_shape
             if self.extra_obs:
                 obs_shape *= 2
+            obs_shape *= self.num_concat_states
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
-            self.state_names = ['speed', 'leader_speed', 'headway']
-            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE]
+            self.state_names = []
+            for i in range(self.num_concat_states):
+                self.state_names += [f'speed_{i}', f'leader_speed_{i}', f'headway_{i}']
+            self.state_scales = [SPEED_SCALE, SPEED_SCALE, DISTANCE_SCALE] * self.num_concat_states
 
+        self.state_vec = np.zeros(len(self.state_names))
+
+        self.state_vec = np.zeros(self.observation_space.low.shape[0])
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel, noise=0.5)
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
         self.energy_model = PFMMidsizeSedan()
@@ -87,21 +105,30 @@ class TrajectoryEnv(gym.Env):
                 for i, (name, scale) in enumerate(zip(self.state_names, self.state_scales))}
     
     def get_state(self):
-        state = {
-            'speed': self.av['speed'],
-            'leader_speed': self.leader_speeds[self.traj_idx],
-            'headway': self.leader_positions[self.traj_idx] - self.av['pos'],
-        }
+        # state = {
+        #     'speed': self.av['speed'],
+        #     'leader_speed': self.leader_speeds[self.traj_idx],
+        #     'headway': self.leader_positions[self.traj_idx] - self.av['pos'],
+        # }
+        #
+        # if self.use_fs:
+        #     state['vdes'] = self.follower_stopper.v_des
 
+        return self.normalize_state(self.convert_state_to_dict())
+
+    def convert_state_to_dict(self):
+        return {state_name: elem for  elem, state_name in zip(self.state_vec, self.state_names)}
+
+    def update_state_vec(self):
+        self.state_vec = np.roll(self.state_vec, self.base_obs_shape)
+        self.state_vec[0:3] = [self.av['speed'], self.leader_speeds[self.traj_idx],
+                               self.leader_positions[self.traj_idx] - self.av['pos']]
         if self.use_fs:
-            state['vdes'] = self.follower_stopper.v_des
-
-        return self.normalize_state(state)
+            self.state_vec[3] = self.follower_stopper.v_des
     
     def reset(self):
         self.step_num += 1
         # start at random time in trajectory
-
 
         # total_length = len(self.leader_positions)
         # if self.whole_trajectory:
@@ -130,18 +157,23 @@ class TrajectoryEnv(gym.Env):
 
         # create idm followers behind av
         self.idm_followers = [{
-            'pos': self.av['pos'] - 20 * (i + 1),
+            'pos': self.av['pos'] - 20 * (i + 1),#- max(2 * self.av['speed'] + 20 * (-0.5 + np.random.uniform(low=0, high=1)), 20) * (i + 1),
             'speed': self.av['speed'],
             'last_accel': -1,
         } for i in range(5)]
 
+        if self.include_idm_mpg:
+            self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
+            self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
+        else:
+            self.energy_consumption = [0 for _ in range(1)]
+            self.init_pos = [car['pos'] for car in [self.av]]
+            
         if self.emissions:
             self.emissions_data = defaultdict(list)
             self.step_emissions()
 
-        self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
-        self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
-
+        self.update_state_vec()
         if self.extra_obs:
             return np.concatenate((self.get_state(), np.zeros(int(self.observation_space.low.shape[0] / 2))))
         else:
@@ -187,7 +219,6 @@ class TrajectoryEnv(gym.Env):
         else:
             action = float(actions)
         
-        # action = np.clip(action, -1, 1)
         # action *= self.max_accel if action > 0 else self.max_decel
         if self.use_fs:
             self.follower_stopper.v_des += action
@@ -207,13 +238,13 @@ class TrajectoryEnv(gym.Env):
 
         av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
 
-        # forcibly prevent the car from getting within a headway
-        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
-        if time_headway < 1.5:
-            accel = -np.abs(self.max_decel)
         self.av['last_accel'] = accel
 
-        for i, car in enumerate([self.av] + self.idm_followers):
+        if self.include_idm_mpg:
+            car_list = [self.av] + self.idm_followers
+        else:
+            car_list = [self.av]
+        for i, car in enumerate(car_list):
             curr_consumption = self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
             self.energy_consumption[i] += curr_consumption
             infos['energy_consumption_{}'.format(i)] = curr_consumption
@@ -248,6 +279,18 @@ class TrajectoryEnv(gym.Env):
             reward -= 50
             done = True
 
+        if av_headway <= self.minimal_headway:
+            reward -= 2
+
+        # forcibly prevent the car from getting within a headway
+        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
+        if time_headway < self.minimal_time_headway:
+            reward -= 2.0
+
+        if av_headway > self.max_headway:
+            reward -= 2.0
+
+
         if self.whole_trajectory:
             if self.traj_idx >= len(self.leader_positions) - 1:
                 done = True
@@ -260,30 +303,39 @@ class TrajectoryEnv(gym.Env):
             if done:
                 self.generate_emissions()
 
-        # reward -= (action ** 2) * 0.5
         # we have travelled at least 0.9 times as far as the lead car did
         leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
-        reward = 0
-        if (self.env_step % int(self.horizon) == 0 and
-                self.av['pos'] - self.init_pos[0] > (self.closing_gap * leader_pos_change)):
-            reward += np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
-                        np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6)
-                           for i, car in enumerate([self.av] + self.idm_followers)])
-            reward /= self.time_step
-            # reward -= 0.002 * (self.accumulated_headway)
-            self.env_step = 0
-            self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
-            self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
 
-        # reward -= (action ** 2) * 0.5
+        if (self.env_step % int(self.horizon) == 0):
+            if self.include_idm_mpg:
+                car_list = [self.av] + self.idm_followers
+            else:
+                car_list = [self.av]
+            avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
+                        np.maximum(self.energy_consumption[i], 1.0) / 3600 + 1e-6)
+                           for i, car in enumerate(car_list)])
+            avg_mpg /= self.time_step
+            reward += avg_mpg
+            # reward -= 0.002 * (self.accumulated_headway)
+            self.energy_consumption = [0 for _ in range(len(car_list))]
+            self.init_pos = [car['pos'] for car in car_list]
+            infos['avg_horizon_mpg'] = avg_mpg
+        # else:
+        #     infos['success'] = 0.0
+
+        # reward -= np.abs(accel) * 0.1
+        self.update_state_vec()
         returned_state = self.get_state()
         if self.extra_obs:
             vec = np.zeros(int(self.observation_space.low.shape[0] / 2))
             # do the feature engineering: is the episode over, have we satisfied the criterion
-            vec[0] = ((self.env_step / self.horizon) >= 1)
-            # vec[1] = (self.av['pos'] - self.init_pos) / (0.95 * leader_pos_change) - 1
-            vec[1] = self.av['pos'] / 1000.0
-            vec[2] = leader_pos_change / 1000.0
+            vec[0] = self.env_step / self.horizon
+            vec[1] = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34)
+                           for i, car in enumerate(car_list)])
+            # vec[1] = max(time_headway, 10.0)
+            vec[2] = np.mean([(
+                        np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6)
+                           for i, car in enumerate(car_list)])
             returned_state = np.concatenate((returned_state, vec))
 
         self.env_step += 1

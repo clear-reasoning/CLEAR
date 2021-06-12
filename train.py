@@ -71,7 +71,6 @@ if __name__ == '__main__':
     os.makedirs(exp_logdir, exist_ok=True)
     print(f'Created experiment logdir at {exp_logdir}')
 
-    # save args and metadata
     with open(os.path.join(exp_logdir, 'params.json'), 'w') as fp:
         git_branch = subprocess.check_output(['git', 'branch']).decode('utf8')
         for branch in git_branch.split('\n'):

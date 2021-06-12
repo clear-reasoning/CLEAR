@@ -129,20 +129,29 @@ class TensorboardCallback(BaseCallback):
                         return self.model.predict(state, deterministic=True)[0]
                 else:
                     def get_action(state):
-                        return self.model.predict(state, deterministic=True)[0][0]
+                        action =  self.model.predict(state, deterministic=True)[0][0]
+                        # s = test_env.unnormalize_state(state)
+                        # if s['headway'] / max(s['speed'], 0.01) < test_env.minimal_time_headway:
+                        #     action = -np.abs(test_env.max_decel)
+                        # if s['headway'] > test_env.max_headway:
+                        #     action = test_env.max_accel
+                        return action
+
                     
             elif controller == 'idm':
-                idm = IDMController(a=test_env.max_accel, b=test_env.max_decel)
+                idm = IDMController(noise=0.0)
                 def get_action(state):
                     s = test_env.unnormalize_state(state)
-                    return idm.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
+                    idm_accel = idm.get_accel(s['speed_0'], s['leader_speed_0'], s['headway_0'], test_env.time_step)
+                    idm_accel = np.clip(idm_accel, -np.abs(test_env.max_decel), test_env.max_accel)
+                    return idm_accel
 
             elif controller == 'fs_leader':
                 fs = TimeHeadwayFollowerStopper(max_accel=test_env.max_accel, max_deaccel=test_env.max_decel)
                 def get_action(state):
                     s = test_env.unnormalize_state(state)
-                    fs.v_des = s['leader_speed']
-                    return fs.get_accel(s['speed'], s['leader_speed'], s['headway'], test_env.time_step)
+                    fs.v_des = s['leader_speed_0']
+                    return fs.get_accel(s['speed_0'], s['leader_speed_0'], s['headway_0'], test_env.time_step)
 
             # execute controller on traj
             data = []
@@ -180,7 +189,10 @@ class TensorboardCallback(BaseCallback):
             for rwd in data_plot['rewards'][1:]:
                 data_plot['episode_reward'].append(data_plot['episode_reward'][-1] + rwd)
 
-            num_veh = len(test_env.idm_followers) + 1
+            if test_env.include_idm_mpg:
+                num_veh = len(test_env.idm_followers) + 1
+            else:
+                num_veh = 1
             mpg = 0
             for i in range(num_veh):
                 mpg += (sum(data_plot['speed_{}'.format(i)]) / 1609.34) / (sum(data_plot['energy_consumption_{}'.format(i)]) / 3600 + 1e-6)
@@ -203,19 +215,21 @@ class TensorboardCallback(BaseCallback):
                 plt.close()
 
             # colormap
-            ego_speed = 5
+            ego_speed = 20
             lead_speed_range = np.arange(0, 40, 2)
             headway_range = np.arange(0, 100, 5)
             lead_speeds, headways = np.meshgrid(lead_speed_range, headway_range)
             accels = np.zeros_like(lead_speeds)
             for i in range(lead_speeds.shape[0]):
                 for j in range(lead_speeds.shape[1]):
-                    state = test_env.normalize_state({
-                        'vdes': 10.0,
-                        'speed': ego_speed,
-                        'leader_speed': lead_speeds[i,j],
-                        'headway': headways[i,j],
-                    })
+                    # TODO(@evinitsky) this might not be representative when num_concat_states > 1
+                    state_dict = {}
+                    for i in range(test_env.num_concat_states):
+                        state_dict.update({'vdes_{}'.format(i): 10.0,
+                        'speed_{}'.format(i): ego_speed,
+                        'leader_speed_{}'.format(i): lead_speeds[i,j],
+                        'headway_{}'.format(i): headways[i,j]})
+                    state = test_env.normalize_state(state_dict)
                     if test_env.extra_obs:
                         extra_obs_shape = int(test_env.observation_space.low.shape[0] / 2)
                         state = np.concatenate((state, np.zeros(extra_obs_shape)))
@@ -279,9 +293,19 @@ class LoggingCallback(BaseCallback):
         self.rollout_t0 = time.time()
 
     def _on_rollout_end(self):
-        # log current training progress 
-        timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
-        total_iters = math.ceil(self.locals['total_timesteps'] / timesteps_per_iter)
+        # log current training progress
+        if hasattr(self.model, 'n_steps'):
+            # for PPO
+            timesteps_per_iter = self.training_env.num_envs * self.model.n_steps
+            total_iters = math.ceil(self.locals['total_timesteps'] / timesteps_per_iter)
+        else:
+            # for TD3
+            timesteps_per_iter = self.training_env.num_envs * self.model.train_freq.frequency
+            if len(self.locals['total_timesteps']) > 0:
+                total_iters = math.ceil(self.locals['total_timesteps'][0] / timesteps_per_iter)
+            else:
+                total_iters = 1
+
         total_timesteps_rounded = timesteps_per_iter * total_iters
         progress_fraction = self.num_timesteps / total_timesteps_rounded
 

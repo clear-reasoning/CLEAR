@@ -226,7 +226,7 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         else:
             raise NotImplementedError(f"Unsupported distribution '{self.action_dist}'.")
 
-        self.value_net = nn.Linear(self.vf_extractor.latent_dim_pi, 1)
+        self.value_net = PopArt(self.vf_extractor.latent_dim_pi, 1)
         # Init weights: use orthogonal initialization
         # with small initial weight for the output
         if self.ortho_init:
