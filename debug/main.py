@@ -1,3 +1,6 @@
+import torch
+torch.set_num_threads(1)
+
 import gym
 import time
 import multiprocessing
