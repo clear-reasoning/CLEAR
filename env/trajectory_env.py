@@ -205,6 +205,8 @@ class TrajectoryEnv(gym.Env):
         df.to_csv(path, encoding='utf-8', index=False)
 
     def step(self, actions):
+        self.env_step += 1
+
         # get av accel
 
         # additional trajectory data that will be plotted in tensorboard
@@ -248,7 +250,7 @@ class TrajectoryEnv(gym.Env):
             curr_consumption = self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
             self.energy_consumption[i] += curr_consumption
             infos['energy_consumption_{}'.format(i)] = curr_consumption
-            infos['speed_{}'.format(i)] = car['speed']
+            infos['speed_car_{}'.format(i)] = car['speed']
 
         # compute idms accels
         for i, idm in enumerate(self.idm_followers):
@@ -325,7 +327,6 @@ class TrajectoryEnv(gym.Env):
                            for i, car in enumerate(car_list)])
             returned_state = np.concatenate((returned_state, vec))
 
-        self.env_step += 1
         self.traj_idx += 1
 
         if self.whole_trajectory:
