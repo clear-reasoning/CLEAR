@@ -58,7 +58,7 @@ def start_training(args):
         'num_idm_cars': config['env_num_idm_cars'],
         'num_concat_states': config['env_num_concat_states']
     }
-    gs_dir_path = os.path.join(exp_logdir, gs_str)
+    gs_dir_path = exp_logdir if len(gs_str) == 0 else os.path.join( exp_logdir, gs_str[1:])
     os.makedirs(gs_dir_path, exist_ok=True)
     with open(os.path.join(gs_dir_path, 'env_config.json'), 'w') as fp:
         print(f'saved env config to {fp.name}')
