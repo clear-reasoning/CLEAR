@@ -4,9 +4,9 @@
 python savio.py 'python train.py --iters 3200 --n_steps 12800 --use_fs 0 \
 --n_envs 1 --gae_lambda 0.99 0.95 0.9 --gamma 0.99 0.95 --lr .0003 .00003 --batch_size 2560 \
 --cp_frequency 100 --augment_vf 1 --hidden_layer_size 64 --network_depth 4 --env_horizon 500 1000 \
-----env_num_concat_states 1 5' --jobname test --mail vinitsky.eugene@gmail.com
+--env_num_concat_states 1 5 --n_processes 20' --jobname test --mail vinitsky.eugene@gmail.com
 
 python savio.py 'python train.py --iters 3200 --n_steps 12800 --use_fs 0 \
 --n_envs 1 --gae_lambda 0.99 0.95 0.9 --gamma 0.99 0.95 --batch_size 2560 \
 --cp_frequency 100 --augment_vf 1 --hidden_layer_size 64 --network_depth 4 --env_horizon 500 1000 \
-----env_num_concat_states 1 5 10' --jobname test --mail vinitsky.eugene@gmail.com
+--env_num_concat_states 1 5 10 --n_processes 20' --jobname test --mail vinitsky.eugene@gmail.com
