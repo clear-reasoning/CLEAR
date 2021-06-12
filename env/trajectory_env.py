@@ -41,6 +41,8 @@ class TrajectoryEnv(gym.Env):
         self.num_idm_cars = config.get('num_idm_cars')
         # number of states to concatenate on
         self.num_concat_states = config.get('num_concat_states')
+        # we will take this many self.time_steps for every env step
+        self.num_steps_per_sim = config.get('num_steps_per_sim')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -88,7 +90,7 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon)
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
 
         self.emissions = False
         if self.emissions:
@@ -273,7 +275,7 @@ class TrajectoryEnv(gym.Env):
         done = False
 
         self.env_step += 1
-        self.traj_idx += 1
+        self.traj_idx += self.num_steps_per_sim
 
         reward = 0
         if av_headway <= 0:

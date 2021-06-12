@@ -82,6 +82,8 @@ def parse_args_train():
         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
         help='If true, use a FollowerStopper wrapper.')
+    parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
+        help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
 
     args = parser.parse_args()
     return args
