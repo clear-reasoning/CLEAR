@@ -41,7 +41,8 @@ def run_experiment(config):
         # if false, we only include the AVs mpg in the calculation
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_idm_cars': config['env_num_idm_cars'],
-        'num_concat_states': config['env_num_concat_states']
+        'num_concat_states': config['env_num_concat_states'],
+        'num_steps_per_sim': config['env_num_steps_per_sim'],
     }
 
     # create env

@@ -41,6 +41,8 @@ class TrajectoryEnv(gym.Env):
         self.num_idm_cars = config.get('num_idm_cars')
         # number of states to concatenate on
         self.num_concat_states = config.get('num_concat_states')
+        # we will take this many self.time_steps for every env step
+        self.num_steps_per_sim = config.get('num_steps_per_sim')
 
         self.whole_trajectory = config.get('whole_trajectory', False)
         self.step_num = 0
@@ -88,7 +90,7 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon)
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
 
         self.emissions = False
         if self.emissions:
@@ -117,7 +119,7 @@ class TrajectoryEnv(gym.Env):
         return self.normalize_state(self.convert_state_to_dict())
 
     def convert_state_to_dict(self):
-        return {state_name: elem for  elem, state_name in zip(self.state_vec, self.state_names)}
+        return {state_name: elem for elem, state_name in zip(self.state_vec, self.state_names)}
 
     def update_state_vec(self):
         self.state_vec = np.roll(self.state_vec, self.base_obs_shape)
@@ -205,8 +207,6 @@ class TrajectoryEnv(gym.Env):
         df.to_csv(path, encoding='utf-8', index=False)
 
     def step(self, actions):
-        self.env_step += 1
-
         # get av accel
 
         # additional trajectory data that will be plotted in tensorboard
@@ -274,6 +274,8 @@ class TrajectoryEnv(gym.Env):
         av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
         done = False
 
+        self.env_step += 1
+        self.traj_idx += self.num_steps_per_sim
 
         reward = 0
         if av_headway <= 0:
@@ -292,23 +294,6 @@ class TrajectoryEnv(gym.Env):
         if av_headway > self.max_headway:
             reward -= 2.0
 
-        # we have travelled at least 0.9 times as far as the lead car did
-        leader_pos_change = self.leader_positions[self.traj_idx] - self.init_leader_pos
-
-        if (self.env_step % int(self.horizon) == 0):
-            if self.include_idm_mpg:
-                car_list = [self.av] + self.idm_followers
-            else:
-                car_list = [self.av]
-            avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
-                        np.maximum(self.energy_consumption[i], 1.0) / 3600 + 1e-6)
-                           for i, car in enumerate(car_list)])
-            avg_mpg /= self.time_step
-            reward += avg_mpg
-            # reward -= 0.002 * (self.accumulated_headway)
-            self.energy_consumption = [0 for _ in range(len(car_list))]
-            self.init_pos = [car['pos'] for car in car_list]
-            infos['avg_horizon_mpg'] = avg_mpg
         # else:
         #     infos['success'] = 0.0
 
@@ -327,14 +312,27 @@ class TrajectoryEnv(gym.Env):
                            for i, car in enumerate(car_list)])
             returned_state = np.concatenate((returned_state, vec))
 
-        self.traj_idx += 1
-
         if self.whole_trajectory:
             if self.traj_idx >= len(self.leader_positions) - 1:
                 done = True
         else:
-            if self.env_step % int(self.horizon) == 0:
+            if (self.env_step + 1) % int(self.horizon) == 0:
                 done = True
+
+        if ((self.env_step + 1) % int(self.horizon) == 0) or self.traj_idx >= len(self.leader_positions) - 1:
+            if self.include_idm_mpg:
+                car_list = [self.av] + self.idm_followers
+            else:
+                car_list = [self.av]
+            avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
+                        np.maximum(self.energy_consumption[i], 1.0) / 3600 + 1e-6)
+                           for i, car in enumerate(car_list)])
+            avg_mpg /= self.time_step
+            reward += avg_mpg
+            # reward -= 0.002 * (self.accumulated_headway)
+            self.energy_consumption = [0 for _ in range(len(car_list))]
+            self.init_pos = [car['pos'] for car in car_list]
+            infos['avg_horizon_mpg'] = avg_mpg
 
         if self.emissions:
             self.step_emissions()
