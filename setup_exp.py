@@ -1,43 +1,26 @@
-from env.trajectory_env import TrajectoryEnv
-from callbacks import CheckpointCallback, TensorboardCallback, ProgressBarCallback, LoggingCallback
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import torch
-from stable_baselines3.ppo import PPO
-from stable_baselines3.td3 import TD3
-from algos.td3.policies import CustomTD3Policy
-from algos.ppo.policies import PopArtActorCriticPolicy
-from algos.ppo.ppo import PPO as AugmentedPPO
+from datetime import datetime
+import json
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.policies import (
-    register_policy,
-)
+from stable_baselines3.common.policies import register_policy
+from stable_baselines3.ppo import PPO
+from stable_baselines3.td3 import TD3
+import torch
 
-from datetime import datetime
-import os.path
-import os
-import json
-import sys
-import subprocess
-import multiprocessing
-import itertools
-import platform
+from algos.ppo.policies import PopArtActorCriticPolicy
+from algos.ppo.ppo import PPO as AugmentedPPO
+from algos.td3.policies import CustomTD3Policy
+from callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
+from env.trajectory_env import TrajectoryEnv
+from env.utils import dict_to_json
 
 
+def run_experiment(config):
+    # create exp logdir
+    exp_logdir = config['gs_logdir']
+    exp_logdir.mkdir(parents=True, exist_ok=True)
 
-def start_training(args):
-    configs, exp_logdir = args
-    fixed_config, grid_search_config = configs
-    config = {**fixed_config, **grid_search_config}
-
-    if len(grid_search_config) > 0:
-        gs_str = '_' + '_'.join([f'{k}={v}' for k, v in grid_search_config.items()])
-    else:
-        gs_str = ''
-
+    # create env config
     env_config = {
         'max_accel': 1.5,
         'max_decel': 3.0,
@@ -58,19 +41,13 @@ def start_training(args):
         'num_idm_cars': config['env_num_idm_cars'],
         'num_concat_states': config['env_num_concat_states']
     }
-    gs_dir_path = exp_logdir if len(gs_str) == 0 else os.path.join( exp_logdir, gs_str[1:])
-    os.makedirs(gs_dir_path, exist_ok=True)
-    with open(os.path.join(gs_dir_path, 'env_config.json'), 'w') as fp:
-        print(f'saved env config to {fp.name}')
-        json.dump(env_config, fp)
 
+    # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
 
+    # create train config
     if config['algorithm'].lower() == 'ppo':
-        callbacks = []
-        if len(grid_search_config) == 0:
-            callbacks.append(ProgressBarCallback())
-        
+        callbacks = []        
         if not config['no_eval']:
             callbacks.append(TensorboardCallback(
                 eval_freq=config['eval_frequency'],
@@ -78,10 +55,10 @@ def start_training(args):
                 eval_at_end=True))
         callbacks += [
             LoggingCallback(
-                grid_search_config=grid_search_config,
-                log_metrics=len(grid_search_config) > 0),
+                grid_search_config=config['gs_config'],
+                log_metrics=True),
             CheckpointCallback(
-                save_path=os.path.join(exp_logdir, f'checkpoints{gs_str}'),
+                save_path=exp_logdir / 'checkpoints',
                 save_freq=config['cp_frequency'],
                 save_at_end=True),
         ]
@@ -102,7 +79,7 @@ def start_training(args):
         train_config = {
             'env': multi_env,
             'tensorboard_log': exp_logdir,
-            'verbose': 0 if len(grid_search_config) > 0 else 1,  # 0 no output, 1 info, 2 debug
+            'verbose': 0,  # 0 no output, 1 info, 2 debug
             'seed': None,  # only concerns PPO and not the environment
             'device': 'cpu',  # 'cpu', 'cuda', 'auto'
 
@@ -145,10 +122,10 @@ def start_training(args):
                 eval_at_start=True,
                 eval_at_end=True),
             LoggingCallback(
-                grid_search_config=grid_search_config,
-                log_metrics=len(grid_search_config) > 0),
+                grid_search_config=config['gs_config'],
+                log_metrics=True),
             CheckpointCallback(
-                save_path=os.path.join(exp_logdir, f'checkpoints{gs_str}'),
+                save_path=exp_logdir / 'checkpoints',
                 save_freq=config['cp_frequency'],
                 save_at_end=True),
         ]
@@ -161,7 +138,7 @@ def start_training(args):
         train_config = {
             'env': multi_env,
             'tensorboard_log': exp_logdir,
-            'verbose': 0 if len(grid_search_config) > 0 else 1,  # 0 no output, 1 info, 2 debug
+            'verbose': 0,  # 0 no output, 1 info, 2 debug
             'seed': None,  # only concerns PPO and not the environment
             'device': 'cpu',  # 'cpu', 'cuda', 'auto'
 
@@ -183,13 +160,20 @@ def start_training(args):
             'target_noise_clip': 0.5,
         }
 
-
+    # create learn config
     learn_config = {
         'total_timesteps': config['iters'] * config['n_steps'] * config['n_envs'],
-        'tb_log_name': f'tb{gs_str}',
         'callback': callbacks,
-        'log_interval': 1,  # print metrics every n rollouts
     }
 
+    # save configs
+    configs = {
+        'env_config': env_config,
+        'train_config': train_config,
+        'learn_config': learn_config
+    }
+    dict_to_json(configs, exp_logdir / 'configs.json')
+
+    # create model and start training
     model = algorithm(**train_config)
     model.learn(**learn_config)

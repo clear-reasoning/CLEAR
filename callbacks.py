@@ -262,22 +262,22 @@ class CheckpointCallback(BaseCallback):
         self.save_path = save_path
         self.save_at_end = save_at_end
 
-        self.rollout = 0
+        self.iter = 0
 
         os.makedirs(self.save_path, exist_ok=True)
 
     def _on_rollout_end(self):
-        self.rollout += 1
+        self.iter += 1
 
-        if self.save_freq is not None and self.rollout % self.save_freq == 0:
+        if self.save_freq is not None and self.iter % self.save_freq == 0:
             self.write_checkpoint()
 
     def _on_training_end(self):
-        if (self.save_freq is None or self.rollout % self.save_freq != 0) and self.save_at_end:
+        if (self.save_freq is None or self.iter % self.save_freq != 0) and self.save_at_end:
             self.write_checkpoint()
 
     def write_checkpoint(self):
-        path = os.path.join(self.save_path, f'iter_{self.rollout}_{self.num_timesteps}steps')
+        path = self.save_path / str(self.iter)
         self.model.save(path)
         print(f'Saving model checkpoint to {path}.zip')
 
@@ -381,25 +381,3 @@ class LoggingCallback(BaseCallback):
 
     def _on_step(self):
         return True
-
-
-class ProgressBarCallback(BaseCallback):
-    """Callback to display a progress bar showing the progress of each rollout."""
-    def __init__(self):
-        super(ProgressBarCallback, self).__init__()
-
-    def _on_rollout_start(self):
-        self.n_envs = self.training_env.num_envs
-        self.n_steps = self.model.n_steps
-
-        self.pbar = tqdm(
-            desc='Rollout progress',
-            total=self.n_envs * self.n_steps,
-            leave=True,
-            unit=' env steps')
-
-    def _on_rollout_end(self):        
-        self.pbar.close()
-
-    def _on_step(self):
-        self.pbar.update(self.n_envs)

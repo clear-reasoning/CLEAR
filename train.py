@@ -1,32 +1,14 @@
-from args import parse_args_train
-from env.trajectory_env import TrajectoryEnv
-from callbacks import CheckpointCallback, TensorboardCallback, ProgressBarCallback, LoggingCallback
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import torch
-from stable_baselines3.ppo import PPO
-from stable_baselines3.td3 import TD3
-from algos.ppo.policies import PopArtActorCriticPolicy
-# from algos.ppo.ppo import PPO as AugmentedPPO
-from stable_baselines3.common.callbacks import CallbackList
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.policies import (
-    register_policy,
-)
-
 from datetime import datetime
-import os.path
-import os
-import json
-import sys
-import subprocess
-import multiprocessing
 import itertools
+import multiprocessing
+from pathlib import Path
 import platform
+import subprocess
+import sys
 
-from setup_train import start_training
+from args import parse_args_train
+from env.utils import dict_to_json, partition
+from setup_exp import run_experiment
 
 
 if __name__ == '__main__':
@@ -34,88 +16,80 @@ if __name__ == '__main__':
     if platform.system() == 'Darwin':
         multiprocessing.set_start_method('spawn')
 
+    # read command line arguments
     args = parse_args_train()
-
-    # parse command line args to separate grid searches from regular values
-    fixed_config = {}
-    grid_searches = {}
-    for arg, value in vars(args).items():
-        if type(value) is list:
-            if len(value) == 0:
-                raise ValueError('empty list in args')
-            elif len(value) == 1:
-                fixed_config[arg] = value[0]
-            else:
-                grid_searches[arg] = value
-        else:
-            fixed_config[arg] = value
-    
-    # generate cartesian product of grid search to generate all configs
-    product_raw = itertools.product(*grid_searches.values())
-    product_dicts = [dict(zip(grid_searches.keys(), values)) for values in product_raw]
-    configs = [(fixed_config, gs_config) for gs_config in product_dicts]
-
-    # print config and grid searches
-    print('\nRunning experiment with the following config:\n')
-    for k, v in fixed_config.items():
-        print(f'\t{k}: {v}')
-    if len(grid_searches) > 0:
-        print(f'\nwith a total of {len(configs)} grid searches across the following parameters:\n')
-        for k, v in grid_searches.items():
-            print(f'\t{k}: {v}')
-    print()
 
     # create exp logdir
     now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-    exp_logdir = os.path.join(args.logdir, f'{args.expname}_{now}')
-    os.makedirs(exp_logdir, exist_ok=True)
-    print(f'Created experiment logdir at {exp_logdir}')
+    exp_logdir = Path(args.logdir, f'{args.expname}_{now}')
+    exp_logdir.mkdir(parents=True, exist_ok=True)
+    print(f'\nCreated experiment logdir at {exp_logdir}')
 
-    with open(os.path.join(exp_logdir, 'params.json'), 'w') as fp:
-        git_branch = subprocess.check_output(['git', 'branch']).decode('utf8')
-        for branch in git_branch.split('\n'):
-            if branch.startswith('*'):
-                git_branch = branch[2:]
-                break
-        git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf8').split()[0]
-        whoami = subprocess.check_output(['whoami']).decode('utf8').split()[0]
-        
-        exp_dict = {
-            'full_command': 'python ' + ' '.join(sys.argv),
-            'timestamp': datetime.timestamp(datetime.now()),
-            'user': whoami,
-            'git_branch': git_branch,
-            'git_commit': git_commit,
-            'args': vars(args),
-        }
+    # write params.json
+    git_branches = subprocess.check_output(['git', 'branch']).decode('utf8')
+    git_branch = next(filter(lambda s: s.startswith('*'), git_branches.split('\n')), '?')[2:]
+    git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf8').split()[0]
+    whoami = subprocess.check_output(['whoami']).decode('utf8').split()[0]
+    
+    exp_dict = {
+        'full_command': 'python ' + ' '.join(sys.argv),
+        'timestamp': datetime.timestamp(datetime.now()),
+        'user': whoami,
+        'git_branch': git_branch,
+        'git_commit': git_commit,
+        'n_cpus': multiprocessing.cpu_count(),
+        'args': vars(args),
+    }
 
-        class Encoder(json.JSONEncoder):
-            def default(self, obj):
-                try:
-                    return json.JSONEncoder.default(self, obj)
-                except TypeError:
-                    return str(obj)
+    dict_to_json(exp_dict, exp_logdir / 'params.json')
 
-        json.dump(exp_dict, fp, indent=4, cls=Encoder)
-        print(f'Saved exp params to {fp.name}')
+    # parse command line args to separate grid search args from regular args
+    fixed_config, gs_config = partition(
+        vars(args).items(),
+        pred=lambda kv: type(kv[1]) is list and len(kv[1]) > 1
+    )
+
+    # turn args that are a list of one element into just that element
+    fixed_config = dict(map(
+        lambda kv: (kv[0], kv[1][0]) if type(kv[1]) is list else kv, 
+        fixed_config))
+
+    # compute cartesian product of grid search params
+    gs_keys, gs_values = next(zip(*gs_config), ([], []))
+    grid_searches_raw = itertools.product(*gs_values)
+    grid_searches = map(lambda gs: dict(zip(gs_keys, gs)), grid_searches_raw)
+    
+    # generate all configs
+    configs = [{'gs_str': (gs_str := '_'.join([f'{k}={v}' for k, v in gs.items()])),
+                'gs_logdir': exp_logdir / gs_str,
+                'gs_config': gs,
+                **fixed_config, 
+                **gs} for gs in grid_searches]
+
+    # print config and grid searches
+    print('\nRunning experiment with the following config:\n')
+    print('\n'.join([f'\t{k} = {v}' for k, v in fixed_config.items()]))
+    if (n := len(configs)) > 1:
+        print(f'\nwith a total of {n} grid searches across the following parameters:\n')
+        print('\n'.join([f'\t{k} = {v}' for k, v in zip(gs_keys, gs_values)]))
+    print()
 
     # save git diff to account for uncommited changes
     ps = subprocess.Popen(('git', 'diff', 'HEAD'), stdout=subprocess.PIPE)
     git_diff = subprocess.check_output(('cat'), stdin=ps.stdout).decode('utf8')
     ps.wait()
     if len(git_diff) > 0:
-        with open(os.path.join(exp_logdir, 'git_diff.txt'), 'w') as fp:
+        with open(exp_logdir / 'git_diff.txt', 'w') as fp:
             print(git_diff, file=fp)
-            print(f'Saved git diff to {fp.name}')
-    print()
 
+    # run experiments
     if len(configs) == 1:
-        start_training((configs[0], exp_logdir))
+        run_experiment(configs[0])
     else:
-        print(f'Starting training with {fixed_config["n_processes"]} parallel processes')
-        with multiprocessing.Pool(processes=fixed_config['n_processes']) as pool:
-            pool.map(start_training, zip(configs, [exp_logdir] * len(configs)))
+        with multiprocessing.Pool(processes=(n := fixed_config['n_processes'])) as pool:
+            print(f'Starting training with {n} parallel processes')
+            pool.map(run_experiment, configs)
         pool.close()
         pool.join()
 
-    print('\nTraining terminated')
+    print(f'\nTraining terminated\n\t{exp_logdir}')

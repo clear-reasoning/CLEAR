@@ -1,6 +1,7 @@
-import numpy as np
-from math import cos, sin, radians, atan2, sqrt
 import itertools
+import json
+from math import atan2, cos, radians, sin, sqrt
+import numpy as np
 
 
 def lat_long_distance(pos1, pos2):
@@ -21,6 +22,12 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
+def partition(iterable, pred):
+    "Use a predicate to partition entries into false entries and true entries"
+    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
+    t1, t2 = itertools.tee(iterable)
+    return itertools.filterfalse(pred, t1), filter(pred, t2)
+
 def moving_sum(array, chunk_size):
     """Moving sum. Returns an array of size len(array) - chunk_size + 1."""
     return np.convolve(array, np.ones(chunk_size), 'valid')
@@ -30,6 +37,7 @@ def moving_average(array, chunk_size):
     return np.convolve(array, np.ones(chunk_size), 'valid') / chunk_size
 
 def counter(limit=None):
+    """Equivalent to range(limit), with range(None) counting up to infinity."""
     i = 0
     while True:
         yield i
@@ -47,3 +55,15 @@ def duration_to_str(delta_t):
         if count > 0 or unit == 's':
             s_out += f'{count}{unit}'
     return s_out
+
+def dict_to_json(data, path):
+    """Save a dictionary into a .json file at path."""
+    class Encoder(json.JSONEncoder):
+        def default(self, obj):
+            try:
+                return json.JSONEncoder.default(self, obj)
+            except TypeError:
+                return str(obj)
+
+    with open(path, 'w') as fp:
+        json.dump(data, fp, indent=4, cls=Encoder)
