@@ -36,7 +36,7 @@ def parse_args_train():
 
     # training params
     parser.add_argument('--algorithm', type=str, default='PPO', nargs='+',
-        help='RL algorithm to train with. Available options: PPO.')
+        help='RL algorithm to train with. Available options: PPO, TD3.')
 
     parser.add_argument('--hidden_layer_size', type=int, default=32, nargs='+',
         help='Hidden layer size to use for the policy and value function networks.'
@@ -44,10 +44,6 @@ def parse_args_train():
     parser.add_argument('--network_depth', type=int, default=2, nargs='+',
         help='Number of hidden layers to use for the policy and value function networks.'
              'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
-    parser.add_argument('--activation', type=str, default='tanh', nargs='+',
-        help='Non-linear activation function to use. Available options: Tanh, ReLU.')
-    parser.add_argument('--optimizer', type=str, default='adam', nargs='+',
-        help='Optimizer algorithm to use. Available options: Adam.')
 
     parser.add_argument('--lr', type=float, default=3e-4, nargs='+',
         help='Learning rate.')

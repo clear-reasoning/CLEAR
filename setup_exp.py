@@ -7,12 +7,14 @@ from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 import torch
 
-from algos.ppo.policies import PopArtActorCriticPolicy
+from algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from algos.ppo.ppo import PPO as AugmentedPPO
 from algos.td3.policies import CustomTD3Policy
 from callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
 from env.trajectory_env import TrajectoryEnv
 from env.utils import dict_to_json
+
+register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
 
 def run_experiment(config):
@@ -45,108 +47,54 @@ def run_experiment(config):
     # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
 
+    # create callbacks
+    callbacks = []        
+    if not config['no_eval']:
+        callbacks.append(TensorboardCallback(
+            eval_freq=config['eval_frequency'],
+            eval_at_start=True,
+            eval_at_end=True))
+    callbacks += [
+        LoggingCallback(
+            grid_search_config=config['gs_config'],
+            log_metrics=True),
+        CheckpointCallback(
+            save_path=exp_logdir / 'checkpoints',
+            save_freq=config['cp_frequency'],
+            save_at_end=True),
+    ]
+    callbacks = CallbackList(callbacks)
+
     # create train config
     if config['algorithm'].lower() == 'ppo':
-        callbacks = []        
-        if not config['no_eval']:
-            callbacks.append(TensorboardCallback(
-                eval_freq=config['eval_frequency'],
-                eval_at_start=True,
-                eval_at_end=True))
-        callbacks += [
-            LoggingCallback(
-                grid_search_config=config['gs_config'],
-                log_metrics=True),
-            CheckpointCallback(
-                save_path=exp_logdir / 'checkpoints',
-                save_freq=config['cp_frequency'],
-                save_at_end=True),
-        ]
-        callbacks = CallbackList(callbacks)
-        if config['augment_vf']:
-            from algos.ppo.policies import SplitActorCriticPolicy
-            policy = SplitActorCriticPolicy
-        else:
-            register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
-            policy = PopArtActorCriticPolicy
-        if config['augment_vf']:
-            algorithm = AugmentedPPO
-        else:
-            algorithm = {
-                'ppo': PPO,
-            }[config['algorithm'].lower()]
+        algorithm = AugmentedPPO if config['augment_vf'] else PPO
+        policy = SplitActorCriticPolicy if config['augment_vf'] else PopArtActorCriticPolicy
 
         train_config = {
-            'env': multi_env,
-            'tensorboard_log': exp_logdir,
-            'verbose': 0,  # 0 no output, 1 info, 2 debug
-            'seed': None,  # only concerns PPO and not the environment
-            'device': 'cpu',  # 'cpu', 'cuda', 'auto'
-
-            # policy params
-            'policy': policy,
             'policy_kwargs': {
-                'activation_fn': {
-                    'tanh': torch.nn.Tanh,
-                    'relu': torch.nn.ReLU,
-                }[config['activation'].lower()],
                 'net_arch': [{
                     'pi': [config['hidden_layer_size']] * config['network_depth'],
                     'vf': [config['hidden_layer_size']] * config['network_depth'],
                 }],
-                'optimizer_class': {
-                    'adam': torch.optim.Adam,
-                }[config['optimizer'].lower()],
             },
-
-            # PPO params
-            'learning_rate': config['lr'],  # lr (*)
-            'n_steps': config['n_steps'],  # rollout size is n_steps * n_envs (distinct from env horizon which can span across several rollouts)
-            'batch_size': config['batch_size'],  #64 # minibatch size
-            'n_epochs': config['n_epochs'],  # num sgd iter
-            'gamma': config['gamma'],  # discount factor
-            'gae_lambda': config['gae_lambda'],  # factor for trade-off of bias vs variance for Generalized Advantage Estimator
-            'clip_range': 0.2,  # clipping param (*)
-            'clip_range_vf': None,  # clipping param for the vf (*)
-            'ent_coef': 0.0,  # entropy coef in loss function
-            'vf_coef': 0.5,  # vf coef in loss function
-            'max_grad_norm': 0.5,  # max value of grad clipping
-            # (*) can be a function of the current progress remaining (from 1 to 0)
+            'learning_rate': config['lr'],
+            'n_steps': config['n_steps'],
+            'batch_size': config['batch_size'],
+            'n_epochs': config['n_epochs'],
+            'gamma': config['gamma'],
+            'gae_lambda': config['gae_lambda'],
+            'clip_range': 0.2,
+            'clip_range_vf': None,
+            'ent_coef': 0.0,
+            'vf_coef': 0.5,
+            'max_grad_norm': 0.5,
         }
     elif config['algorithm'].lower() == 'td3':
-        callbacks = []
-
-        callbacks += [
-            TensorboardCallback(
-                eval_freq=config['eval_frequency'],
-                eval_at_start=True,
-                eval_at_end=True),
-            LoggingCallback(
-                grid_search_config=config['gs_config'],
-                log_metrics=True),
-            CheckpointCallback(
-                save_path=exp_logdir / 'checkpoints',
-                save_freq=config['cp_frequency'],
-                save_at_end=True),
-        ]
-        callbacks = CallbackList(callbacks)
         algorithm = TD3
-        if config['augment_vf']:
-            policy = CustomTD3Policy
-        else:
-            policy = 'MlpPolicy'
+        policy = CustomTD3Policy if config['augment_vf'] else 'MlpPolicy'
+
         train_config = {
-            'env': multi_env,
-            'tensorboard_log': exp_logdir,
-            'verbose': 0,  # 0 no output, 1 info, 2 debug
-            'seed': None,  # only concerns PPO and not the environment
-            'device': 'cpu',  # 'cpu', 'cuda', 'auto'
-
-            # policy params
-            'policy': policy,
-
-            # # TD3 params
-            'gamma':0.99,
+            'gamma': 0.99,
             'learning_rate': 0.0003,
             'buffer_size': 1000000,
             'learning_starts': 100,
@@ -159,6 +107,17 @@ def run_experiment(config):
             'target_policy_noise': 0.2,
             'target_noise_clip': 0.5,
         }
+    else:
+        raise ValueError(f'Unknown algorithm: {config["algorithm"]}')
+
+    train_config.update({
+        'env': multi_env,
+        'tensorboard_log': exp_logdir,
+        'verbose': 0,  # 0 no output, 1 info, 2 debug
+        'seed': None,  # only concerns PPO and not the environment
+        'device': 'cpu',  # 'cpu', 'cuda', 'auto'
+        'policy': policy,
+    })
 
     # create learn config
     learn_config = {
