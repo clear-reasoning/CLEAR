@@ -55,10 +55,13 @@ if __name__ == '__main__':
         fixed_config))
 
     # compute cartesian product of grid search params
-    gs_keys, gs_values = next(zip(*gs_config), ([], []))
-    grid_searches_raw = itertools.product(*gs_values)
-    grid_searches = map(lambda gs: dict(zip(gs_keys, gs)), grid_searches_raw)
-    
+    try:
+        gs_keys, gs_values = list(zip(*gs_config))
+        grid_searches_raw = itertools.product(*gs_values)
+        grid_searches = map(lambda gs: dict(zip(gs_keys, gs)), grid_searches_raw)
+    except ValueError:
+        grid_searches = [{}]
+
     # generate all configs
     configs = [{'gs_str': (gs_str := '_'.join([f'{k}={v}' for k, v in gs.items()])),
                 'gs_logdir': exp_logdir / gs_str,
