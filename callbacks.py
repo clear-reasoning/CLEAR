@@ -4,6 +4,7 @@ matplotlib.use('agg')
 import numpy as np
 import os
 import math
+import random
 from tqdm import tqdm
 import time
 
@@ -115,6 +116,8 @@ class TensorboardCallback(BaseCallback):
     def log_trajectory_stats(self):
         print('Running evaluation')
         for controller in ['rl', 'idm', 'fs_leader']:
+            random.seed(self.rollout)
+            np.random.seed(self.rollout)
             # create test env from config
             config = dict(self.training_env.envs[0].config)
             config['whole_trajectory'] = True
