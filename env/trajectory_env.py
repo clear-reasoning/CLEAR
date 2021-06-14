@@ -46,6 +46,8 @@ class TrajectoryEnv(gym.Env):
         for k, v in self.config.items():
             setattr(self, k, v)
 
+        assert (self.use_fs is False)  # TODO(nl) need an FS wrapper in the vehicle class
+
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader()
         if self.whole_trajectory:
@@ -126,72 +128,47 @@ class TrajectoryEnv(gym.Env):
         return state
     
     def create_simulation(self):
-        # start at random time in trajectory
+        # collect the next trajectory
+        self.traj = next(self.trajectories)
 
-        # total_length = len(self.leader_positions)
-        # if self.whole_trajectory:
-        #     self.traj_idx = 0
-        #     self.horizon = total_length - 1
-        # else:
-        #     self.traj_idx = randint(0, total_length - self.horizon - 1)
-        traj = next(self.trajectories)
-        self.leader_positions, self.leader_speeds = traj['positions'], traj['velocities']
-        self.traj_idx = 0
+        # create a simulation object
+        self.time_step = self.traj['timestep']
+        self.sim = Simulation(timestep=self.time_step)
+
+        # populate simulation with a trajectory leader, an AV and a platoon of IDMs
+        self.sim.add_vehicle(controller='trajectory',
+            trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
+        av_initial_gap = max(2.1 * self.traj['velocities'][0], 20)
+        self.sim.add_vehicle(controller=args.av_controller, gap=av_initial_gap)
+        for _ in range(self.num_idm_cars):
+            self.sim.add_vehicle(controller='idm', gap=20, v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)
+    
+        # initialize counters TODO
         self.env_step = 0
-        self.time_step = traj['timestep']
 
-        # create av behind leader
-        self.av = {
-            'pos': self.leader_positions[self.traj_idx] - max(2.1 * self.leader_speeds[self.traj_idx], 20),
-            'speed': self.leader_speeds[self.traj_idx],
-            'last_accel': -1,
-        }
-        self.init_leader_pos = self.leader_positions[self.traj_idx]
+        self.init_leader_pos = self.traj['positions'][0]
         self.accumulated_headway = 0
         self.accumulated_pos = 0
         self.average_speed = 0
-        if self.use_fs:
-            self.follower_stopper.v_des = self.leader_speeds[self.traj_idx]
 
-        # create idm followers behind av
-        self.idm_followers = [{
-            'pos': self.av['pos'] - 20 * (i + 1),#- max(2 * self.av['speed'] + 20 * (-0.5 + np.random.uniform(low=0, high=1)), 20) * (i + 1),
-            'speed': self.av['speed'],
-            'last_accel': -1,
-        } for i in range(5)]
-
-        if self.include_idm_mpg:
-            self.energy_consumption = [0 for _ in range(len(self.idm_followers) + 1)]
-            self.init_pos = [car['pos'] for car in [self.av] + self.idm_followers]
-        else:
-            self.energy_consumption = [0 for _ in range(1)]
-            self.init_pos = [car['pos'] for car in [self.av]]
-            
-        if self.include_idm_mpg:
-            self.car_list = [self.av] + self.idm_followers
-        else:
-            self.car_list = [self.av]
+        self.car_list = [self.av] + (self.idm_followers if self.include_idm_mpg else [])
+        self.energy_consumption = [0] * len(self.car_list)
+        self.init_pos = [v.pos for v in self.sim.vehicles]
 
     def reset(self):
         self.create_simulation()
         return self.get_state(_store_state=True)
 
-    def step(self, actions):
-        # get av accel
+    def step(self, action):
+        # apply acceleration action to AV
+        accel = self.action_set[action] if self.discrete else float(action)
+        av = self.sim.get_vehicles(controller=='rl')[0]
+        av.set_accel(accel) 
 
-        # additional trajectory data that will be plotted in tensorboard
-        infos = {
-            'test': 2,
-        }
+        # execute one simulation step
+        end_of_horizon = self.sim.step()
 
-        # assert self.action_space.contains(action), f'Action {action} not in action space'
-        # careful should not be rescaled when this method is called for IDM/FS baseline in callback
-        if self.discrete and isinstance(actions, np.int64):
-            action = self.action_set[actions]
-        else:
-            action = float(actions)
         
-        # action *= self.max_accel if action > 0 else self.max_decel
         if self.use_fs:
             self.follower_stopper.v_des += action
             self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
@@ -286,5 +263,9 @@ class TrajectoryEnv(gym.Env):
             infos['avg_horizon_mpg'] = avg_mpg
 
 
+        # additional trajectory data that will be plotted in tensorboard
+        metrics = {
+            'pi': np.pi,
+        }
 
-        return state, reward, done, infos
+        return state, reward, done, metrics
