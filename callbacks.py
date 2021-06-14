@@ -110,8 +110,7 @@ class TensorboardCallback(BaseCallback):
             figure = plt.figure()
             plt.plot(self.rollout_info[key])
             self.logger.record(f'rollout/{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-            plt.clf()
-            plt.close()
+            plt.close(figure)
 
     def log_trajectory_stats(self):
         print('Running evaluation')
@@ -213,8 +212,7 @@ class TensorboardCallback(BaseCallback):
                 else:
                     plt.plot(values_lst)
                 self.logger.record(f'trajectory/{controller}_{key}', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-                plt.clf()
-                plt.close()
+                plt.close(figure)
 
             # colormap
             ego_speed = 20
@@ -250,8 +248,7 @@ class TensorboardCallback(BaseCallback):
             figure.tight_layout()
 
             # self.logger.record(f'trajectory/{controller}_accel_colormap', Figure(figure, close=True), exclude=('stdout', 'log', 'json', 'csv'))
-            plt.clf()
-            plt.close()
+            plt.close(figure)
 
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
