@@ -128,6 +128,7 @@ def run_experiment(config):
 
     # save configs
     configs = {
+        'algorithm': algorithm,
         'env_config': env_config,
         'train_config': train_config,
         'learn_config': learn_config

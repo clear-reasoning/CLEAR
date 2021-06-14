@@ -86,3 +86,15 @@ class TrajectoryVehicle(Vehicle):
         return True
 
 
+class RLVehicle(Vehicle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def step(self):
+        raise NotImplementedError
+        accel = 0
+
+        return super().step(accel=accel, ballistic=False)
+
+
+

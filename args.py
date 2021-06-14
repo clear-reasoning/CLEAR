@@ -2,7 +2,7 @@ import argparse
 
 
 def parse_args_train():
-    parser = argparse.ArgumentParser(description='Train on the I-24 trajectory env.')
+    parser = argparse.ArgumentParser(description='Train on the trajectory env.')
 
     # exp params
     parser.add_argument('--expname', type=str, default='test',
@@ -83,6 +83,35 @@ def parse_args_train():
 
     args = parser.parse_args()
     return args
+
+
+def parse_args_simulate():
+    parser = argparse.ArgumentParser(description='Simulate a trained controller or baselines on the trajectory env.')
+
+    parser.add_argument('--av_controller', type=str, default='rl',
+        help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
+    parser.add_argument('--av_gap', type=float, default=20.0,
+        help='Initial bumper-to-bumper gap (in meters) to leave from the AV to its leader at initialization.')
+    parser.add_argument('--av_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+    parser.add_argument('--cp_path', type=str, default=None, required=True,
+        help='Path to a saved model checkpoint. '
+             'Even when {av_controller} is not "rl", this is required to get env params from the config file. '
+             'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
+    parser.add_argument('--verbose', default=False, action='store_true',
+        help='If set, print information about the loaded controller when {av_controller} is "rl".')
+    parser.add_argument('--n_idms', type=int, default=5,
+        help='Number of IDM cars to spawn in the platoon behind the AV.')
+    parser.add_argument('--idms_gap', type=float, default=20.0,
+        help='Initial bumper-to-bumper gap (in meters) to leave from each platoon IDM car to its leader at initialization.')
+    parser.add_argument('--idms_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the platoon IDM controllers, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)".')
+
+    args = parser.parse_args()
+    return args
+
 
 def parse_args_savio():
     parser = argparse.ArgumentParser(
