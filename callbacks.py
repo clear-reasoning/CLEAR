@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import os, os.path
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import Figure
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from env.trajectory_env import TrajectoryEnv, SPEED_SCALE, DISTANCE_SCALE
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
@@ -42,6 +42,7 @@ class TensorboardCallback(BaseCallback):
         self.rollout += 1
 
     def _on_step(self):
+        # print(self.locals['rollout_buffer'])
         # TODO can probably get all these info at the end from replay buffer
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # get information about rollout for one of the actors
@@ -307,6 +308,8 @@ class LoggingCallback(BaseCallback):
         self.grid_search_config = grid_search_config
         self.log_metrics = log_metrics
 
+        self.ep_info_buffer = deque(maxlen=100)
+
     def _on_rollout_start(self):
         self.logger.record('time/time_this_iter', duration_to_str(time.time() - self.iter_t0))
 
@@ -345,6 +348,10 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/estimated_time_left', duration_to_str(time_left))
         self.logger.record('time/timesteps_per_second', round(self.num_timesteps / (t - self.training_t0), 1))
 
+        if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
+            self.logger.record("rollout/ep_rew_mean", np.mean([ep_info["r"] for ep_info in self.ep_info_buffer]))
+            self.logger.record("rollout/ep_len_mean", np.mean([ep_info["l"] for ep_info in self.ep_info_buffer]))
+        
         if self.log_metrics:
             self.print_metrics()
 
@@ -367,7 +374,7 @@ class LoggingCallback(BaseCallback):
             
 
             if isinstance(value, float):
-                value_str = f'{value:<8.3g}'
+                value_str = f'{value:<10.5g}'
             elif isinstance(value, int) or isinstance(value, str):
                 value_str = str(value)
             else:
@@ -394,4 +401,6 @@ class LoggingCallback(BaseCallback):
         print('\n'.join(lines))
 
     def _on_step(self):
+        if (infos := self.locals['infos'][0].get('episode')) is not None:
+            self.ep_info_buffer.extend([infos])
         return True

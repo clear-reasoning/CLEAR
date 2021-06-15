@@ -90,7 +90,8 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
+            # 1 more than horizon to get the next_state at the last env step
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=(self.horizon + 1) * self.num_steps_per_sim)
 
         self.emissions = False
         if self.emissions:
@@ -316,10 +317,10 @@ class TrajectoryEnv(gym.Env):
             if self.traj_idx >= len(self.leader_positions) - 1:
                 done = True
         else:
-            if (self.env_step + 1) % int(self.horizon) == 0:
+            if (self.env_step + 0) % int(self.horizon) == 0:
                 done = True
 
-        if ((self.env_step + 1) % int(self.horizon) == 0) or self.traj_idx >= len(self.leader_positions) - 1:
+        if ((self.env_step + 0) % int(self.horizon) == 0) or self.traj_idx >= len(self.leader_positions) - 1:
             if self.include_idm_mpg:
                 car_list = [self.av] + self.idm_followers
             else:
