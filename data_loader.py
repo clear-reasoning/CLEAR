@@ -119,13 +119,16 @@ if __name__ == '__main__':
             # desired constraints: s0 > 7, noise = 0, 10 < headway < 150, T > 0.4
             all_av_params = []
             # Add IDM search params
-            for a in np.arange(0.8, 1.8, 0.1):
-                for b in np.arange(1.6, 2.5, 0.1):
-                    all_av_params.append((5, 'idm', dict(v0=35, T=1, a=a, b=b, delta=4, s0=7, noise=0)))
+            if 'grid_search' in sys.argv:
+                for a in np.arange(0.8, 1.8, 0.1):
+                    for b in np.arange(1.6, 2.5, 0.1):
+                        all_av_params.append((5, 'idm', dict(v0=35, T=1, a=a, b=b, delta=4, s0=7, noise=0)))
 
-            # Add FS search params
-            for v in np.arange(5, 21):
-                all_av_params.append((5, 'fs', dict(v_des=v)))
+                # Add FS search params
+                for v in np.arange(5, 21):
+                    all_av_params.append((5, 'fs', dict(v_des=v)))
+            else:
+                all_av_params.append((5, 'idm', dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=7, noise=0)))
 
             for num_idms, controller, av_params in all_av_params:
                 plotter = Plotter('figs/dataset/', traj['path'].stem)
