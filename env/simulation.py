@@ -1,5 +1,5 @@
 from collections import defaultdict
-from env.vehicles import IDMVehicle, RLVehicle, TrajectoryVehicle
+from env.vehicles import IDMVehicle, RLVehicle, TrajectoryVehicle, FSVehicle
 from env.energy_models import PFMMidsizeSedan
 
 
@@ -38,6 +38,7 @@ class Simulation(object):
             'idm': IDMVehicle,
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
+            'fs': FSVehicle
         }[controller]
 
         veh = vehicle_class(

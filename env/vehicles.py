@@ -1,4 +1,4 @@
-from env.accel_controllers import IDMController
+from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 from env.failsafes import safe_velocity
 import numpy as np
 
@@ -96,5 +96,16 @@ class RLVehicle(Vehicle):
 
         return super().step(accel=accel, ballistic=False)
 
+class FSVehicle(Vehicle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
+
+    def step(self):
+        accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+        accel = self.apply_failsafe(accel)
+
+        return super().step(accel=accel, ballistic=False)
 
 
