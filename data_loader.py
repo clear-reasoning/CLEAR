@@ -116,17 +116,24 @@ if __name__ == '__main__':
         print('Computing MPG values for different platoons following the trajectories')
         
         for traj in data_loader.get_all_trajectories():
-            for num_idms, av_idm_params in [
-                (5, dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)),
-                # (5, dict(v0=35, T=1.5, a=5, b=0.1, delta=4, s0=2, noise=0.0)),
-                # (5, dict(v0=35, T=4, a=0.7, b=1.2, delta=4, s0=2, noise=0.0)),
-            ]:
+            # desired constraints: s0 > 7, noise = 0, 10 < headway < 150, T > 0.4
+            all_av_params = []
+            # Add IDM search params
+            for a in np.arange(0.8, 1.8, 0.1):
+                for b in np.arange(1.6, 2.5, 0.1):
+                    all_av_params.append((5, 'idm', dict(v0=35, T=1, a=a, b=b, delta=4, s0=7, noise=0)))
+
+            # Add FS search params
+            for v in np.arange(5, 21):
+                all_av_params.append((5, 'fs', dict(v_des=v)))
+
+            for num_idms, controller, av_params in all_av_params:
                 plotter = Plotter('figs/dataset/', traj['path'].stem)
                 print(traj['path'])
                 sim = Simulation(timestep=traj['timestep'])
                 sim.add_vehicle(controller='trajectory',
                     trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
-                sim.add_vehicle(controller='idm', gap=20, **av_idm_params)
+                sim.add_vehicle(controller=controller, gap=20, **av_params)
                 for _ in range(num_idms):
                     sim.add_vehicle(controller='idm', gap=20, **dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3))
                 sim.run()
@@ -163,8 +170,9 @@ if __name__ == '__main__':
                     avg_mpg = np.mean(mpgs)
                     plotter.plot([0, 1], [avg_mpg] * 2, label=f'average ({round(avg_mpg, 2)})', linewidth=3.0)
                 
-                idm_params_str = '_'.join([f'{k}={v}' for k, v in av_idm_params.items()])
-                plotter.save(f'platoon_{num_idms}idms_{idm_params_str}_{round(avg_mpg, 2)}mpg', log='\t')
+                params_str = '_'.join([f'{k}={v}' for k, v in av_params.items()])
+                plotter.save(f'platoon_{num_idms}{controller}_{params_str}_{round(avg_mpg, 2)}mpg', log='\t')
+            
 
     if 'small_chunks' in sys.argv:  # compute different metrics on a lot of small chunks of trajectories
         print('Running simulations with small chunks of trajectories')
