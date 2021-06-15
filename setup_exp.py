@@ -19,8 +19,8 @@ register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
 def run_experiment(config):
     # create exp logdir
-    exp_logdir = config['gs_logdir']
-    exp_logdir.mkdir(parents=True, exist_ok=True)
+    gs_logdir = config['gs_logdir']
+    gs_logdir.mkdir(parents=True, exist_ok=True)
 
     # create env config
     env_config = {
@@ -60,9 +60,11 @@ def run_experiment(config):
             grid_search_config=config['gs_config'],
             log_metrics=True),
         CheckpointCallback(
-            save_path=exp_logdir / 'checkpoints',
+            save_path=gs_logdir / 'checkpoints',
             save_freq=config['cp_frequency'],
-            save_at_end=True),
+            save_at_end=True,
+            s3_bucket='trajectory.env' if config['s3'] else None,
+            exp_logdir=config['exp_logdir'],),
     ]
     callbacks = CallbackList(callbacks)
 
@@ -113,7 +115,7 @@ def run_experiment(config):
 
     train_config.update({
         'env': multi_env,
-        'tensorboard_log': exp_logdir,
+        'tensorboard_log': gs_logdir,
         'verbose': 0,  # 0 no output, 1 info, 2 debug
         'seed': None,  # only concerns PPO and not the environment
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
@@ -133,7 +135,7 @@ def run_experiment(config):
         'train_config': train_config,
         'learn_config': learn_config
     }
-    dict_to_json(configs, exp_logdir / 'configs.json')
+    dict_to_json(configs, gs_logdir / 'configs.json')
 
     # create model and start training
     model = algorithm(**train_config)

@@ -7,6 +7,8 @@ import math
 import random
 from tqdm import tqdm
 import time
+from pathlib import Path
+import boto3
 
 import matplotlib.pyplot as plt
 import os, os.path
@@ -255,14 +257,17 @@ class TensorboardCallback(BaseCallback):
 
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
-    def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False):
+    def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False, s3_bucket=None, exp_logdir=None):
         super(CheckpointCallback, self).__init__()
 
         self.save_freq = save_freq
-        self.save_path = save_path
+        self.save_path = Path(save_path)
         self.save_at_end = save_at_end
 
         self.iter = 0
+
+        self.s3_bucket = s3_bucket
+        self.exp_logdir = Path(exp_logdir)
 
         os.makedirs(self.save_path, exist_ok=True)
 
@@ -279,7 +284,16 @@ class CheckpointCallback(BaseCallback):
     def write_checkpoint(self):
         path = self.save_path / str(self.iter)
         self.model.save(path)
-        print(f'Saving model checkpoint to {path}.zip')
+        print(f'Saved model checkpoint to {path}.zip')
+
+        if self.s3_bucket is not None and self.exp_logdir is not None:
+            s3 = boto3.resource('s3').Bucket(self.s3_bucket)
+            for root, _, file_names in os.walk(self.exp_logdir):
+                for file_name in file_names:
+                    file_path = Path(root, file_name)
+                    file_path_s3 = file_path.relative_to(self.exp_logdir.parent.parent)
+                    s3.upload_file(str(file_path), str(file_path_s3))
+            print(f'Uploaded exp logdir to s3://{self.s3_bucket}/{self.exp_logdir.relative_to(self.exp_logdir.parent.parent)}')
 
     def _on_step(self):
         return True
