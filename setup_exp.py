@@ -87,7 +87,7 @@ def run_experiment(config):
             'gamma': config['gamma'],
             'gae_lambda': config['gae_lambda'],
             'clip_range': 0.2,
-            'clip_range_vf': None,
+            'clip_range_vf': 50,
             'ent_coef': 0.0,
             'vf_coef': 0.5,
             'max_grad_norm': 0.5,
