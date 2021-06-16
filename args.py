@@ -99,9 +99,8 @@ def parse_args_simulate():
     parser.add_argument('--av_kwargs', type=str, default='{}',
         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
-    parser.add_argument('--cp_path', type=str, default=None, required=True,
+    parser.add_argument('--cp_path', type=str, default=None,
         help='Path to a saved model checkpoint. '
-             'Even when {av_controller} is not "rl", this is required to get env params from the config file. '
              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
     parser.add_argument('--verbose', default=False, action='store_true',
         help='If set, print information about the loaded controller when {av_controller} is "rl".')

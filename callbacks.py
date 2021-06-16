@@ -51,7 +51,6 @@ class TensorboardCallback(BaseCallback):
         self.rollout += 1
     
     def log_rollout_dict(self, base_name, rollout_dict):
-
         plotter = TensorboardPlotter(self.logger)
         for group, metrics in rollout_dict.items():
             for k, v in metrics.items():

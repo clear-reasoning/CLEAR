@@ -22,12 +22,14 @@ DEFAULT_ENV_CONFIG = {
     'minimal_time_headway': 1.0,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
-    'num_idm_cars': 5,
     'num_concat_states': 1,
     'num_steps_per_sim': 1,
     # controller to use for the AV (available options: rl, idm, fs)
     'av_controller': 'rl',
     'av_kwargs': '{}',
+    # idm platoon
+    'num_idm_cars': 5,
+    'idms_kwargs': '{}',
 }
 
 
@@ -133,10 +135,10 @@ class TrajectoryEnv(gym.Env):
         # an AV
         av_initial_gap = max(2.1 * self.traj['velocities'][0], 20)
         self.av = self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=av_initial_gap,
-            **eval(self.av_kwargs))
+                                       **eval(self.av_kwargs))
         # and a platoon of IDMs
-        self.idm_platoon = [self.sim.add_vehicle(controller='idm', kind='platoon', gap=20, v0=45.0)
-                       for _ in range(self.num_idm_cars)]
+        self.idm_platoon = [self.sim.add_vehicle(controller='idm', kind='platoon', gap=20, **eval(self.idms_kwargs))
+                            for _ in range(self.num_idm_cars)]
 
         # define which vehicles are used for the MPG reward
         self.mpg_cars = [self.av] + (self.idm_platoon if self.include_idm_mpg else [])

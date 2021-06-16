@@ -4,7 +4,7 @@ from env.failsafes import safe_velocity
 
 
 class IDMController(object):
-    def __init__(self, v0=30, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3):
+    def __init__(self, v0=45, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3):
         self.v0 = v0
         self.T = T
         self.a = a
