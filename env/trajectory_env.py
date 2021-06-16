@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from data_loader import DataLoader
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
-from env.energy_models import PFMMidsizeSedan
+from env.energy_models import PFM2019RAV4
 from env.failsafes import safe_velocity
 
 

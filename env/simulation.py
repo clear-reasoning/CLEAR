@@ -1,6 +1,6 @@
 from collections import defaultdict
 from env.vehicles import IDMVehicle, RLVehicle, TrajectoryVehicle
-from env.energy_models import PFMMidsizeSedan
+from env.energy_models import PFM2019RAV4
 
 
 class Simulation(object):

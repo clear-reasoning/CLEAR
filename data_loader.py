@@ -6,7 +6,7 @@ import random
 import sys
 
 from env.accel_controllers import IDMController
-from env.energy_models import PFMMidsizeSedan
+from env.energy_models import PFM2019RAV4
 from env.simulation import Simulation
 from env.utils import lat_long_distance, moving_sum, pairwise, counter
 from visualize.plotter import Plotter
