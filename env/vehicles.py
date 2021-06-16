@@ -12,7 +12,7 @@ class Vehicle(object):
         self.vid = vid
         self.controller = controller
         self.kind = kind
-        self.name = '_'.join([str(self.vid), self.controller] + [str(self.kind)] if self.kind is not None else [])
+        self.name = '_'.join([str(self.vid), self.controller] + ([str(self.kind)] if self.kind is not None else []))
         
         self.pos = pos
         self.speed = speed
