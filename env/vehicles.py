@@ -4,15 +4,15 @@ import numpy as np
 
 
 class Vehicle(object):
-    def __init__(self, vid, controller, kind=None
+    def __init__(self, vid, controller, kind=None,
                  pos=0, speed=0, accel=0,
-                 length=5.0, max_accel=1.3, max_decel=2.0,
+                 length=5.0, max_accel=1.5, max_decel=3.0,
                  timestep=None, leader=None,
                  **controller_args):
         self.vid = vid
         self.controller = controller
         self.kind = kind
-        self.name = '_'.join([self.vid, self.controller] + [self.kind] if self.kind is not None else [])
+        self.name = '_'.join([str(self.vid), self.controller] + [str(self.kind)] if self.kind is not None else [])
         
         self.pos = pos
         self.speed = speed
@@ -30,6 +30,8 @@ class Vehicle(object):
     def step(self, accel=None, ballistic=False):
         if accel is not None:
             self.accel = accel
+        # clip accel
+        self.accel = min(max(self.accel, -self.max_decel), self.max_accel)
 
         if ballistic:
             self.pos += max(self.dt * self.speed + self.dt * self.dt * self.accel / 2.0, 0)
@@ -57,11 +59,13 @@ class Vehicle(object):
 
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
-        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), 5, self.dt)
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
-            accel = np.clip((v_safe - self.speed) / self.dt, np.abs(self.max_decel), self.max_accel)
-        return accel
+            safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
+        else:
+            safe_accel = accel
+        return safe_accel
 
 
 class IDMVehicle(Vehicle):
