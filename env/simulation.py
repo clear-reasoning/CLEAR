@@ -1,6 +1,7 @@
 from collections import defaultdict
-from env.vehicles import IDMVehicle, RLVehicle, TrajectoryVehicle
+from env.vehicles import FSVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from env.energy_models import PFMMidsizeSedan
+from env.utils import get_last_or
 
 
 class Simulation(object):
@@ -26,8 +27,13 @@ class Simulation(object):
 
         self.vids = 0
 
+    def get_vehicles(self, controller=None):
+        if controller is None:
+            return self.vehicles
+        else:
+            return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
-    def add_vehicle(self, controller='idm', gap=20, **controller_kwargs):
+    def add_vehicle(self, controller='idm', kind=None, gap=20, **controller_kwargs):
         """Add a vehicle behind the platoon.
         
         controller: 'idm' or 'rl' or 'trajectory' (do not use trajectory)
@@ -36,13 +42,15 @@ class Simulation(object):
         """
         vehicle_class = {
             'idm': IDMVehicle,
+            'fs': FSVehicle,
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
         }[controller]
 
         veh = vehicle_class(
             vid=self.vids,
-            name=controller,
+            controller=controller,
+            kind=kind,
             pos=0 if len(self.vehicles) == 0 else self.vehicles[-1].pos - gap - self.vlength,
             speed=0 if len(self.vehicles) == 0 else self.vehicles[-1].speed,
             accel=0,
@@ -51,8 +59,10 @@ class Simulation(object):
             leader=None if len(self.vehicles) == 0 else self.vehicles[-1],
             **controller_kwargs)
         self.vids += 1
+        self.collect_data(vehicles=[veh])
 
         self.vehicles.append(veh)
+        return veh
 
     def run(self, num_steps=None):
         running = True
@@ -64,8 +74,6 @@ class Simulation(object):
                 running = False
 
     def step(self):
-        if self.step_counter == -1:
-            self.collect_data()
         self.step_counter += 1
         self.time_counter += self.timestep
 
@@ -83,17 +91,28 @@ class Simulation(object):
         return True
 
     def add_data(self, veh, key, value):
-        self.data_by_vehicle[veh.id_name][key].append(value)
+        self.data_by_vehicle[veh.name][key].append(value)
+        # TODO(nl) add data by time as well
 
-    def collect_data(self):
-        for veh in self.vehicles:          
-            self.add_data(veh, 'times', round(self.time_counter, 4))
-            self.add_data(veh, 'steps', self.step_counter)
-            self.add_data(veh, 'positions', veh.pos)
-            self.add_data(veh, 'speeds', veh.speed)
-            self.add_data(veh, 'accels', veh.accel)
-            self.add_data(veh, 'headways', veh.get_headway())
-            self.add_data(veh, 'leader_speeds', veh.get_leader_speed())
-            self.add_data(veh, 'speed_differences', None if veh.leader is None else veh.leader.speed - veh.speed)
-            self.add_data(veh, 'leader_ids', None if veh.leader is None else veh.leader.id_name)
-            self.add_data(veh, 'instant_energy_consumptions', self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
+    def get_data(self, veh, key):
+        return self.data_by_vehicle[veh.name][key]
+
+    def collect_data(self, vehicles=None):
+        if vehicles is None: 
+            vehicles = self.vehicles
+        for veh in vehicles:          
+            self.add_data(veh, 'time', round(self.time_counter, 4))
+            self.add_data(veh, 'step', self.step_counter)
+            self.add_data(veh, 'position', veh.pos)
+            self.add_data(veh, 'speed', veh.speed)
+            self.add_data(veh, 'accel', veh.accel)
+            self.add_data(veh, 'headway', veh.get_headway())
+            self.add_data(veh, 'leader_speed', veh.get_leader_speed())
+            self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
+            self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
+            self.add_data(veh, 'instant_energy_consumption', self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
+            self.add_data(veh, 'total_energy_consumption', get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
+            self.add_data(veh, 'total_distance_traveled', veh.pos - self.data_by_vehicle[veh.name]['position'][0])
+            self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
+            self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] / 3600.0 * self.timestep)
+            self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles'][-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
