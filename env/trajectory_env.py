@@ -5,9 +5,6 @@ import numpy as np
 from data_loader import DataLoader
 from env.simulation import Simulation
 
-from env.accel_controllers import * # TMP
-from env.energy_models import PFMMidsizeSedan  # TMP
-
 
 # env params that will be used except for params explicitely set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
@@ -31,9 +28,6 @@ DEFAULT_ENV_CONFIG = {
     'num_idm_cars': 5,
     'num_concat_states': 1,
     'num_steps_per_sim': 1,
-    # scales to normalize the action space
-    'speed_scale': 40,  # for vehicle speeds or desired speeds
-    'distance_scale': 100,  # for headways
 }
 
 
@@ -46,7 +40,7 @@ class TrajectoryEnv(gym.Env):
         for k, v in self.config.items():
             setattr(self, k, v)
 
-        assert (self.use_fs is False)  # TODO(nl) need an FS wrapper in the vehicle class
+        assert (self.use_fs == False)  # TODO(nl) need an FS wrapper in the vehicle class
 
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader()
@@ -82,31 +76,27 @@ class TrajectoryEnv(gym.Env):
             n_obs *= 2  # additional room for vf states
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
 
-        # TMP
-        self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel, noise=0.5)
-        self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
-        self.energy_model = PFMMidsizeSedan()
-
 
     def get_base_state(self):
+        """Dict of state_name: (state_value, state_normalization_scale)"""
         state = {
-            'speed': self.av['speed'] / self.speed_scale,
-            'leader_speed': self.leader_speeds[self.traj_idx] / self.speed_scale,
-            'headway': (self.leader_positions[self.traj_idx] - self.av['pos']) / self.distance_scale,
+            'speed': (self.av.speed, 40.0),
+            'leader_speed': (self.av.get_leader_speed(), 40.0),
+            'headway': (self.av.get_headway(), 100.0),
         }
         
         if self.use_fs:
-            state['vdes'] = self.follower_stopper.v_des / self.speed_scale
+            state['vdes'] = (self.follower_stopper.v_des, 40.0)
 
         return state
 
     def get_base_additional_vf_state(self):
+        """Dict of state_name: (state_value, state_normalization_scale)
+        This state will only be used if augment_vf is set"""
         vf_state = {
-            'time': self.env_step / self.horizon,
-            'mpg_top': np.mean([(car['pos'] - self.init_pos[i]) / 1609.34
-                             for i, car in enumerate(self.car_list)]),
-            'mpg_bot': np.mean([np.maximum(self.energy_consumption[i], 10.0) / 3600 + 1e-6
-                             for i, car in enumerate(self.car_list)]),
+            'time': (self.sim.step_counter, self.horizon),
+            'avg_miles': (np.mean([self.sim.data_by_vehicle[veh.name]['total_miles'] for veh in self.mpg_cars]), 50.0),
+            'avg_gallons': (np.mean([self.sim.data_by_vehicle[veh.name]['total_gallons'] + 1e-6 for veh in self.mpg_cars]), 100.0),
         }
 
         return vf_state
@@ -114,12 +104,12 @@ class TrajectoryEnv(gym.Env):
     def get_state(self, _store_state=False):
         if _store_state:
             # preprend new state to the saved past states
-            state = list(self.get_base_state().values())
+            state = [value / scale for value, scale in self.get_base_state().values()]
             self.past_states = np.roll(self.past_states, len(state))
             self.past_states[:len(state)] = state
 
         if self.augment_vf:
-            additional_vf_state = list(self.get_base_additional_vf_state().values())
+            additional_vf_state = [value / scale for value, scale in self.get_base_additional_vf_state().values()]
             additional_vf_state += [0] * (len(self.past_states) - len(additional_vf_state))
             state = np.concatenate((self.past_states, additional_vf_state))
         else:
@@ -135,25 +125,18 @@ class TrajectoryEnv(gym.Env):
         self.time_step = self.traj['timestep']
         self.sim = Simulation(timestep=self.time_step)
 
-        # populate simulation with a trajectory leader, an AV and a platoon of IDMs
-        self.sim.add_vehicle(controller='trajectory',
+        # populate simulation with a trajectoy leader
+        self.sim.add_vehicle(controller='trajectory', kind='leader',
             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
+        # an AV
         av_initial_gap = max(2.1 * self.traj['velocities'][0], 20)
-        self.sim.add_vehicle(controller=args.av_controller, gap=av_initial_gap)
-        for _ in range(self.num_idm_cars):
-            self.sim.add_vehicle(controller='idm', gap=20, v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)
-    
-        # initialize counters TODO
-        self.env_step = 0
+        self.av = self.sim.add_vehicle(controller='rl', kind='av', gap=av_initial_gap)
+        # and a platoon of IDMs
+        self.idm_platoon = [self.sim.add_vehicle(controller='idm', kind='platoon', gap=20, v0=45.0)
+                       for _ in range(self.num_idm_cars)]
 
-        self.init_leader_pos = self.traj['positions'][0]
-        self.accumulated_headway = 0
-        self.accumulated_pos = 0
-        self.average_speed = 0
-
-        self.car_list = [self.av] + (self.idm_followers if self.include_idm_mpg else [])
-        self.energy_consumption = [0] * len(self.car_list)
-        self.init_pos = [v.pos for v in self.sim.vehicles]
+        # define which vehicles are used for the MPG reward
+        self.mpg_cars = [self.av] + (self.idm_platoon if self.include_idm_mpg else [])
 
     def reset(self):
         self.create_simulation()
@@ -162,110 +145,45 @@ class TrajectoryEnv(gym.Env):
     def step(self, action):
         # apply acceleration action to AV
         accel = self.action_set[action] if self.discrete else float(action)
-        av = self.sim.get_vehicles(controller=='rl')[0]
-        av.set_accel(accel) 
+        accel = self.av.set_accel(accel)  # returns accel with failsafes applied
 
         # execute one simulation step
         end_of_horizon = self.sim.step()
 
-        
-        if self.use_fs:
-            self.follower_stopper.v_des += action
-            self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
-            self.follower_stopper.v_des = min(self.follower_stopper.v_des, self.max_speed)
-            # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
-            accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
-                                                    self.leader_positions[self.traj_idx] - self.av['pos'],
-                                                    self.time_step)
-        else:
-            accel = action
-            v_safe = safe_velocity(self.av['speed'], self.leader_speeds[self.traj_idx],
-                                self.leader_positions[self.traj_idx] - self.av['pos'], self.max_decel, self.time_step)
-            v_next = accel * self.time_step + self.av['speed']
-            if v_next > v_safe:
-                accel = np.clip((v_safe - self.av['speed']) / self.time_step, -np.abs(self.max_decel), self.max_accel)
+        # additional trajectory data that will be plotted in tensorboard
+        metrics = {}
 
-        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
-
-        self.av['last_accel'] = accel
-
-        if self.include_idm_mpg:
-            self.car_list = [self.av] + self.idm_followers
-        else:
-            self.car_list = [self.av]
-        for i, car in enumerate(self.car_list):
-            curr_consumption = self.energy_model.get_instantaneous_fuel_consumption(car['last_accel'], car['speed'], grade=0)
-            self.energy_consumption[i] += curr_consumption
-            infos['energy_consumption_{}'.format(i)] = curr_consumption
-            infos['speed_car_{}'.format(i)] = car['speed']
-
-        # compute idms accels
-        for i, idm in enumerate(self.idm_followers):
-            if i == 0:
-                # idm right behind av
-                leader_speed = self.av['speed']
-                headway = self.av['pos'] - idm['pos']
-            else:
-                leader_speed = self.idm_followers[i - 1]['speed']
-                headway = self.idm_followers[i - 1]['pos'] - idm['pos']
-            assert(headway > 0)
-            idm['last_accel'] = self.idm_controller.get_accel(idm['speed'], leader_speed, headway, self.time_step)
-        
-        # step cars
-        for car in [self.av] + self.idm_followers:
-            car['speed'] += car['last_accel'] * self.time_step
-            car['speed'] = min(max(car['speed'], self.min_speed), self.max_speed)
-            car['pos'] += car['speed'] * self.time_step
-
-        # compute reward/done
-        av_headway = self.leader_positions[self.traj_idx] - self.av['pos']
-        done = False
-
-        self.env_step += 1
-        self.traj_idx += self.num_steps_per_sim
+        # compute reward & done
+        h = self.av.get_headway()
+        th = self.av.get_time_headway()
 
         reward = 0
-        if av_headway <= 0:
-            # crash
-            reward -= 50
-            done = True
 
-        if av_headway <= self.min_headway:
-            reward -= 2
+        # prevent crashes
+        crash = (h <= 0)
+        if crash:  
+            reward -= 50.0
 
-        # forcibly prevent the car from getting within a headway
-        time_headway = av_headway / np.maximum(self.av['speed'], 0.01)
-        if time_headway < self.minimal_time_headway:
+        # forcibly prevent the car from getting too small or large headways
+        headway_penalties = {
+            'low_headway_penalty': h < self.min_headway, 
+            'large_headway_penalty', h > self.max_headway, 
+            'low_time_headway_penalty', th < self.minimal_time_headway}
+        if any(headway_penalties.values()):
             reward -= 2.0
 
-        if av_headway > self.max_headway:
-            reward -= 2.0
+        # give average MPG reward at the end
+        if end_of_horizon:
+            mpgs = [self.sim.data_by_vehicle[veh.name]['avg_mpg'][-1] for veh in self.mpg_cars]
+            reward += np.mean(mpgs)
 
+        # log some metrics
+        metrics['crash'] = int(crash)
+        for k, v in headway_penalties.items():
+            metrics[k] = int(v)
 
-        state = self.get_state(_store_state=True)
+        # get next state & done
+        next_state = self.get_state(_store_state=True)
+        done = (end_of_horizon or crash)
 
-        if self.whole_trajectory:
-            if self.traj_idx >= len(self.leader_positions) - 1:
-                done = True
-        else:
-            if (self.env_step + 1) % int(self.horizon) == 0:
-                done = True
-
-        if ((self.env_step + 1) % int(self.horizon) == 0) or self.traj_idx >= len(self.leader_positions) - 1:
-            avg_mpg = np.mean([((car['pos'] - self.init_pos[i]) / 1609.34) / (
-                        np.maximum(self.energy_consumption[i], 1.0) / 3600 + 1e-6)
-                           for i, car in enumerate(self.car_list)])
-            avg_mpg /= self.time_step
-            reward += avg_mpg
-            # reward -= 0.002 * (self.accumulated_headway)
-            self.energy_consumption = [0 for _ in range(len(self.car_list))]
-            self.init_pos = [car['pos'] for car in self.car_list]
-            infos['avg_horizon_mpg'] = avg_mpg
-
-
-        # additional trajectory data that will be plotted in tensorboard
-        metrics = {
-            'pi': np.pi,
-        }
-
-        return state, reward, done, metrics
+        return next_state, reward, done, metrics
