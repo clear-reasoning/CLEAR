@@ -60,11 +60,12 @@ def parse_args_train():
         help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
-                        help='If true, the value function will be augmented with info stored in the extra_obs'
-                             'key of the info dict.')
+        help='If true, the value function will be augmented with some additional states.')
+
     # env params
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
-        help='This many past states will be concatenated ')
+        help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
+             'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_idm_cars', type=int, default=5, nargs='+',
