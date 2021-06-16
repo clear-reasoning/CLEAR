@@ -1,3 +1,4 @@
+from collections import defaultdict
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
@@ -9,10 +10,6 @@ from env.simulation import Simulation
 # env params that will be used except for params explicitely set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
-    'max_accel': 1.5,
-    'max_decel': 3.0,
-    'min_speed': 0.0,
-    'max_speed': 40.0,
     'min_headway': 7.0,
     'max_headway': 120.0,
     'whole_trajectory': False,
@@ -28,6 +25,9 @@ DEFAULT_ENV_CONFIG = {
     'num_idm_cars': 5,
     'num_concat_states': 1,
     'num_steps_per_sim': 1,
+    # controller to use for the AV (available options: rl, idm, fs)
+    'av_controller': 'rl',
+    'av_kwargs': '{}',
 }
 
 
@@ -39,6 +39,7 @@ class TrajectoryEnv(gym.Env):
         self.config = config
         for k, v in self.config.items():
             setattr(self, k, v)
+        self.collect_rollout = False
 
         assert (self.use_fs == False)  # TODO(nl) need an FS wrapper in the vehicle class
 
@@ -96,8 +97,8 @@ class TrajectoryEnv(gym.Env):
         This state will only be used if augment_vf is set"""
         vf_state = {
             'time': (self.sim.step_counter, self.horizon),
-            'avg_miles': (np.mean([self.sim.data_by_vehicle[veh.name]['total_miles'] for veh in self.mpg_cars]), 50.0),
-            'avg_gallons': (np.mean([self.sim.data_by_vehicle[veh.name]['total_gallons'] + 1e-6 for veh in self.mpg_cars]), 100.0),
+            'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
+            'avg_gallons': (np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
         }
 
         return vf_state
@@ -131,7 +132,8 @@ class TrajectoryEnv(gym.Env):
             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
         # an AV
         av_initial_gap = max(2.1 * self.traj['velocities'][0], 20)
-        self.av = self.sim.add_vehicle(controller='rl', kind='av', gap=av_initial_gap)
+        self.av = self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=av_initial_gap,
+            **eval(self.av_kwargs))
         # and a platoon of IDMs
         self.idm_platoon = [self.sim.add_vehicle(controller='idm', kind='platoon', gap=20, v0=45.0)
                        for _ in range(self.num_idm_cars)]
@@ -144,15 +146,18 @@ class TrajectoryEnv(gym.Env):
         return self.get_state(_store_state=True)
 
     def step(self, action):
-        # apply acceleration action to AV
-        accel = self.action_set[action] if self.discrete else float(action)
-        accel = self.av.set_accel(accel)  # returns accel with failsafes applied
-
-        # execute one simulation step
-        end_of_horizon = self.sim.step()
-
         # additional trajectory data that will be plotted in tensorboard
         metrics = {}
+
+        # apply acceleration action to AV
+        if self.av.controller == 'rl':
+            accel = self.action_set[action] if self.discrete else float(action)
+            metrics['rl_accel_before_failsafe'] = accel
+            accel = self.av.set_accel(accel)  # returns accel with failsafes applied
+            metrics['rl_accel_after_failsafe'] = accel
+
+        # execute one simulation step
+        end_of_horizon = not self.sim.step()
 
         # compute reward & done
         h = self.av.get_headway()
@@ -168,14 +173,15 @@ class TrajectoryEnv(gym.Env):
         # forcibly prevent the car from getting too small or large headways
         headway_penalties = {
             'low_headway_penalty': h < self.min_headway, 
-            'large_headway_penalty', h > self.max_headway, 
-            'low_time_headway_penalty', th < self.minimal_time_headway}
+            'large_headway_penalty': h > self.max_headway, 
+            'low_time_headway_penalty': th < self.minimal_time_headway}
         if any(headway_penalties.values()):
             reward -= 2.0
 
+
         # give average MPG reward at the end
         if end_of_horizon:
-            mpgs = [self.sim.data_by_vehicle[veh.name]['avg_mpg'][-1] for veh in self.mpg_cars]
+            mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
             reward += np.mean(mpgs)
 
         # log some metrics
@@ -186,5 +192,24 @@ class TrajectoryEnv(gym.Env):
         # get next state & done
         next_state = self.get_state(_store_state=True)
         done = (end_of_horizon or crash)
+        infos = { 'metrics': metrics }
 
-        return next_state, reward, done, metrics
+        if self.collect_rollout:
+            self.collected_rollout['actions'].append(action)
+            self.collected_rollout['base_states'].append(self.get_base_state())
+            self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
+            self.collected_rollout['rewards'].append(reward)
+            self.collected_rollout['dones'].append(done)
+            self.collected_rollout['infos'].append(infos)
+
+        return next_state, reward, done, infos
+
+    def start_collecting_rollout(self):
+        self.collected_rollout = defaultdict(list)
+        self.collect_rollout = True
+
+    def stop_collecting_rollout(self):
+        self.collot_rollout = False
+
+    def get_collected_rollout(self):
+        return self.collected_rollout
