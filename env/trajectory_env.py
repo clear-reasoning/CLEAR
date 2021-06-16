@@ -2,6 +2,7 @@ from collections import defaultdict
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
+import pandas as pd
 
 from data_loader import DataLoader
 from env.simulation import Simulation
@@ -143,6 +144,9 @@ class TrajectoryEnv(gym.Env):
         # define which vehicles are used for the MPG reward
         self.mpg_cars = [self.av] + (self.idm_platoon if self.include_idm_mpg else [])
 
+        # initialize one data collection step
+        self.sim.collect_data()
+
     def reset(self):
         self.create_simulation()
         return self.get_state(_store_state=True)
@@ -215,3 +219,31 @@ class TrajectoryEnv(gym.Env):
 
     def get_collected_rollout(self):
         return self.collected_rollout
+
+    def gen_emissions(self, emission_path):
+        # generate emissions dict
+        self.emissions = defaultdict(list)
+        for veh in self.sim.vehicles:
+            for k, v in self.sim.data_by_vehicle[veh.name].items():
+                self.emissions[k] += v
+        
+        # custom columns
+        self.emissions['x'] = self.emissions['position']
+        self.emissions['y'] = [0] * len(self.emissions['x'])
+        self.emissions['leader_rel_speed'] = self.emissions['speed_difference']
+        self.emissions['road_grade'] = [0] * len(self.emissions['x'])
+        self.emissions['edge_id'] = ['edge0'] * len(self.emissions['x'])
+        self.emissions['lane_number'] = [0] * len(self.emissions['x'])
+        self.emissions['distance'] = self.emissions['total_distance_traveled']
+        self.emissions['relative_position'] = self.emissions['total_distance_traveled']
+        self.emissions['realized_accel'] = self.emissions['accel']
+        self.emissions['target_accel_with_noise_with_failsafe'] = self.emissions['accel']
+        self.emissions['target_accel_no_noise_no_failsafe'] = self.emissions['accel']
+        self.emissions['target_accel_with_noise_no_failsafe'] = self.emissions['accel']
+        self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['accel']
+
+        # sort and save emissions file
+        pd.DataFrame(self.emissions) \
+            .sort_values(by=['time', 'id']) \
+            .to_csv(emission_path, index=False)
+        print(f'Saved emissions file at {emission_path}')

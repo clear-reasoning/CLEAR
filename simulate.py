@@ -49,7 +49,7 @@ else:
     env_config.update({
         'use_fs': False,
         'discrete': False,
-        'whole_trajectory': False,
+        'whole_trajectory': True,
         'av_controller': args.av_controller,
         'av_kwargs': args.av_kwargs,
         'num_idm_cars': args.n_idms,
@@ -81,6 +81,11 @@ for group, metrics in rollout_dict.items():
     for k, v in metrics.items():
         plotter.plot(v, title=k, grid=True, linewidth=1.0)
     plotter.save(group, log='\t')
+
+# generate_emissions
+if args.gen_emissions:
+    emission_path = f'emissions_{now}.csv'
+    test_env.gen_emissions(emission_path)
 
 # print stuff
 print()

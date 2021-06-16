@@ -111,6 +111,8 @@ def parse_args_simulate():
     parser.add_argument('--idms_kwargs', type=str, default='{}',
         help='Kwargs to pass to the platoon IDM controllers, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)".')
+    parser.add_argument('--gen_emissions', default=False, action='store_true',
+        help='If set, a .csv emission file will be generated.')
 
     args = parser.parse_args()
     return args

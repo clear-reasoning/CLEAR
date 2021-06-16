@@ -7,7 +7,7 @@ class Vehicle(object):
     def __init__(self, vid, controller, kind=None,
                  pos=0, speed=0, accel=0,
                  length=5.0, max_accel=1.5, max_decel=3.0,
-                 timestep=None, leader=None,
+                 timestep=None, leader=None, follower=None,
                  **controller_args):
         self.vid = vid
         self.controller = controller
@@ -22,6 +22,7 @@ class Vehicle(object):
         self.max_accel = max_accel
         self.max_decel = max_decel
         self.leader = leader
+        self.follower = follower
 
         self.controller_args = controller_args
 

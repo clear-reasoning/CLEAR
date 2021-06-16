@@ -58,8 +58,9 @@ class Simulation(object):
             length=self.vlength,
             leader=None if len(self.vehicles) == 0 else self.vehicles[-1],
             **controller_kwargs)
+        if len(self.vehicles) > 0:
+            self.vehicles[-1].follower = veh
         self.vids += 1
-        self.collect_data(vehicles=[veh])
 
         self.vehicles.append(veh)
         return veh
@@ -103,6 +104,7 @@ class Simulation(object):
         for veh in vehicles:          
             self.add_data(veh, 'time', round(self.time_counter, 4))
             self.add_data(veh, 'step', self.step_counter)
+            self.add_data(veh, 'id', veh.name)
             self.add_data(veh, 'position', veh.pos)
             self.add_data(veh, 'speed', veh.speed)
             self.add_data(veh, 'accel', veh.accel)
@@ -110,6 +112,7 @@ class Simulation(object):
             self.add_data(veh, 'leader_speed', veh.get_leader_speed())
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
+            self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
             self.add_data(veh, 'instant_energy_consumption', self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
             self.add_data(veh, 'total_energy_consumption', get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
             self.add_data(veh, 'total_distance_traveled', veh.pos - self.data_by_vehicle[veh.name]['position'][0])
