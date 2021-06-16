@@ -1,6 +1,7 @@
 from collections import defaultdict
 from env.vehicles import FSVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from env.energy_models import PFMMidsizeSedan
+from env.utils import get_last_or
 
 
 class Simulation(object):
@@ -58,6 +59,7 @@ class Simulation(object):
             leader=None if len(self.vehicles) == 0 else self.vehicles[-1],
             **controller_kwargs)
         self.vids += 1
+        self.collect_data(vehicles=[veh])
 
         self.vehicles.append(veh)
         return veh
@@ -72,8 +74,6 @@ class Simulation(object):
                 running = False
 
     def step(self):
-        if self.step_counter == -1:
-            self.collect_data()
         self.step_counter += 1
         self.time_counter += self.timestep
 
@@ -94,8 +94,13 @@ class Simulation(object):
         self.data_by_vehicle[veh.name][key].append(value)
         # TODO(nl) add data by time as well
 
-    def collect_data(self):
-        for veh in self.vehicles:          
+    def get_data(self, veh, key):
+        return self.data_by_vehicle[veh.name][key]
+
+    def collect_data(self, vehicles=None):
+        if vehicles is None: 
+            vehicles = self.vehicles
+        for veh in vehicles:          
             self.add_data(veh, 'time', round(self.time_counter, 4))
             self.add_data(veh, 'step', self.step_counter)
             self.add_data(veh, 'position', veh.pos)
@@ -106,9 +111,8 @@ class Simulation(object):
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'instant_energy_consumption', self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
-            self.add_data(veh, 'total_energy_consumption', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
+            self.add_data(veh, 'total_energy_consumption', get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
             self.add_data(veh, 'total_distance_traveled', veh.pos - self.data_by_vehicle[veh.name]['position'][0])
             self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
-            self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] * 3600 * self.timestep)
+            self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] / 3600.0 * self.timestep)
             self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles'][-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
-
