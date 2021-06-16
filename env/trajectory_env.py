@@ -84,7 +84,7 @@ class TrajectoryEnv(gym.Env):
         self.state_vec = np.zeros(self.observation_space.low.shape[0])
         self.idm_controller = IDMController(a=self.max_accel, b=self.max_decel, noise=0.5)
         self.follower_stopper = TimeHeadwayFollowerStopper(max_accel=self.max_accel, max_deaccel=self.max_decel)
-        self.energy_model = PFMMidsizeSedan()
+        self.energy_model = PFM2019RAV4()
 
         self.data_loader = DataLoader()
         if self.whole_trajectory:
