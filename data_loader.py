@@ -130,6 +130,8 @@ if __name__ == '__main__':
             else:
                 all_av_params.append((5, 'idm', dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=7, noise=0)))
 
+            mpg_params = dict()
+
             for num_idms, controller, av_params in all_av_params:
                 plotter = Plotter('figs/dataset/', traj['path'].stem)
                 print(traj['path'])
@@ -173,9 +175,16 @@ if __name__ == '__main__':
                     avg_mpg = np.mean(mpgs)
                     plotter.plot([0, 1], [avg_mpg] * 2, label=f'average ({round(avg_mpg, 2)})', linewidth=3.0)
                 
+                mpg_params[str(av_params)] = avg_mpg
+
                 params_str = '_'.join([f'{k}={v}' for k, v in av_params.items()])
                 plotter.save(f'platoon_{num_idms}{controller}_{params_str}_{round(avg_mpg, 2)}mpg', log='\t')
             
+            key = max(mpg_params, key=lambda k: mpg_params.get(k))
+            print(f'Top score is {mpg_params[key]} mpg with params: {str(key)}')
+            print("All results:")
+            for k, v in mpg_params.items():
+                print(k, v)
 
     if 'small_chunks' in sys.argv:  # compute different metrics on a lot of small chunks of trajectories
         print('Running simulations with small chunks of trajectories')
