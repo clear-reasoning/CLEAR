@@ -47,7 +47,8 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
+            # 1 more than horizon to get the next_state at the last env step
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=(self.horizon + 1) * self.num_steps_per_sim)
 
         # create simulation
         self.create_simulation()

@@ -12,7 +12,10 @@ def parse_args_train():
     parser.add_argument('--n_processes', type=int, default=1,
         help='Number of processes to run in parallel. Useful when running grid searches.'
              'Can be more than the number of available CPUs.')
-
+    parser.add_argument('--s3', default=False, action='store_true',
+        help='If set, experiment data will be uploaded to s3://trajectory.env/. '
+             'AWS credentials must have been set in ~/.aws in order to use this.')
+    
     parser.add_argument('--iters', type=int, default=1, nargs='+',
         help='Number of iterations (rollouts) to train for.'
              'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')

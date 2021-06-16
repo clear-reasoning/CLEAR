@@ -4,14 +4,17 @@ matplotlib.use('agg')
 import numpy as np
 import os
 import math
+import random
 from tqdm import tqdm
 import time
+from pathlib import Path
+import boto3
 
 import matplotlib.pyplot as plt
 import os, os.path
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import Figure
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from env.trajectory_env import TrajectoryEnv
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
@@ -39,6 +42,7 @@ class TensorboardCallback(BaseCallback):
         self.rollout += 1
 
     def _on_step(self):
+        # print(self.locals['rollout_buffer'])
         # TODO can probably get all these info at the end from replay buffer
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # get information about rollout for one of the actors
@@ -115,6 +119,8 @@ class TensorboardCallback(BaseCallback):
     def log_trajectory_stats(self):
         print('Running evaluation')
         for controller in ['rl', 'idm', 'fs_leader']:
+            random.seed(self.rollout)
+            np.random.seed(self.rollout)
             # create test env from config
             config = dict(self.training_env.envs[0].config)
             config['whole_trajectory'] = True
@@ -252,14 +258,17 @@ class TensorboardCallback(BaseCallback):
 
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
-    def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False):
+    def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False, s3_bucket=None, exp_logdir=None):
         super(CheckpointCallback, self).__init__()
 
         self.save_freq = save_freq
-        self.save_path = save_path
+        self.save_path = Path(save_path)
         self.save_at_end = save_at_end
 
         self.iter = 0
+
+        self.s3_bucket = s3_bucket
+        self.exp_logdir = Path(exp_logdir)
 
         os.makedirs(self.save_path, exist_ok=True)
 
@@ -276,7 +285,16 @@ class CheckpointCallback(BaseCallback):
     def write_checkpoint(self):
         path = self.save_path / str(self.iter)
         self.model.save(path)
-        print(f'Saving model checkpoint to {path}.zip')
+        print(f'Saved model checkpoint to {path}.zip')
+
+        if self.s3_bucket is not None and self.exp_logdir is not None:
+            s3 = boto3.resource('s3').Bucket(self.s3_bucket)
+            for root, _, file_names in os.walk(self.exp_logdir):
+                for file_name in file_names:
+                    file_path = Path(root, file_name)
+                    file_path_s3 = file_path.relative_to(self.exp_logdir.parent.parent)
+                    s3.upload_file(str(file_path), str(file_path_s3))
+            print(f'Uploaded exp logdir to s3://{self.s3_bucket}/{self.exp_logdir.relative_to(self.exp_logdir.parent.parent)}')
 
     def _on_step(self):
         return True
@@ -289,6 +307,8 @@ class LoggingCallback(BaseCallback):
 
         self.grid_search_config = grid_search_config
         self.log_metrics = log_metrics
+
+        self.ep_info_buffer = deque(maxlen=100)
 
     def _on_rollout_start(self):
         self.logger.record('time/time_this_iter', duration_to_str(time.time() - self.iter_t0))
@@ -328,6 +348,10 @@ class LoggingCallback(BaseCallback):
         self.logger.record('time/estimated_time_left', duration_to_str(time_left))
         self.logger.record('time/timesteps_per_second', round(self.num_timesteps / (t - self.training_t0), 1))
 
+        if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
+            self.logger.record("rollout/ep_rew_mean", np.mean([ep_info["r"] for ep_info in self.ep_info_buffer]))
+            self.logger.record("rollout/ep_len_mean", np.mean([ep_info["l"] for ep_info in self.ep_info_buffer]))
+        
         if self.log_metrics:
             self.print_metrics()
 
@@ -350,7 +374,7 @@ class LoggingCallback(BaseCallback):
             
 
             if isinstance(value, float):
-                value_str = f'{value:<8.3g}'
+                value_str = f'{value:<10.5g}'
             elif isinstance(value, int) or isinstance(value, str):
                 value_str = str(value)
             else:
@@ -377,4 +401,6 @@ class LoggingCallback(BaseCallback):
         print('\n'.join(lines))
 
     def _on_step(self):
+        if (infos := self.locals['infos'][0].get('episode')) is not None:
+            self.ep_info_buffer.extend([infos])
         return True

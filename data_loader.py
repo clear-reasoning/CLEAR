@@ -31,6 +31,7 @@ class DataLoader(object):
         return zip(file_paths, data)
 
     def get_all_trajectories(self):
+        random.shuffle(self.trajectories)
         return iter(self.trajectories)
 
     def get_trajectories(self, chunk_size=None, count=None):

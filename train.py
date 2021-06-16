@@ -20,8 +20,10 @@ if __name__ == '__main__':
     args = parse_args_train()
 
     # create exp logdir
-    now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-    exp_logdir = Path(args.logdir, f'{args.expname}_{now}')
+    now = datetime.now()
+    now_date = now.strftime('%d%b%y')
+    now_time = now.strftime('%Hh%Mm%Ss')
+    exp_logdir = Path(args.logdir, now_date, f'{args.expname}_{now_time}')
     exp_logdir.mkdir(parents=True, exist_ok=True)
     print(f'\nCreated experiment logdir at {exp_logdir}')
 
@@ -66,6 +68,7 @@ if __name__ == '__main__':
     configs = [{'gs_str': (gs_str := '_'.join([f'{k}={v}' for k, v in gs.items()])),
                 'gs_logdir': exp_logdir / gs_str,
                 'gs_config': gs,
+                'exp_logdir': exp_logdir,
                 **fixed_config, 
                 **gs} for gs in grid_searches]
 
