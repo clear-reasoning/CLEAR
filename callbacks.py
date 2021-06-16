@@ -13,7 +13,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import Figure
 from collections import defaultdict
 
-from env.trajectory_env import TrajectoryEnv, SPEED_SCALE, DISTANCE_SCALE
+from env.trajectory_env import TrajectoryEnv
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 from env.utils import duration_to_str
 
@@ -125,7 +125,7 @@ class TensorboardCallback(BaseCallback):
 
             # set controller
             if controller == 'rl':
-                if test_env.use_discrete:
+                if test_env.discrete:
                     def get_action(state):
                         return self.model.predict(state, deterministic=True)[0]
                 else:
@@ -230,9 +230,9 @@ class TensorboardCallback(BaseCallback):
                         'leader_speed_{}'.format(i): lead_speeds[i,j],
                         'headway_{}'.format(i): headways[i,j]})
                     state = test_env.normalize_state(state_dict)
-                    if test_env.extra_obs:
-                        extra_obs_shape = int(test_env.observation_space.low.shape[0] / 2)
-                        state = np.concatenate((state, np.zeros(extra_obs_shape)))
+                    if test_env.augment_vf:
+                        augment_vf_shape = int(test_env.observation_space.low.shape[0] / 2)
+                        state = np.concatenate((state, np.zeros(augment_vf_shape)))
 
                     accels[-1-i,j] = get_action(state)
             extent = np.min(lead_speed_range), np.max(lead_speed_range), np.min(headway_range), np.max(headway_range)
