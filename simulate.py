@@ -6,11 +6,16 @@ import re
 from env.trajectory_env import TrajectoryEnv
 from env.simulation import Simulation
 from data_loader import DataLoader
+from visualize.plotter import Plotter
+import numpy as np
+
 
 # parse command line arguments
 args = parse_args_simulate()
 
 # load config file
+# TODO right now run python train.py --iters 1 --no_eval to generate a quick CP
+# even if not running a RL controller
 cp_path = Path(args.cp_path)
 with open(cp_path.parent.parent / 'configs.json', 'r') as fp:
     configs = json.load(fp)
@@ -39,20 +44,26 @@ if args.av_controller.lower() == 'rl':
 # load trajectories for evaluation
 trajectories = DataLoader().get_all_trajectories()
 
-# TODO(nl) for now just evaluate on one trajectory for debugging
+# TODO for now we're just evaluating on one random trajectory for debugging
 for trajectory in [next(trajectories)]:
     # create simulation
     sim = Simulation(timestep=trajectory['timestep'])
 
-    # populate simulation with a trajectory leader, an AV and a platoon of IDMs
-    sim.add_vehicle(controller='trajectory',
+    # populate simulation with a trajectory leader
+    sim.add_vehicle(controller='trajectory', kind='leader',
         trajectory=zip(trajectory['positions'], trajectory['velocities'], trajectory['accelerations']))
-    sim.add_vehicle(controller=args.av_controller, gap=args.av_gap, **eval(args.av_kwargs))
+    # an AV
+    sim.add_vehicle(controller=args.av_controller, kind='av', gap=args.av_gap, **eval(args.av_kwargs))
+    # and a platoon of IDMs
     for _ in range(args.n_idms):
-        sim.add_vehicle(controller='idm', gap=args.idms_gap, **eval(args.idms_kwargs))
+        sim.add_vehicle(controller='idm', kind='platoon', gap=args.idms_gap, **eval(args.idms_kwargs))
     
     # run simulation for the whole trajectory
-    sim.run()
+    sim.run(num_steps=10000)  # TODO remove num_steps to plot the whole trajectory
 
     # collect and plot results
-    # TODO(nl) take from data loader
+    for veh in sim.vehicles:
+        plotter = Plotter('figs/simulate')
+        for k, v in sim.data_by_vehicle[veh.name].items():
+            plotter.plot(v, title=k, grid=True)
+        plotter.save(f'sim_output_{veh.name}', log='\t')
