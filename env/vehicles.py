@@ -77,7 +77,7 @@ class IDMVehicle(Vehicle):
         return super().step(accel=accel, ballistic=False)
 
 
-class FollowerStopperVehicle(Vehicle):
+class FSVehicle(Vehicle):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
