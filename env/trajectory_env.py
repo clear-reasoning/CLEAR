@@ -1,11 +1,15 @@
 from collections import defaultdict
+from datetime import datetime
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
 import pandas as pd
+from pathlib import Path
+import uuid
 
 from data_loader import DataLoader
 from env.simulation import Simulation
+from env.utils import upload_to_s3
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -220,7 +224,13 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emission_path):
+    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
+        # create emissions dir if it doesn't exist
+        now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
+        path = Path(emissions_dir, now)
+        path.mkdir(parents=True, exist_ok=True)
+        emissions_path = path / 'emissions.csv'
+
         # generate emissions dict
         self.emissions = defaultdict(list)
         for veh in self.sim.vehicles:
@@ -245,5 +255,50 @@ class TrajectoryEnv(gym.Env):
         # sort and save emissions file
         pd.DataFrame(self.emissions) \
             .sort_values(by=['time', 'id']) \
-            .to_csv(emission_path, index=False)
-        print(f'Saved emissions file at {emission_path}')
+            .to_csv(emissions_path, index=False)
+        print(f'Saved emissions file at {emissions_path}')
+
+        if upload_to_leaderboard:
+            # get date & time in appropriate format
+            now = datetime.now()
+            date_now = now.date().isoformat()
+            time_now = now.time().isoformat()
+
+            # create metadata file
+            source_id = f'trajectory_{uuid.uuid4().hex}'
+            metadata = pd.DataFrame({
+                'source_id': [source_id],
+                'submission_time': [time_now],
+                'network': ['Single-Lane Trajectoy'],
+                'is_baseline': [False],
+                'submitter_name': ['Nathan'],
+                'strategy': ['Strategy'],
+                'version': ['1.0'],
+                'on_ramp': [False],
+                'penetration_rate': [0],
+                'road_grade': [False],
+                'is_benchmark': [False],
+            })
+            metadata_path = path / 'metadata.csv'
+            metadata.to_csv(metadata_path, index=False)
+
+            # upload emissions and metadata to S3
+            print()
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'metadata_table/date={date_now}/partition_name={source_id}_METADATA/{source_id}_METADATA.csv',
+                metadata_path, log=True
+            )
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'fact_vehicle_trace/date={date_now}/partition_name={source_id}/{source_id}.csv',
+                emissions_path, log=True
+            )
+
+            # TODO generate time space diagram and upload to
+            # upload_to_s3(
+            #     'circles.data.pipeline',
+            #     'time_space_diagram/date={0}/partition_name={1}/'
+            #     '{1}.png'.format(cur_date, source_id),
+            #     emission_files[0].replace('csv', 'png')
+            # ).

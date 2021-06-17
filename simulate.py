@@ -75,27 +75,28 @@ tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary sh
 rollout_dict = tb_callback.get_rollout_dict(test_env)
 
 # plot stuff
+print()
 now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
 plotter = Plotter(f'figs/simulate/{now}')
 for group, metrics in rollout_dict.items():
     for k, v in metrics.items():
         plotter.plot(v, title=k, grid=True, linewidth=1.0)
     plotter.save(group, log='\t')
+print()
 
 # generate_emissions
 if args.gen_emissions:
-    emission_path = f'emissions_{now}.csv'
-    test_env.gen_emissions(emission_path)
+    test_env.gen_emissions()
 
 # print stuff
-print()
+print('\nMetrics:')
 episode_reward = np.sum(rollout_dict['training']['rewards'])
 av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
-print('episode_reward', episode_reward)
-print('av_mpg', av_mpg)
+print('\tepisode_reward', episode_reward)
+print('\tav_mpg', av_mpg)
 for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
     has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
-    print(f'has_{penalty}', has_penalty)
+    print(f'\thas_{penalty}', has_penalty)
 
 for (name, array) in [
     ('reward', rollout_dict['training']['rewards']),
@@ -103,5 +104,5 @@ for (name, array) in [
     ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
     ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
 ]:
-    print(f'min_{name}', np.min(array))
-    print(f'max_{name}', np.max(array))
+    print(f'\tmin_{name}', np.min(array))
+    print(f'\tmax_{name}', np.max(array))
