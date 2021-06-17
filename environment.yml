@@ -15,3 +15,6 @@ dependencies:
     - tensorboard==2.5.0
     - torch==1.8.1
     - tqdm==4.60.0
+    - onnx==1.9.0
+    - onnx_tf==1.8.0
+    - tensorflow==2.5.0
