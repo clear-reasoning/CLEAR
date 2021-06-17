@@ -79,7 +79,7 @@ class IDMVehicle(Vehicle):
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         accel = self.apply_failsafe(accel)
 
-        return super().step(accel=accel, ballistic=False)
+        return super().step(accel=accel, ballistic=True)
 
 
 class FSVehicle(Vehicle):
@@ -94,7 +94,7 @@ class FSVehicle(Vehicle):
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         accel = self.apply_failsafe(accel)
 
-        return super().step(accel=accel, ballistic=False)
+        return super().step(accel=accel, ballistic=True)
 
 
 class TrajectoryVehicle(Vehicle):
@@ -117,7 +117,7 @@ class RLVehicle(Vehicle):
         super().__init__(**kwargs)
 
     def step(self):
-        return super().step(ballistic=False)
+        return super().step(ballistic=True)
 
     def set_accel(self, accel):
         self.accel = self.apply_failsafe(accel)
