@@ -47,7 +47,6 @@ def run_experiment(config):
     if not config['no_eval']:
         callbacks.append(TensorboardCallback(
             eval_freq=config['eval_frequency'],
-            eval_at_start=True,
             eval_at_end=True))
     callbacks += [
         LoggingCallback(
