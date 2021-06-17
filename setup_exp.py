@@ -34,6 +34,7 @@ def run_experiment(config):
         'minimal_time_headway': config['env_minimal_time_headway'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_idm_cars': config['env_num_idm_cars'],
+        'idms_kwargs': config['env_idms_kwargs'],
         'num_concat_states': config['env_num_concat_states'],
         'num_steps_per_sim': config['env_num_steps_per_sim'],
     })

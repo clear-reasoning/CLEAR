@@ -188,11 +188,15 @@ class TrajectoryEnv(gym.Env):
         if any(headway_penalties.values()):
             reward -= 2.0
 
+        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0) for veh in self.mpg_cars]) / 10.0
+        if self.av.controller == 'rl':
+            reward -= 0.002 * accel ** 2
+        reward += 1
 
         # give average MPG reward at the end
-        if end_of_horizon:
-            mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
-            reward += np.mean(mpgs)
+        # if end_of_horizon:
+        #     mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
+        #     reward += np.mean(mpgs)
 
         # log some metrics
         metrics['crash'] = int(crash)

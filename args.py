@@ -70,6 +70,8 @@ def parse_args_train():
         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_idm_cars', type=int, default=5, nargs='+',
         help='Number of IDM cars to place behind the AV.')
+    parser.add_argument('--env_idms_kwargs', type=str, default='{}', nargs='+',
+        help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
     parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
         help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
     parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
