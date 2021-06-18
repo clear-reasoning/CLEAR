@@ -164,7 +164,7 @@ class TrajectoryEnv(gym.Env):
                     self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=20, **eval(self.av_kwargs))
                 )
             elif veh_type == 'human':
-                self.avs.append(
+                self.humans.append(
                     self.sim.add_vehicle(controller=self.human_controller, kind='human', gap=20, **eval(self.human_kwargs))
                 )
 
