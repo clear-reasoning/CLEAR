@@ -153,7 +153,7 @@ class TrajectoryEnv(gym.Env):
                 self.platoon_lst += [vsplit[0]] * int(vsplit[1])
             else:
                 self.platoon_lst.append(veh)
-        assert set(self.platoon_lst).is_subset(set(['av', 'human']))
+        assert set(self.platoon_lst).issubset(set(['av', 'human']))
 
         # spawn vehicles
         self.avs = []
