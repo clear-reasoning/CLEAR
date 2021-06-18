@@ -1,3 +1,4 @@
+import boto3
 import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
@@ -67,3 +68,24 @@ def dict_to_json(data, path):
 
     with open(path, 'w') as fp:
         json.dump(data, fp, indent=4, cls=Encoder)
+
+def get_last_or(arr, default=None):
+    """Return the last element of {arr}, or {default} if {arr} is empty."""
+    if len(arr) == 0:
+        return default
+    return arr[-1]
+
+def get_first_element(arr):
+    """Returns arr[0]...[0]."""
+    val = arr
+    try:
+        while True:
+            val = val[0]
+    except:
+        return val
+
+def upload_to_s3(bucket_name, bucket_key, file_path, log=False):
+    s3 = boto3.resource("s3")
+    s3.Bucket(bucket_name).upload_file(str(file_path), str(bucket_key))
+    if log:
+        print(f'Uploaded {file_path} to s3://{bucket_name}/{bucket_key}')

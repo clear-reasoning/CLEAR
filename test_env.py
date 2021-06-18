@@ -1,7 +1,7 @@
 import json
 import os
 
-from env.trajectory_env import TrajectoryEnv
+from env.trajectory_env import *
 from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 
 import matplotlib.pyplot as plt
@@ -14,29 +14,25 @@ PLOT_PLOTS = False
 LOAD_CONFIG = True
 
 if __name__ == '__main__':
-    controller = 'custom_cp_path'
+    controller = 'idm'
 
-    custom_cp_path = '/Users/eugenevinitsky/Desktop/Research/Code/trajectory_training/log/test_08Jun21_17h50m15s/checkpoints/iter_600_15360000steps.zip'#None # './checkpoints/01_beats_idm_03Jun21/checkpoints/iter_300_7680000steps'
+    custom_cp_path = None
 
     metrics = defaultdict(list)
 
     os.makedirs('figs/test_env/', exist_ok=True)
 
-    config_path = os.path.join('/'.join(custom_cp_path.split('/')[:-2]) ,'env_config.json')
-    if os.path.exists(config_path) and LOAD_CONFIG:
-        with open(config_path, 'r') as fp:
-            env_config = json.load(fp)
-    else:
-
-        env_config = {
-            'max_accel': 1.5,
-            'max_decel': 3.0,
+    # config_path = os.path.join('/'.join(custom_cp_path.split('/')[:-2]) ,'env_config.json')
+    # if os.path.exists(config_path) and LOAD_CONFIG:
+    #     with open(config_path, 'r') as fp:
+    #         env_config = json.load(fp)
+    if True:
+        env_config = DEFAULT_ENV_CONFIG
+        env_config.update({
             'horizon': 300,
-            'min_speed': 0,
-            'max_speed': 40,
             'max_headway': 160,
             'use_fs': False,
-            'extra_obs': True,
+            'augment_vf': True,
             # how close we need to be at the end to get the reward
             'closing_gap': .85,
             # if we get closer then this time headway we are forced to break with maximum decel
@@ -45,7 +41,7 @@ if __name__ == '__main__':
             'num_concat_states': 1,
             'num_idm_cars': 10,
             'minimal_headway': 10.0
-        }
+        })
 
     env = TrajectoryEnv(env_config)
     idm = IDMController(a=env.max_accel, b=env.max_decel, noise=0.0)
@@ -59,7 +55,7 @@ if __name__ == '__main__':
 
     state = env.reset()
 
-    s = env.unnormalize_state(state)
+    s = env.get_base_state()
     fs.v_des = s['leader_speed']
 
     dmax = 0
@@ -114,30 +110,30 @@ if __name__ == '__main__':
         #     print(i)
         i += 1
         if controller == 'idm':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             accel = idm.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_leader':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             dmax = max(dmax, abs(fs.v_des - s['leader_speed']))  # dmax = 1.3933480995153147
             fs.v_des = s['leader_speed']
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_leader_every':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             if i % 30 == 0:
                 fs.v_des =  s['leader_speed']
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_leader_incremental':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             delta_max = 0.05
             fs.v_des += min(max(s['leader_speed'] - fs.v_des, -delta_max), delta_max)
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_leader_late':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             delta_max = 1
             fs.v_des = min(max(fs.v_des, s['leader_speed'] - delta_max), s['leader_speed'] + delta_max)
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'fs_fixed':
-            s = env.unnormalize_state(state)
+            s = env.get_base_state()
             fs.v_des = 50
             accel = fs.get_accel(s['speed'], s['leader_speed'], s['headway'], env.time_step)
         elif controller == 'constant_accel':
@@ -276,9 +272,9 @@ if __name__ == '__main__':
                                                'leader_speed_{}'.format(i): leader_speed[i, j],
                                                'headway_{}'.format(i): headways[i, j]})
                         state = env.normalize_state(state_dict)
-                        if env.extra_obs:
-                            extra_obs_shape = int(env.observation_space.low.shape[0] / 2)
-                            state = np.concatenate((state, np.zeros(extra_obs_shape)))
+                        if env.augment_vf:
+                            augment_vf_shape = int(env.observation_space.low.shape[0] / 2)
+                            state = np.concatenate((state, np.zeros(augment_vf_shape)))
                         accel, _ = model.predict(state, deterministic=True)
                         # accel = idm.get_accel(ego_speed, leader_speed, headway, env.time_step)
 

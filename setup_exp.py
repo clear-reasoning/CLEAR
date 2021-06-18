@@ -11,7 +11,7 @@ from algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from algos.ppo.ppo import PPO as AugmentedPPO
 from algos.td3.policies import CustomTD3Policy
 from callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
-from env.trajectory_env import TrajectoryEnv
+from env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from env.utils import dict_to_json
 
 register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
@@ -19,31 +19,25 @@ register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
 def run_experiment(config):
     # create exp logdir
-    exp_logdir = config['gs_logdir']
-    exp_logdir.mkdir(parents=True, exist_ok=True)
+    gs_logdir = config['gs_logdir']
+    gs_logdir.mkdir(parents=True, exist_ok=True)
 
     # create env config
-    env_config = {
-        'max_accel': 1.5,
-        'max_decel': 3.0,
+    env_config = dict(DEFAULT_ENV_CONFIG)
+    env_config.update({
         'horizon': config['env_horizon'],
-        'min_speed': 0,
-        'max_speed': 40,
         'max_headway': config['env_max_headway'],
-        'minimal_headway': 7,
-        'whole_trajectory': False,
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
         'use_fs': config['use_fs'],
-        'extra_obs': config['augment_vf'],
-        # if we get closer then this time headway we are forced to break with maximum decel
+        'augment_vf': config['augment_vf'],
         'minimal_time_headway': config['env_minimal_time_headway'],
-        # if false, we only include the AVs mpg in the calculation
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_idm_cars': config['env_num_idm_cars'],
+        'idms_kwargs': config['env_idms_kwargs'],
         'num_concat_states': config['env_num_concat_states'],
         'num_steps_per_sim': config['env_num_steps_per_sim'],
-    }
+    })
 
     # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
@@ -53,16 +47,17 @@ def run_experiment(config):
     if not config['no_eval']:
         callbacks.append(TensorboardCallback(
             eval_freq=config['eval_frequency'],
-            eval_at_start=True,
             eval_at_end=True))
     callbacks += [
         LoggingCallback(
             grid_search_config=config['gs_config'],
             log_metrics=True),
         CheckpointCallback(
-            save_path=exp_logdir / 'checkpoints',
+            save_path=gs_logdir / 'checkpoints',
             save_freq=config['cp_frequency'],
-            save_at_end=True),
+            save_at_end=True,
+            s3_bucket='trajectory.env' if config['s3'] else None,
+            exp_logdir=config['exp_logdir'],),
     ]
     callbacks = CallbackList(callbacks)
 
@@ -85,7 +80,7 @@ def run_experiment(config):
             'gamma': config['gamma'],
             'gae_lambda': config['gae_lambda'],
             'clip_range': 0.2,
-            'clip_range_vf': None,
+            'clip_range_vf': 50,
             'ent_coef': 0.0,
             'vf_coef': 0.5,
             'max_grad_norm': 0.5,
@@ -113,7 +108,7 @@ def run_experiment(config):
 
     train_config.update({
         'env': multi_env,
-        'tensorboard_log': exp_logdir,
+        'tensorboard_log': gs_logdir,
         'verbose': 0,  # 0 no output, 1 info, 2 debug
         'seed': None,  # only concerns PPO and not the environment
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
@@ -133,7 +128,7 @@ def run_experiment(config):
         'train_config': train_config,
         'learn_config': learn_config
     }
-    dict_to_json(configs, exp_logdir / 'configs.json')
+    dict_to_json(configs, gs_logdir / 'configs.json')
 
     # create model and start training
     model = algorithm(**train_config)
