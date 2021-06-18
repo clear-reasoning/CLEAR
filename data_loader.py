@@ -65,7 +65,8 @@ def _preprocess_data():
         df = pd.read_csv(fp, index_col=0)
         df = df.reset_index(drop=True)
 
-        df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)
+        if 'smooth' in sys.argv:
+            df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)
         # sometimes there are missing timesteps
         # fix that by doing linear interpolation on the missing timesteps
         dt = 0.1
