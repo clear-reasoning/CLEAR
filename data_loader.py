@@ -4,6 +4,8 @@ import pandas as pd
 from pathlib import Path
 import random
 import sys
+import time
+from collections import defaultdict
 
 from env.accel_controllers import IDMController
 from env.energy_models import PFM2019RAV4
@@ -114,19 +116,39 @@ if __name__ == '__main__':
 
     if 'plot_sims' in sys.argv:  # plot mpg values for the trajectories, using different types of platoons
         print('Computing MPG values for different platoons following the trajectories')
-        
+        # Contains data from each trajectory
+        all_mpg_params = []
+        curr_time = time.strftime("%Y%m%d-%H%M%S")
         for traj in data_loader.get_all_trajectories():
-            for num_idms, av_idm_params in [
-                (5, dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)),
-                # (5, dict(v0=35, T=1.5, a=5, b=0.1, delta=4, s0=2, noise=0.0)),
-                # (5, dict(v0=35, T=4, a=0.7, b=1.2, delta=4, s0=2, noise=0.0)),
-            ]:
-                plotter = Plotter('figs/dataset/', traj['path'].stem)
+            # desired constraints: s0 > 7, noise = 0, 10 < headway < 150, T > 0.4
+            all_av_params = []
+            # Add IDM search params
+            if 'grid_search' in sys.argv:
+                a_sweep = np.around(np.arange(0.5, 2.4, 0.1), decimals=1)
+                b_sweep = np.around(np.arange(1.3, 3.0, 0.1), decimals=1)
+                # a_sweep = np.around(np.arange(0.8, 1.0, 0.1), decimals=1)
+                # b_sweep = np.around(np.arange(1.6, 1.8, 0.1), decimals=1)
+                for a in a_sweep:
+                    for b in b_sweep:
+                        all_av_params.append((5, 'idm', dict(v0=35, T=1, a=a, b=b, delta=4, s0=7, noise=0)))
+
+                v_des_sweep = np.arange(5, 21)
+                # v_des_sweep = np.arange(5, 7)
+                for v in v_des_sweep:
+                    all_av_params.append((5, 'fs', dict(v_des=v)))
+            else:
+                all_av_params.append((5, 'idm', dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=7, noise=0)))
+
+            # For each trajectory, stores key-values of car params-MPG by controller
+            mpg_params = defaultdict(dict)
+            fs_plotter = Plotter('figs/dataset/', curr_time)
+            for num_idms, controller, av_params in all_av_params:
+                plotter = Plotter(f'figs/dataset/{curr_time}/', traj['path'].stem)
                 print(traj['path'])
                 sim = Simulation(timestep=traj['timestep'])
                 sim.add_vehicle(controller='trajectory',
                     trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
-                sim.add_vehicle(controller='idm', gap=20, **av_idm_params)
+                sim.add_vehicle(controller=controller, gap=20, **av_params)
                 for _ in range(num_idms):
                     sim.add_vehicle(controller='idm', gap=20, **dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3))
                 sim.run()
@@ -163,8 +185,43 @@ if __name__ == '__main__':
                     avg_mpg = np.mean(mpgs)
                     plotter.plot([0, 1], [avg_mpg] * 2, label=f'average ({round(avg_mpg, 2)})', linewidth=3.0)
                 
-                idm_params_str = '_'.join([f'{k}={v}' for k, v in av_idm_params.items()])
-                plotter.save(f'platoon_{num_idms}idms_{idm_params_str}_{round(avg_mpg, 2)}mpg', log='\t')
+                mpg_params[controller][str(av_params)] = avg_mpg
+
+                params_str = '_'.join([f'{k}={v}' for k, v in av_params.items()])
+                plotter.save(f'platoon_{num_idms}{controller}_{params_str}_{round(avg_mpg, 2)}mpg', log='\t')
+            
+            if 'idm' in mpg_params:
+                heat = np.empty((0,len(b_sweep)), int)
+                for j in np.arange(len(a_sweep) * len(b_sweep), 0, -len(b_sweep)):
+                    heat = np.append(heat, np.array([list(mpg_params['idm'].values())[j-len(b_sweep): j]]), axis=0)
+
+                y_ticks = range(0, len(a_sweep)) if len(a_sweep) % 2 == 0 else range(0, len(a_sweep))
+                x_ticks = range(0, len(b_sweep))
+                yticklabels = np.around(a_sweep, decimals=1)[::-1]
+                xticklabels = np.around(b_sweep, decimals=1)
+    
+                plotter.heatmap(heat, xlabel='', ylabel='', xticks=x_ticks, yticks=y_ticks,
+                                xticklabels= xticklabels, yticklabels=yticklabels,
+                                title="Heatmap of IDM a and b parameters", cbarlabel='MPG')
+
+            all_mpg_params.append(mpg_params)
+            score = dict()
+            for elem in list(mpg_params.values()):
+                score.update(elem)
+            key = max(score, key=lambda k: score.get(k))
+            print(f'Top score is {score[key]} mpg with params: {str(key)}')
+            print("All results:")
+            for k, v in score.items():
+                print(k, v)
+
+        with fs_plotter.subplot(title='MPGs over v_des sweep', xlabel='v_des (m/s)', ylabel='Miles per gallon', grid=True, legend=True):
+            for traj in all_mpg_params:
+                for controller, m_param in traj.items():
+                    if controller == 'fs':
+                        fs_plotter.plot([elem['v_des'] for elem in [eval(x) for x in list(m_param.keys())]], list(m_param.values()))
+
+            fs_plotter.save('v_des_sweep')
+        
 
     if 'small_chunks' in sys.argv:  # compute different metrics on a lot of small chunks of trajectories
         print('Running simulations with small chunks of trajectories')

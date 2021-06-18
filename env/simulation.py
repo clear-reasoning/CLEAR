@@ -45,6 +45,7 @@ class Simulation(object):
             'fs': FSVehicle,
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
+            'fs': FSVehicle
         }[controller]
 
         veh = vehicle_class(
