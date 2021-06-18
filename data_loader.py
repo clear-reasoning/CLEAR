@@ -50,6 +50,10 @@ class DataLoader(object):
 
 ###################################################################################################
 
+def smooth_data(target, n, mu = 0.5):
+    for i in range(n):
+        target = mu/2*np.append(target[0], target[:-1]) + (1-mu)*target + mu/2*np.append(target[1:], target[-1])
+    return target
 
 def _preprocess_data():
     """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
@@ -61,6 +65,8 @@ def _preprocess_data():
         df = pd.read_csv(fp, index_col=0)
         df = df.reset_index(drop=True)
 
+        if 'smooth' in sys.argv:
+            df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)
         # sometimes there are missing timesteps
         # fix that by doing linear interpolation on the missing timesteps
         dt = 0.1
@@ -73,7 +79,7 @@ def _preprocess_data():
                     df.loc[idx] = df.loc[i - 1] + (df.loc[i] - df.loc[i - 1]) * k / missing
                     df.loc[idx]['Time'] = round(df.loc[idx]['Time'], 3)
         df = df.sort_index().reset_index(drop=True)
-        assert(all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(data['Time'])))
+        assert(all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(df['Time'])))
         
         # compute total ego distances traveled from GPS coordinates
         distances = itertools.accumulate(
@@ -89,6 +95,7 @@ def _preprocess_data():
 
 if __name__ == '__main__':
     data_loader = DataLoader()
+    curr_time = time.strftime("%Y%m%d-%H%M%S")
 
     if 'preprocess' in sys.argv:
         print('Preprocessing trajectory files')
@@ -104,7 +111,7 @@ if __name__ == '__main__':
 
     if 'plot_data' in sys.argv:  # plot ego trajectories (positions, speeds, accels)
         print('Plotting processed trajectory data')
-        plotter = Plotter('figs/dataset/processed')
+        plotter = Plotter(f'figs/dataset/processed/{curr_time}')
         for traj in data_loader.get_all_trajectories():
             plotter.plot(traj['times'], traj['positions'], title='Ego positions', 
                 xlabel='time (s)', ylabel='position (m)', grid=True)
@@ -118,7 +125,6 @@ if __name__ == '__main__':
         print('Computing MPG values for different platoons following the trajectories')
         # Contains data from each trajectory
         all_mpg_params = []
-        curr_time = time.strftime("%Y%m%d-%H%M%S")
         for traj in data_loader.get_all_trajectories():
             # desired constraints: s0 > 7, noise = 0, 10 < headway < 150, T > 0.4
             all_av_params = []
