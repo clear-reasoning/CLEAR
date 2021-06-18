@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 from pathlib import Path # needed?
+from stable_baselines3.common.logger import Figure
 
 
 class Plotter(object):
@@ -90,10 +91,10 @@ class Plotter(object):
         save_path = self.save_dir / (file_name + '.png')
         plt.savefig(save_path)
 
-    def save(self, file_name, log=None):
+    def makefig(self, dpi=100):
         # figsize in inches, dpi = dots (pixels) per inches
         fig, axes = plt.subplots(len(self.plot_data), 
-            figsize=(20, 2 * len(self.plot_data)), dpi=100)
+            figsize=(15, 2 * len(self.plot_data)), dpi=dpi)
         if len(self.plot_data) == 1:
             axes = [axes]
         for ax, data in zip(axes, self.plot_data):
@@ -107,6 +108,10 @@ class Plotter(object):
             if data['grid']: ax.grid()
             if data['legend']: ax.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
         fig.tight_layout()
+        return fig
+
+    def save(self, file_name, log=None):
+        fig = self.makefig()
         save_path = self.save_dir / (file_name + '.png')
         fig.savefig(save_path)
         plt.close(fig)
@@ -114,3 +119,16 @@ class Plotter(object):
 
         if log:
             print(f'{log if type(log) is str else ""}Written {save_path}')
+
+
+class TensorboardPlotter(Plotter):
+    def __init__(self, logger):
+        self.logger = logger
+        self.plot_data = []
+        self.subplots = False
+
+    def save(self, log_name):
+        fig = self.makefig(dpi=100)
+        self.logger.record(log_name, Figure(fig, close=True), exclude=('stdout', 'log', 'json', 'csv'))
+        plt.close(fig)
+        self.plot_data.clear()

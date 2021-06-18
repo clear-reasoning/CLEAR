@@ -12,7 +12,10 @@ def parse_args_train():
     parser.add_argument('--n_processes', type=int, default=1,
         help='Number of processes to run in parallel. Useful when running grid searches.'
              'Can be more than the number of available CPUs.')
-
+    parser.add_argument('--s3', default=False, action='store_true',
+        help='If set, experiment data will be uploaded to s3://trajectory.env/. '
+             'AWS credentials must have been set in ~/.aws in order to use this.')
+    
     parser.add_argument('--iters', type=int, default=1, nargs='+',
         help='Number of iterations (rollouts) to train for.'
              'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
@@ -57,15 +60,18 @@ def parse_args_train():
         help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
-                        help='If true, the value function will be augmented with info stored in the extra_obs'
-                             'key of the info dict.')
+        help='If true, the value function will be augmented with some additional states.')
+
     # env params
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
-        help='This many past states will be concatenated ')
+        help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
+             'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_idm_cars', type=int, default=5, nargs='+',
         help='Number of IDM cars to place behind the AV.')
+    parser.add_argument('--env_idms_kwargs', type=str, default='{}', nargs='+',
+        help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
     parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
         help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
     parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
@@ -95,9 +101,8 @@ def parse_args_simulate():
     parser.add_argument('--av_kwargs', type=str, default='{}',
         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
-    parser.add_argument('--cp_path', type=str, default=None, required=True,
+    parser.add_argument('--cp_path', type=str, default=None,
         help='Path to a saved model checkpoint. '
-             'Even when {av_controller} is not "rl", this is required to get env params from the config file. '
              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
     parser.add_argument('--verbose', default=False, action='store_true',
         help='If set, print information about the loaded controller when {av_controller} is "rl".')
@@ -108,6 +113,8 @@ def parse_args_simulate():
     parser.add_argument('--idms_kwargs', type=str, default='{}',
         help='Kwargs to pass to the platoon IDM controllers, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)".')
+    parser.add_argument('--gen_emissions', default=False, action='store_true',
+        help='If set, a .csv emission file will be generated.')
 
     args = parser.parse_args()
     return args
