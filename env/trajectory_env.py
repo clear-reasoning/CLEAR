@@ -258,11 +258,11 @@ class TrajectoryEnv(gym.Env):
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_time': [time_now],
-                'network': ['Single-Lane Trajectoy'],
+                'network': ['Single-Lane Trajectory'],
                 'is_baseline': [False],
                 'submitter_name': ['Nathan'],
                 'strategy': ['Strategy'],
-                'version': ['1.0'],
+                'version': ['3.0'],
                 'on_ramp': [False],
                 'penetration_rate': [0],
                 'road_grade': [False],
