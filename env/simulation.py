@@ -1,6 +1,6 @@
 from collections import defaultdict
 from env.vehicles import FSVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
-from env.energy_models import PFMMidsizeSedan
+from env.energy_models import PFM2019RAV4
 from env.utils import get_last_or
 
 
@@ -20,7 +20,7 @@ class Simulation(object):
         self.step_counter = -1
         self.time_counter = 0
         
-        self.energy_model = PFMMidsizeSedan() 
+        self.energy_model = PFM2019RAV4()
 
         self.data_by_time = []
         self.data_by_vehicle = defaultdict(lambda: defaultdict(list)) 
