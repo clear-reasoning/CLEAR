@@ -156,29 +156,29 @@ if __name__ == '__main__':
                 # plot
                 with plotter.subplot(title='Positions', xlabel='Time (s)', ylabel='Position (m)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        plotter.plot(vdata['times'], vdata['positions'], label=vid)
+                        plotter.plot(vdata['time'], vdata['position'], label=vid)
                 with plotter.subplot(title='Velocities', xlabel='Time (s)', ylabel='Speed (m/s)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        plotter.plot(vdata['times'], vdata['speeds'], label=vid)
+                        plotter.plot(vdata['time'], vdata['speed'], label=vid)
                 with plotter.subplot(title='Accelerations', xlabel='Time (s)', ylabel='Accel (m/s$^2$)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        plotter.plot(vdata['times'], vdata['accels'], label=vid)
+                        plotter.plot(vdata['time'], vdata['accel'], label=vid)
                 with plotter.subplot(title='Bumper-to-bumper gaps (to leader)', xlabel='Time (s)', ylabel='Gap (m)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        plotter.plot(vdata['times'], vdata['headways'], label=vid)
+                        plotter.plot(vdata['time'], vdata['headway'], label=vid)
                 with plotter.subplot(title='Velocity differences (to leader)', xlabel='Time (s)', ylabel='Speed diff (m/s)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        plotter.plot(vdata['times'], vdata['speed_differences'], label=vid)
+                        plotter.plot(vdata['time'], vdata['speed_difference'], label=vid)
                 with plotter.subplot(title='Running MPGs over the last 100s', xlabel='Time (s)', ylabel='MPG average', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
-                        speeds = moving_sum(vdata['speeds'], chunk_size=1000)
-                        energies = moving_sum(vdata['instant_energy_consumptions'], chunk_size=1000)
+                        speeds = moving_sum(vdata['speed'], chunk_size=1000)
+                        energies = moving_sum(vdata['instant_energy_consumption'], chunk_size=1000)
                         mpgs = (speeds / 1609.34) / (energies / 3600 + 1e-6)
-                        plotter.plot(vdata['times'][999:], mpgs, label=vid)
+                        plotter.plot(vdata['time'][999:], mpgs, label=vid)
                 with plotter.subplot(title='MPGs (average doesn\'t account for trajectory vehicles)', xlabel='Time (s)', ylabel='Miles per gallon', grid=True, legend=True):
                     mpgs = []
                     for vid, vdata in sim.data_by_vehicle.items():
-                        mpg = (np.sum(vdata['speeds']) / 1609.34) / (np.sum(vdata['instant_energy_consumptions']) / 3600 + 1e-6)
+                        mpg = (np.sum(vdata['speed']) / 1609.34) / (np.sum(vdata['instant_energy_consumption']) / 3600 + 1e-6)
                         plotter.plot([0, 1], [mpg] * 2, label=f'{vid} ({round(mpg, 2)})')
                         if 'trajectory' not in vid:
                             mpgs.append(mpg)
