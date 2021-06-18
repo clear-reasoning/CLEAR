@@ -59,6 +59,30 @@ class Plotter(object):
                     'linewidth': linewidth,
                 }],
             })
+    
+    def heatmap (self, array, xticks=None, yticks=None, xlabel=None, ylabel=None, title=None,file_name='heatmap'):
+        # Integrate it in with plot_data
+        fig, ax = plt.subplots()
+        im = ax.imshow(array)
+        if xticks is not None:
+            ax.set_xticks(xticks)
+        if yticks is not None:
+            ax.set_yticks(yticks)
+
+        # ... and label them with the respective list entries
+        if xlabel is not None:
+            ax.set_xticklabels(xlabel)
+        if ylabel is not None:
+            ax.set_yticklabels(ylabel)
+
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                rotation_mode="anchor")
+
+        ax.set_title(title)
+        fig.tight_layout()
+        save_path = self.save_dir / (file_name + '.png')
+        plt.savefig(save_path)
 
     def save(self, file_name, log=None):
         # figsize in inches, dpi = dots (pixels) per inches
