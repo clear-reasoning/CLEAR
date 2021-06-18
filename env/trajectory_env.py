@@ -9,7 +9,7 @@ import uuid
 
 from data_loader import DataLoader
 from env.simulation import Simulation
-from env.utils import upload_to_s3
+from env.utils import get_first_element, upload_to_s3
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -29,12 +29,14 @@ DEFAULT_ENV_CONFIG = {
     'include_idm_mpg': False,
     'num_concat_states': 1,
     'num_steps_per_sim': 1,
+    # platoon (combination of avs and humans following the leader car)
+    'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
     'av_controller': 'rl',
     'av_kwargs': '{}',
-    # idm platoon
-    'num_idm_cars': 5,
-    'idms_kwargs': '{}',
+    # human controller & params
+    'human_controller': 'idm',
+    'human_kwargs': '{}',
 }
 
 
@@ -60,6 +62,12 @@ class TrajectoryEnv(gym.Env):
 
         # create simulation
         self.create_simulation()
+        print('Using the following platoon: leader ' + ' '.join(self.platoon_lst))
+        print(f'with av controller {self.av_controller} ({self.av_kwargs})')
+        print(f'with human controller {self.human_controller} ({self.human_kwargs})')
+        self.n_avs = max(1, self.platoon_lst.count('av'))
+        if self.n_avs > 1:
+            print('Training with several AVs is not yet supported.')
 
         # define action space
         if self.discrete:
@@ -85,13 +93,13 @@ class TrajectoryEnv(gym.Env):
             n_obs *= 2  # additional room for vf states
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
 
-
-    def get_base_state(self):
+    def get_base_state(self, av_idx=0):
         """Dict of state_name: (state_value, state_normalization_scale)"""
+        av = self.avs[av_idx]
         state = {
-            'speed': (self.av.speed, 40.0),
-            'leader_speed': (self.av.get_leader_speed(), 40.0),
-            'headway': (self.av.get_headway(), 100.0),
+            'speed': (av.speed, 40.0),
+            'leader_speed': (av.get_leader_speed(), 40.0),
+            'headway': (av.get_headway(), 100.0),
         }
         
         if self.use_fs:
@@ -110,10 +118,10 @@ class TrajectoryEnv(gym.Env):
 
         return vf_state
 
-    def get_state(self, _store_state=False):
+    def get_state(self, _store_state=False, av_idx=0):
         if _store_state:
             # preprend new state to the saved past states
-            state = [value / scale for value, scale in self.get_base_state().values()]
+            state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
             self.past_states = np.roll(self.past_states, len(state))
             self.past_states[:len(state)] = state
 
@@ -137,16 +145,31 @@ class TrajectoryEnv(gym.Env):
         # populate simulation with a trajectoy leader
         self.sim.add_vehicle(controller='trajectory', kind='leader',
             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
-        # an AV
-        av_initial_gap = max(2.1 * self.traj['velocities'][0], 20)
-        self.av = self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=av_initial_gap,
-                                       **eval(self.av_kwargs))
-        # and a platoon of IDMs
-        self.idm_platoon = [self.sim.add_vehicle(controller='idm', kind='platoon', gap=20, **eval(self.idms_kwargs))
-                            for _ in range(self.num_idm_cars)]
+
+        # parse platoons
+        self.platoon_lst = []
+        for veh in self.platoon.split():
+            if len(vsplit := veh.split('*')) == 2:
+                self.platoon_lst += [vsplit[0]] * int(vsplit[1])
+            else:
+                self.platoon_lst.append(veh)
+        assert set(self.platoon_lst) == set(['av', 'human'])
+
+        # spawn vehicles
+        self.avs = []
+        self.humans = []
+        for veh_type in self.platoon_lst:
+            if veh_type == 'av':
+                self.avs.append(
+                    self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=20, **eval(self.av_kwargs))
+                )
+            elif veh_type == 'human':
+                self.avs.append(
+                    self.sim.add_vehicle(controller=self.human_controller, kind='human', gap=20, **eval(self.human_kwargs))
+                )
 
         # define which vehicles are used for the MPG reward
-        self.mpg_cars = [self.av] + (self.idm_platoon if self.include_idm_mpg else [])
+        self.mpg_cars = self.avs + (self.humans if self.include_idm_mpg else [])
 
         # initialize one data collection step
         self.sim.collect_data()
@@ -155,23 +178,26 @@ class TrajectoryEnv(gym.Env):
         self.create_simulation()
         return self.get_state(_store_state=True)
 
-    def step(self, action):
+    def step(self, actions):
         # additional trajectory data that will be plotted in tensorboard
         metrics = {}
 
         # apply acceleration action to AV
-        if self.av.controller == 'rl':
-            accel = self.action_set[action] if self.discrete else float(action)
-            metrics['rl_accel_before_failsafe'] = accel
-            accel = self.av.set_accel(accel)  # returns accel with failsafes applied
-            metrics['rl_accel_after_failsafe'] = accel
+        if self.av_controller == 'rl':
+            if type(actions) not in [list, np.ndarray]:
+                actions = [actions]
+            for av, action in zip(self.avs, actions):
+                accel = self.action_set[action] if self.discrete else float(action)
+                metrics['rl_accel_before_failsafe'] = accel
+                accel = av.set_accel(accel)  # returns accel with failsafes applied
+                metrics['rl_accel_after_failsafe'] = accel
 
         # execute one simulation step
         end_of_horizon = not self.sim.step()
 
         # compute reward & done
-        h = self.av.get_headway()
-        th = self.av.get_time_headway()
+        h = self.avs[0].get_headway()
+        th = self.avs[0].get_time_headway()
 
         reward = 0
 
@@ -189,7 +215,7 @@ class TrajectoryEnv(gym.Env):
             reward -= 2.0
 
         reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0) for veh in self.mpg_cars]) / 10.0
-        if self.av.controller == 'rl':
+        if self.av_controller == 'rl':
             reward -= 0.002 * accel ** 2
         reward += 1
 
@@ -209,7 +235,7 @@ class TrajectoryEnv(gym.Env):
         infos = { 'metrics': metrics }
 
         if self.collect_rollout:
-            self.collected_rollout['actions'].append(action)
+            self.collected_rollout['actions'].append(get_first_element(actions))
             self.collected_rollout['base_states'].append(self.get_base_state())
             self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
             self.collected_rollout['rewards'].append(reward)

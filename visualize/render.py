@@ -2,15 +2,28 @@ import pygame
 import pandas as pd
 import time
 import math
+import sys
 
-csv_path = './test.csv'
-df = pd.read_csv(csv_path)
-#  time,env_step,trajectory_index,veh_types,veh_positions,veh_speeds
 
-timesteps = list(map(lambda x: round(x, 1), df['time']))
-car_types = list(map(lambda s: s.split(';'), df['veh_types']))
-car_positions = list(map(lambda s: list(map(float, s.split(';'))), df['veh_positions']))
-car_speeds = list(map(lambda s: list(map(float, s.split(';'))), df['veh_speeds']))
+print('Reading emissions data')
+
+emissions_path = sys.argv[1]
+df = pd.read_csv(emissions_path)
+#  time,step,id,position,speed,accel,headway,leader_speed,speed_difference,leader_id,follower_id,instant_energy_consumption,total_energy_consumption,total_distance_traveled,total_miles,total_gallons,avg_mpg
+
+timesteps = sorted(list(set(map(lambda x: round(x, 1), df['time']))))
+
+car_types = []
+car_positions = []
+car_speeds = []
+
+for ts in timesteps:
+    ts_data = df.loc[df['time'] == ts]
+    car_types.append(list(ts_data['id']))
+    car_positions.append(list(ts_data['position']))
+    car_speeds.append(list(ts_data['speed']))
+
+print('Done')
 
 pygame.init()
 screen = pygame.display.set_mode([1500, 500])
@@ -74,7 +87,7 @@ for i in range(len(timesteps)):
 
     shift_x = 0
     for car_type, car_x in zip(car_types[i], car_positions[i]):
-        if car_type == 'av':
+        if car_type.startswith('leader'):
             shift_x = mid_x - car_x * zoom
 
     for pos_x in range(-1000, 22000, interval):
@@ -91,16 +104,23 @@ for i in range(len(timesteps)):
         pos_y = mid_y
         radius = 3 * zoom
 
-        pygame.draw.circle(screen, (255, 255, 255), (pos_x, pos_y), radius)
+        if car_type.startswith('leader'):
+            car_color = (0, 255, 0)
+        if car_type.startswith('av'):
+            car_color = (255, 0, 0)
+        if car_type.startswith('human'):
+            car_color = (255, 255, 255)
+
+        pygame.draw.circle(screen, car_color, (pos_x, pos_y), radius)
 
         img = font.render(car_type, True, (0, 0, 0))
-        screen.blit(img, (pos_x - img.get_width() // 2, pos_y - 15 * zoom - img.get_height() // 2))
+        screen.blit(img, (pos_x - img.get_width() // 2, pos_y - 20 * zoom - img.get_height() // 2))
 
-        img = font.render(f'{round(car_speed, 1)}' + (' m/s' if car_type == 'leader' else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed, 1)}' + (' m/s' if car_type.startswith('leader') else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom - img.get_height() // 2))
-        img = font.render(f'{round(car_speed * 3.6, 1)}' + (' km/h' if car_type == 'leader' else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed * 3.6, 1)}' + (' km/h' if car_type.startswith('leader') else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom + 15 - img.get_height() // 2))
-        img = font.render(f'{round(car_speed * 2.237, 1)}' + (' mph' if car_type == 'leader' else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed * 2.237, 1)}' + (' mph' if car_type.startswith('leader') else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom + 30 - img.get_height() // 2))
 
     pygame.display.flip()

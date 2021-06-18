@@ -50,10 +50,11 @@ else:
         'use_fs': False,
         'discrete': False,
         'whole_trajectory': True,
+        'platoon': args.platoon,
         'av_controller': args.av_controller,
         'av_kwargs': args.av_kwargs,
-        'num_idm_cars': args.n_idms,
-        'idms_kwargs': args.idms_kwargs,
+        'human_controller': 'idm',
+        'human_kwargs': args.human_kwargs,
     })
 
 # create env
@@ -86,7 +87,7 @@ print()
 
 # generate_emissions
 if args.gen_emissions:
-    test_env.gen_emissions()
+    test_env.gen_emissions(upload_to_leaderboard=args.s3)
 
 # print stuff
 print('\nMetrics:')

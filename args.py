@@ -68,10 +68,8 @@ def parse_args_train():
              'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
         help='If true, the environment has a discrete action space.')
-    parser.add_argument('--env_num_idm_cars', type=int, default=5, nargs='+',
-        help='Number of IDM cars to place behind the AV.')
-    parser.add_argument('--env_idms_kwargs', type=str, default='{}', nargs='+',
-        help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
+    parser.add_argument('--use_fs', type=int, default=0, nargs='+',
+        help='If true, use a FollowerStopper wrapper.')
     parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
         help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
     parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
@@ -82,10 +80,14 @@ def parse_args_train():
         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
-    parser.add_argument('--use_fs', type=int, default=0, nargs='+',
-        help='If true, use a FollowerStopper wrapper.')
     parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
         help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
+
+    parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
+        help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
+             '"human*3" can be used as a shortcut for "human human human".')
+    parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
+        help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
 
     args = parser.parse_args()
     return args
@@ -94,27 +96,29 @@ def parse_args_train():
 def parse_args_simulate():
     parser = argparse.ArgumentParser(description='Simulate a trained controller or baselines on the trajectory env.')
 
-    parser.add_argument('--av_controller', type=str, default='rl',
-        help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
-    parser.add_argument('--av_gap', type=float, default=20.0,
-        help='Initial bumper-to-bumper gap (in meters) to leave from the AV to its leader at initialization.')
-    parser.add_argument('--av_kwargs', type=str, default='{}',
-        help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
-             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
     parser.add_argument('--cp_path', type=str, default=None,
         help='Path to a saved model checkpoint. '
              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
     parser.add_argument('--verbose', default=False, action='store_true',
         help='If set, print information about the loaded controller when {av_controller} is "rl".')
-    parser.add_argument('--n_idms', type=int, default=5,
-        help='Number of IDM cars to spawn in the platoon behind the AV.')
-    parser.add_argument('--idms_gap', type=float, default=20.0,
-        help='Initial bumper-to-bumper gap (in meters) to leave from each platoon IDM car to its leader at initialization.')
-    parser.add_argument('--idms_kwargs', type=str, default='{}',
-        help='Kwargs to pass to the platoon IDM controllers, as a string that will be evaluated into a dict. '
-             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)".')
     parser.add_argument('--gen_emissions', default=False, action='store_true',
         help='If set, a .csv emission file will be generated.')
+    parser.add_argument('--s3', default=False, action='store_true',
+        help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
+
+    parser.add_argument('--platoon', type=str, default='av human*5',
+        help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
+             '"human*3" can be used as a shortcut for "human human human".')
+    parser.add_argument('--av_controller', type=str, default='rl',
+        help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
+    parser.add_argument('--av_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+    parser.add_argument('--human_controller', type=str, default='idm',
+        help='Controller to control the humans(s) with. Can be either one of "idm" or "fs".')
+    parser.add_argument('--human_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
 
     args = parser.parse_args()
     return args
