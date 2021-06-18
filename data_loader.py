@@ -124,15 +124,16 @@ if __name__ == '__main__':
             all_av_params = []
             # Add IDM search params
             if 'grid_search' in sys.argv:
-                # a_sweep = np.around(np.arange(0.5, 2.4, 0.1))
-                # b_sweep = np.around(np.arange(1.3, 3.0, 0.1))
-                a_sweep = np.around(np.arange(0.8, 1.2, 0.1), decimals=1)
-                b_sweep = np.around(np.arange(1.6, 2.0, 0.1), decimals=1)
+                a_sweep = np.around(np.arange(0.5, 2.4, 0.1), decimals=1)
+                b_sweep = np.around(np.arange(1.3, 3.0, 0.1), decimals=1)
+                # a_sweep = np.around(np.arange(0.8, 1.0, 0.1), decimals=1)
+                # b_sweep = np.around(np.arange(1.6, 1.8, 0.1), decimals=1)
                 for a in a_sweep:
                     for b in b_sweep:
                         all_av_params.append((5, 'idm', dict(v0=35, T=1, a=a, b=b, delta=4, s0=7, noise=0)))
 
                 v_des_sweep = np.arange(5, 21)
+                # v_des_sweep = np.arange(5, 7)
                 for v in v_des_sweep:
                     all_av_params.append((5, 'fs', dict(v_des=v)))
             else:
@@ -196,10 +197,12 @@ if __name__ == '__main__':
 
                 y_ticks = range(0, len(a_sweep)) if len(a_sweep) % 2 == 0 else range(0, len(a_sweep))
                 x_ticks = range(0, len(b_sweep))
-                y_label = np.around(a_sweep, decimals=1)[::-1]
-                x_label = np.around(b_sweep, decimals=1)
+                yticklabels = np.around(a_sweep, decimals=1)[::-1]
+                xticklabels = np.around(b_sweep, decimals=1)
     
-                plotter.heatmap(heat, xticks=x_ticks, yticks=y_ticks, xlabel=x_label, ylabel=y_label, title="Heatmap of IDM a and b parameters")
+                plotter.heatmap(heat, xlabel='', ylabel='', xticks=x_ticks, yticks=y_ticks,
+                                xticklabels= xticklabels, yticklabels=yticklabels,
+                                title="Heatmap of IDM a and b parameters", cbarlabel='MPG')
 
             all_mpg_params.append(mpg_params)
             score = dict()

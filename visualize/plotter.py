@@ -60,10 +60,13 @@ class Plotter(object):
                 }],
             })
     
-    def heatmap (self, array, xticks=None, yticks=None, xlabel=None, ylabel=None, title=None,file_name='heatmap'):
+    def heatmap (self, array, xlabel='', ylabel='', xticks=None, yticks=None, xticklabels=None, yticklabels=None,
+                 title=None, file_name='heatmap', cbarlabel=None, cbar_kw={}):
         # Integrate it in with plot_data
         fig, ax = plt.subplots()
         im = ax.imshow(array)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
         if xticks is not None:
             ax.set_xticks(xticks)
         if yticks is not None:
@@ -71,13 +74,16 @@ class Plotter(object):
 
         # ... and label them with the respective list entries
         if xlabel is not None:
-            ax.set_xticklabels(xlabel)
+            ax.set_xticklabels(xticklabels)
         if ylabel is not None:
-            ax.set_yticklabels(ylabel)
+            ax.set_yticklabels(yticklabels)
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                 rotation_mode="anchor")
+
+        cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom") 
 
         ax.set_title(title)
         fig.tight_layout()
