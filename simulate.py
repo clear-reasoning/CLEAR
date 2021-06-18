@@ -50,12 +50,15 @@ else:
         'use_fs': False,
         'discrete': False,
         'whole_trajectory': True,
-        'platoon': args.platoon,
         'av_controller': args.av_controller,
         'av_kwargs': args.av_kwargs,
         'human_controller': 'idm',
         'human_kwargs': args.human_kwargs,
     })
+
+env_config.update({
+    'platoon': args.platoon,
+})
 
 # create env
 test_env = TrajectoryEnv(config=env_config)
@@ -66,7 +69,10 @@ done = False
 test_env.start_collecting_rollout()
 while not done:
     if args.av_controller == 'rl':
-        action = get_first_element(model.predict(state, deterministic=True))
+        action = [
+            get_first_element(model.predict(test_env.get_state(av_idx=i), deterministic=True))
+            for i in range(len(test_env.avs))
+        ]
     else:
         action = 0  # do not change (controllers should be implemented via Vehicle objects)
     state, reward, done, infos = test_env.step(action)
