@@ -4,16 +4,21 @@ import numpy as np
 
 
 class Vehicle(object):
-    def __init__(self, vid, controller, kind=None,
+    def __init__(self, vid, controller, kind=None, tags=None,
                  pos=0, speed=0, accel=0,
                  length=5.0, max_accel=1.5, max_decel=3.0,
                  timestep=None, leader=None, follower=None,
                  **controller_args):
+
         self.vid = vid
         self.controller = controller
         self.kind = kind
-        self.name = '_'.join(([str(self.kind)] if self.kind is not None else []) + [str(self.vid), self.controller])
-        
+        self.tags = tags
+
+        self.name = f'{self.vid}_{self.controller}'
+        if self.kind is not None: self.name += f'_{self.kind}'
+        if self.tags is not None: self.name += ''.join([f'#{tag}' for tag in tags])
+
         self.pos = pos
         self.speed = speed
         self.accel = accel

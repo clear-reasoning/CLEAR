@@ -83,9 +83,10 @@ def parse_args_train():
     parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
         help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
 
-    parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
+    parser.add_argument('--env_platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
-             '"human*3" can be used as a shortcut for "human human human".')
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
 
@@ -108,8 +109,10 @@ def parse_args_simulate():
 
     parser.add_argument('--platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
-             '"human*3" can be used as a shortcut for "human human human".')
-    parser.add_argument('--av_controller', type=str, default='rl',
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3". '
+             'Available presets: "scenario1".')
+    parser.add_argument('--av_controller', type=str, default='idm',
         help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
     parser.add_argument('--av_kwargs', type=str, default='{}',
         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '

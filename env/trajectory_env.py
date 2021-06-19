@@ -5,6 +5,7 @@ from gym.spaces import Discrete, Box
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import re
 import uuid
 
 from data_loader import DataLoader
@@ -39,6 +40,11 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
 }
 
+# platoon presets that can be passed to the "platoon" env param
+PLATOON_PRESETS= {
+    'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
+}
+
 
 class TrajectoryEnv(gym.Env):
     def __init__(self, config):
@@ -62,12 +68,7 @@ class TrajectoryEnv(gym.Env):
 
         # create simulation
         self.create_simulation()
-        print('Using the following platoon: leader ' + ' '.join(self.platoon_lst))
-        print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-        print(f'with human controller {self.human_controller} ({self.human_kwargs})')
-        self.n_avs = max(1, self.platoon_lst.count('av'))
-        if self.n_avs > 1:
-            print('Training with several AVs is not yet supported.')
+        print('Running experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
 
         # define action space
         if self.discrete:
@@ -147,26 +148,32 @@ class TrajectoryEnv(gym.Env):
             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
 
         # parse platoons
-        self.platoon_lst = []
-        for veh in self.platoon.split():
-            if len(vsplit := veh.split('*')) == 2:
-                self.platoon_lst += [vsplit[0]] * int(vsplit[1])
-            else:
-                self.platoon_lst.append(veh)
-        assert set(self.platoon_lst).issubset(set(['av', 'human']))
+        if self.platoon in PLATOON_PRESETS:
+            print(f'Setting scenario preset "{self.platoon}"')
+            self.platoon = PLATOON_PRESETS[self.platoon]
+
+        # parse (subplatoon)*n
+        replace1 = lambda match: ' '.join([match.group(1)] * int(match.group(2)))
+        self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
+        # parse veh#tag1...#tagk*n
+        self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
 
         # spawn vehicles
         self.avs = []
         self.humans = []
-        for veh_type in self.platoon_lst:
-            if veh_type == 'av':
-                self.avs.append(
-                    self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=20, **eval(self.av_kwargs))
-                )
-            elif veh_type == 'human':
-                self.humans.append(
-                    self.sim.add_vehicle(controller=self.human_controller, kind='human', gap=20, **eval(self.human_kwargs))
-                )
+        for vtype, vtags, vcount in self.platoon_lst:
+            for _ in range(int(vcount) if vcount else 1):
+                tags = vtags.split('#')[1:]
+                if vtype == 'av':
+                    self.avs.append(
+                        self.sim.add_vehicle(controller=self.av_controller, kind='av', tags=tags, gap=20, **eval(self.av_kwargs))
+                    )
+                elif vtype == 'human':
+                    self.humans.append(
+                        self.sim.add_vehicle(controller=self.human_controller, kind='human', tags=tags, gap=20, **eval(self.human_kwargs))
+                    )
+                else:
+                    raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
 
         # define which vehicles are used for the MPG reward
         self.mpg_cars = self.avs + (self.humans if self.include_idm_mpg else [])

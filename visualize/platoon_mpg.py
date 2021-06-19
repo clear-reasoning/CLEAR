@@ -8,9 +8,9 @@ import pandas as pd
 emissions_path = sys.argv[1]
 df = pd.read_csv(emissions_path)
 
-id_dict = {int(veh_id.split('_')[1]):{'veh_id': veh_id} for veh_id in df['id'].unique()}
+id_dict = {int(veh_id.split('_')[0]):{'veh_id': veh_id} for veh_id in df['id'].unique()}
 
-circles_nums = [id_num for id_num, veh_dict in id_dict.items() if veh_dict['veh_id'].split('_')[0] in set(['av', 'sensor'])]
+circles_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id'] or 'sensor' in veh_dict['veh_id']]
 leader_nums = [circles_num-1 for circles_num in circles_nums]
 leader_nums.sort()
 local_nums = circles_nums + leader_nums
@@ -25,12 +25,12 @@ color_dict = {
 	'human': 'grey',
 	'leader': 'grey',
 }
-df['color'] = df['id'].apply(lambda x: color_dict[x.split('_')[0]])
-df['id_num'] = df['id'].apply(lambda x: int(x.split('_')[1]))
+df['color'] = df['id'].apply(lambda x: [v for k, v in color_dict.items() if k in x][0])
+df['id_num'] = df['id'].apply(lambda x: int(x.split('_')[0]))
 df.loc[~df['id_num'].isin(local_nums), 'avg_mpg'] = 0.0
 df = df.sort_values('id_num', ascending=False)
 
-av_nums = [id_num for id_num, veh_dict in id_dict.items() if veh_dict['veh_id'].split('_')[0] == 'av']
+av_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id']]
 df['platoon_id'] = pd.cut(df['id_num'], [0] + av_nums + [100], right=False, include_lowest=True, labels=[1, 2, 3, 4, 5])
 
 platoon_df = df[df['id'].isin(local_ids.keys())].groupby('platoon_id')[['total_miles', 'total_gallons']].sum()
