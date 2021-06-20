@@ -12,6 +12,7 @@ class IDMController(object):
         self.delta = delta
         self.s0 = s0
         self.noise = noise
+        self.accel_without_noise = 0
 
     def get_accel(self, this_vel, lead_vel, headway, sim_step):
         """See parent class."""
@@ -28,9 +29,18 @@ class IDMController(object):
 
         accel = self.a * (1 - (this_vel / self.v0)**self.delta - (s_star / headway)**2)
 
+        self.accel_without_noise = accel
+
         if self.noise > 0:
             accel += np.sqrt(sim_step) * np.random.normal(0, self.noise)
         return accel
+
+    def get_accel_without_noise(self):
+        """
+        Return the accel without applying any noise.
+        Must be called after get_accel to updated result.
+        """
+        return self.accel_without_noise
 
 
 class TimeHeadwayFollowerStopper(object):
@@ -70,6 +80,8 @@ class TimeHeadwayFollowerStopper(object):
         self.max_accel = max_accel
         self.max_deaccel = max_deaccel
 
+        self.accel = 0
+
     def get_accel(self, this_vel, lead_vel, headway, time_step):
         """See parent class."""
 
@@ -95,6 +107,15 @@ class TimeHeadwayFollowerStopper(object):
         desired_accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
         v_next = desired_accel * time_step + this_vel
         if v_next > v_safe:
-          return np.clip((v_safe - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+          self.accel = np.clip((v_safe - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
         else:
-          return np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+          self.accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+
+        return self.accel
+
+    def get_accel_without_noise(self):
+        """
+        Return the accel without applying any noise.
+        Must be called after get_accel to updated result.
+        """
+        return self.accel

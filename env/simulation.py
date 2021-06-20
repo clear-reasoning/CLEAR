@@ -19,11 +19,11 @@ class Simulation(object):
 
         self.step_counter = -1
         self.time_counter = 0
-        
+
         self.energy_model = PFM2019RAV4()
 
         self.data_by_time = []
-        self.data_by_vehicle = defaultdict(lambda: defaultdict(list)) 
+        self.data_by_vehicle = defaultdict(lambda: defaultdict(list))
 
         self.vids = 0
 
@@ -35,7 +35,7 @@ class Simulation(object):
 
     def add_vehicle(self, controller='idm', kind=None, gap=20, **controller_kwargs):
         """Add a vehicle behind the platoon.
-        
+
         controller: 'idm' or 'rl' or 'trajectory' (do not use trajectory)
         gap: spawn the vehicle that many meters behind last vehicle in platoon
         controller_kwargs: kwargs that will be passed along to the controller constructor
@@ -100,9 +100,9 @@ class Simulation(object):
         return self.data_by_vehicle[veh.name][key]
 
     def collect_data(self, vehicles=None):
-        if vehicles is None: 
+        if vehicles is None:
             vehicles = self.vehicles
-        for veh in vehicles:          
+        for veh in vehicles:
             self.add_data(veh, 'time', round(self.time_counter, 4))
             self.add_data(veh, 'step', self.step_counter)
             self.add_data(veh, 'id', veh.name)
@@ -120,3 +120,7 @@ class Simulation(object):
             self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
             self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] / 3600.0 * self.timestep)
             self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles'][-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
+            self.add_data(veh, 'realized_accel', (veh.prev_speed - veh.speed) / self.dt)
+            self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
+            self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
+            self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)
