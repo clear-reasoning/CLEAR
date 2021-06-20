@@ -102,7 +102,7 @@ class TrajectoryEnv(gym.Env):
             'leader_speed': (av.get_leader_speed(), 40.0),
             'headway': (av.get_headway(), 100.0),
         }
-        
+
         if self.use_fs:
             state['vdes'] = (self.follower_stopper.v_des, 40.0)
 
@@ -134,7 +134,7 @@ class TrajectoryEnv(gym.Env):
             state = self.past_states
 
         return state
-    
+
     def create_simulation(self):
         # collect the next trajectory
         self.traj = next(self.trajectories)
@@ -210,13 +210,13 @@ class TrajectoryEnv(gym.Env):
 
         # prevent crashes
         crash = (h <= 0)
-        if crash:  
+        if crash:
             reward -= 50.0
 
         # forcibly prevent the car from getting too small or large headways
         headway_penalties = {
-            'low_headway_penalty': h < self.min_headway, 
-            'large_headway_penalty': h > self.max_headway, 
+            'low_headway_penalty': h < self.min_headway,
+            'large_headway_penalty': h > self.max_headway,
             'low_time_headway_penalty': th < self.minimal_time_headway}
         if any(headway_penalties.values()):
             reward -= 2.0
@@ -287,7 +287,7 @@ class TrajectoryEnv(gym.Env):
             time_now = now.time().isoformat()
 
             # create metadata file
-            source_id = f'trajectory_{uuid.uuid4().hex}'
+            source_id = f'flow_{uuid.uuid4().hex}'
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_time': [time_now],
@@ -310,21 +310,23 @@ class TrajectoryEnv(gym.Env):
             self.emissions['leader_rel_speed'] = self.emissions['speed_difference']
             self.emissions['road_grade'] = [0] * len(self.emissions['x'])
             self.emissions['edge_id'] = ['edge0'] * len(self.emissions['x'])
-            self.emissions['lane_number'] = [0] * len(self.emissions['x'])
+            self.emissions['lane_id'] = [0] * len(self.emissions['x'])
             self.emissions['distance'] = self.emissions['total_distance_traveled']
             self.emissions['relative_position'] = self.emissions['total_distance_traveled']
-            self.emissions['realized_accel'] = self.emissions['accel']
+            self.emissions['realized_accel'] = self.emissions['realized_accel']
             self.emissions['target_accel_with_noise_with_failsafe'] = self.emissions['accel']
-            self.emissions['target_accel_no_noise_no_failsafe'] = self.emissions['accel']
-            self.emissions['target_accel_with_noise_no_failsafe'] = self.emissions['accel']
-            self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['accel']
+            self.emissions['target_accel_no_noise_no_failsafe'] = self.emissions['target_accel_no_noise_no_failsafe']
+            self.emissions['target_accel_with_noise_no_failsafe'] = self.emissions['target_accel_with_noise_no_failsafe']
+            self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['target_accel_no_noise_with_failsafe']
+            self.emissions['source_id'] = [source_id] * len(self.emissions['x'])
+            self.emissions['run_id'] = ['run_0'] * len(self.emissions['x'])
 
             emissions_df = pd.DataFrame(self.emissions).sort_values(by=['time', 'id'])
             emissions_df = emissions_df[['time', 'id', 'x', 'y', 'speed', 'headway',
                 'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
                 'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
                 'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
-                'edge_id', 'lane_number', 'distance', 'relative_position']]
+                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id']]
             leaderboard_emissions_path = path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
@@ -338,7 +340,13 @@ class TrajectoryEnv(gym.Env):
             upload_to_s3(
                 'circles.data.pipeline',
                 f'fact_vehicle_trace/date={date_now}/partition_name={source_id}/{source_id}.csv',
-                leaderboard_emissions_path, log=True
+                leaderboard_emissions_path,
+                {'network': metadata['network'][0],
+                 'is_baseline': metadata['is_baseline'][0],
+                 'version': metadata['version'][0],
+                 'on_ramp': metadata['on_ramp'][0],
+                 'road_grade': metadata['road_grade'][0]},
+                log=True
             )
 
             # TODO generate time space diagram and upload to

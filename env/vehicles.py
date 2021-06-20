@@ -21,6 +21,7 @@ class Vehicle(object):
 
         self.pos = pos
         self.speed = speed
+        self.prev_speed = 0
         self.accel = accel
         self.dt = timestep
         self.length = length
@@ -29,6 +30,10 @@ class Vehicle(object):
         self.leader = leader
         self.follower = follower
 
+        self.aaccel_no_noise_no_failsafe = accel
+        self.accel_with_noise_no_failsafe = accel
+        self.accel_no_noise_with_failsafe = accel
+
         self.controller_args = controller_args
 
         assert (timestep is not None)
@@ -36,6 +41,10 @@ class Vehicle(object):
     def step(self, accel=None, ballistic=False):
         if accel is not None:
             self.accel = accel
+
+        # save previous speed
+        self.prev_speed = self.speed
+
         # clip accel
         self.accel = min(max(self.accel, -self.max_decel), self.max_accel)
 
@@ -82,6 +91,9 @@ class IDMVehicle(Vehicle):
 
     def step(self):
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+        self.accel_with_noise_no_failsafe = accel
+        self.aaccel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=True)
@@ -97,6 +109,9 @@ class FSVehicle(Vehicle):
         self.fs.v_des = self.get_leader_speed()
 
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+        self.accel_with_noise_no_failsafe = accel
+        self.aaccel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=True)
@@ -114,6 +129,9 @@ class TrajectoryVehicle(Vehicle):
         if traj_data is None:
             return False
         self.pos, self.speed, self.accel = traj_data
+        self.accel_no_noise_with_failsafe, \
+            self.accel_with_noise_no_failsafe, \
+            self.aaccel_no_noise_no_failsafe = self.accel
         return True
 
 
@@ -122,6 +140,9 @@ class RLVehicle(Vehicle):
         super().__init__(**kwargs)
 
     def step(self):
+        self.accel_no_noise_with_failsafe, \
+            self.accel_with_noise_no_failsafe, \
+            self.aaccel_no_noise_no_failsafe = self.accel
         return super().step(ballistic=True)
 
     def set_accel(self, accel):
@@ -136,6 +157,9 @@ class FSVehicle(Vehicle):
 
     def step(self):
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+        self.accel_with_noise_no_failsafe = accel
+        self.aaccel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=False)

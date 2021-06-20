@@ -84,8 +84,9 @@ def get_first_element(arr):
     except:
         return val
 
-def upload_to_s3(bucket_name, bucket_key, file_path, log=False):
+def upload_to_s3(bucket_name, bucket_key, file_path, metadata={}, log=False):
     s3 = boto3.resource("s3")
-    s3.Bucket(bucket_name).upload_file(str(file_path), str(bucket_key))
+    s3.Bucket(bucket_name).upload_file(str(file_path), str(bucket_key),
+                                       ExtraArgs={"Metadata": metadata})
     if log:
         print(f'Uploaded {file_path} to s3://{bucket_name}/{bucket_key}')
