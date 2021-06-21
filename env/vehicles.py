@@ -140,21 +140,6 @@ class RLVehicle(Vehicle):
         self.accel = self.apply_failsafe(accel)
         return self.accel
 
-class FSVehicle(Vehicle):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
-
-    def step(self):
-        accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
-        self.accel_with_noise_no_failsafe = accel
-        self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
-        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
-        accel = self.apply_failsafe(accel)
-
-        return super().step(accel=accel, ballistic=False)
-
 # TODO(nl) add FS-wrapped RL vehicle
 
 # if self.use_fs:
