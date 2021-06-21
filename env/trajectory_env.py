@@ -11,6 +11,7 @@ import uuid
 from data_loader import DataLoader
 from env.simulation import Simulation
 from env.utils import get_first_element, upload_to_s3
+from visualize.platoon_mpg import platton_mpg
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -261,7 +262,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
+    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True, platoon=False):
         # create emissions dir if it doesn't exist
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
         path = Path(emissions_dir, now)
@@ -279,6 +280,9 @@ class TrajectoryEnv(gym.Env):
             .sort_values(by=['time', 'id']) \
             .to_csv(emissions_path, index=False)
         print(f'Saved emissions file at {emissions_path}')
+
+        if platoon:
+            platton_mpg(emissions_path)
 
         if upload_to_leaderboard:
             # get date & time in appropriate format
@@ -348,6 +352,12 @@ class TrajectoryEnv(gym.Env):
                  'road_grade': metadata['road_grade'][0]},
                 log=True
             )
+            if platoon:
+                upload_to_s3(
+                    'circles.data.pipeline',
+                    f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
+                    emissions_path.replace('csv', 'png')
+                )
 
             # TODO generate time space diagram and upload to
             # upload_to_s3(
