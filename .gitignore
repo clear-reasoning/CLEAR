@@ -11,3 +11,4 @@ slurm_logs*
 log/
 emissions*
 dataset/
+*.sh
