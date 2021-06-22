@@ -66,6 +66,9 @@ if args.horizon is not None:
         'horizon': args.horizon,
     })
 
+if args.s3:
+    assert (args.platoon == 'scenario1')
+
 # create env
 test_env = TrajectoryEnv(config=env_config)
 
