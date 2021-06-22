@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import re
+import time
 import uuid
 
 from data_loader import DataLoader
@@ -49,7 +50,7 @@ PLATOON_PRESETS= {
 
 
 class TrajectoryEnv(gym.Env):
-    def __init__(self, config):
+    def __init__(self, config, _simulate=False):
         super().__init__()
 
         # extract params from config
@@ -57,6 +58,8 @@ class TrajectoryEnv(gym.Env):
         for k, v in self.config.items():
             setattr(self, k, v)
         self.collect_rollout = False
+        self.simulate = _simulate
+        self.log_time_counter = time.time()
 
         assert (self.use_fs == False)  # TODO(nl) need an FS wrapper in the vehicle class
 
@@ -65,8 +68,7 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            # 1 more than horizon to get the next_state at the last env step
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=(self.horizon + 1) * self.num_steps_per_sim)
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
 
         # create simulation
         self.create_simulation()
@@ -74,8 +76,8 @@ class TrajectoryEnv(gym.Env):
         print('Running experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
         print(f'with av controller {self.av_controller} ({self.av_kwargs})')
         print(f'with human controller {self.human_controller} ({self.human_kwargs})')
-        if len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
-            print('Training with several AVs is not yet supported.')
+        if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
+            raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
         if self.discrete:
@@ -208,6 +210,12 @@ class TrajectoryEnv(gym.Env):
 
         # execute one simulation step
         end_of_horizon = not self.sim.step()
+
+        # print progress every 5s if running from simulate.py
+        if self.simulate and (end_of_horizon or time.time() - self.log_time_counter > 5.0):
+            steps, max_steps = self.sim.step_counter, self.traj['size']
+            print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
+            self.log_time_counter = time.time()
 
         # compute reward & done
         h = self.avs[0].get_headway()
