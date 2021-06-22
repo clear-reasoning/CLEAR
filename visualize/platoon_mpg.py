@@ -1,10 +1,10 @@
+from matplotlib.patches import Rectangle
+import matplotlib.pyplot as plt
+import pandas as pd
 import sys
 
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-import pandas as pd
 
-def platoon_mpg(emissions_path):
+def platoon_mpg(emissions_path, save_path):
 	df = pd.read_csv(emissions_path)
 
 	id_dict = {int(veh_id.split('_')[0]):{'veh_id': veh_id} for veh_id in df['id'].unique()}
@@ -79,6 +79,9 @@ def platoon_mpg(emissions_path):
 	plt.xlabel('Platoons', fontsize=20)
 
 	plt.tight_layout()
+	plt.savefig(save_path)
 
-	image_save_path = '{}.png'.format(emissions_path.as_posix().split('.')[0])
-	plt.savefig(image_save_path)
+
+if __name__ == '__main__':
+	emissions_path, save_path = sys.argv[1], sys.argv[2]
+	platoon_mpg(emissions_path, save_path)

@@ -271,9 +271,9 @@ class TrajectoryEnv(gym.Env):
     def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
         # create emissions dir if it doesn't exist
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-        path = Path(emissions_dir, now)
-        path.mkdir(parents=True, exist_ok=True)
-        emissions_path = path / 'emissions.csv'
+        dir_path = Path(emissions_dir, now)
+        dir_path.mkdir(parents=True, exist_ok=True)
+        emissions_path = dir_path / 'emissions.csv'
 
         # generate emissions dict
         self.emissions = defaultdict(list)
@@ -308,7 +308,7 @@ class TrajectoryEnv(gym.Env):
                 'road_grade': ['False'],
                 'is_benchmark': ['False'],
             })
-            metadata_path = path / 'metadata.csv'
+            metadata_path = dir_path / 'metadata.csv'
             metadata.to_csv(metadata_path, index=False)
 
             # custom emissions for leaderboard
@@ -334,11 +334,12 @@ class TrajectoryEnv(gym.Env):
                 'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
                 'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
                 'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id']]
-            leaderboard_emissions_path = path / 'emissions_leaderboard.csv'
+            leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
-            print('Generating platoon plot')
-            platoon_mpg(emissions_path)
+            platoon_mpg_path = dir_path / 'platoon_mpg.png'
+            print(f'Generating platoon MPG plot at {platoon_mpg_path}')
+            plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
 
             print('Generating time-space diagram plot')
             print('TODO')
@@ -365,7 +366,7 @@ class TrajectoryEnv(gym.Env):
             upload_to_s3(
                 'circles.data.pipeline',
                 f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
-                emissions_path.as_posix().replace('csv', 'png')
+                platoon_mpg_path, log=True
             )
             print('TODO upload tsd to S3')
 
