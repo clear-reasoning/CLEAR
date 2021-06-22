@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 
 
-def platoon_mpg(emissions_path, save_path):
+def plot_platoon_mpg(emissions_path, save_path):
 	df = pd.read_csv(emissions_path)
 
 	id_dict = {int(veh_id.split('_')[0]):{'veh_id': veh_id} for veh_id in df['id'].unique()}
@@ -84,4 +84,4 @@ def platoon_mpg(emissions_path, save_path):
 
 if __name__ == '__main__':
 	emissions_path, save_path = sys.argv[1], sys.argv[2]
-	platoon_mpg(emissions_path, save_path)
+	plot_platoon_mpg(emissions_path, save_path)

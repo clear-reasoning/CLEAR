@@ -6,7 +6,7 @@ import pandas as pd
 import sys
 
 
-def time_space_diagram(emissions_path, save_path):
+def plot_time_space_diagram(emissions_path, save_path):
     # load emissions
     df = pd.read_csv(emissions_path)
 
@@ -52,4 +52,4 @@ def time_space_diagram(emissions_path, save_path):
 
 if __name__ == '__main__':
 	emissions_path, save_path = sys.argv[1], sys.argv[2]
-	time_space_diagram(emissions_path, save_path)
+	plot_time_space_diagram(emissions_path, save_path)

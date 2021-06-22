@@ -12,8 +12,8 @@ import uuid
 from data_loader import DataLoader
 from env.simulation import Simulation
 from env.utils import get_first_element, upload_to_s3
-from visualize.platoon_mpg import platoon_mpg
-from visualize.time_space_diagram import time_space_diagram
+from visualize.platoon_mpg import plot_platoon_mpg
+from visualize.time_space_diagram import plot_time_space_diagram
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -355,7 +355,7 @@ class TrajectoryEnv(gym.Env):
 
             tsd_path = dir_path / 'time_space_diagram.png'
             print(f'Generating time-space diagram plot at {tsd_path}')
-            time_space_diagram(emissions_path, save_path=tsd_path)
+            plot_time_space_diagram(emissions_path, save_path=tsd_path)
 
             print()
 
