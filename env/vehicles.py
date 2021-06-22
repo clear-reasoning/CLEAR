@@ -30,7 +30,7 @@ class Vehicle(object):
         self.leader = leader
         self.follower = follower
 
-        self.aaccel_no_noise_no_failsafe = accel
+        self.accel_no_noise_no_failsafe = accel
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_with_failsafe = accel
 
