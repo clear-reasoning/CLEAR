@@ -92,8 +92,8 @@ class IDMVehicle(Vehicle):
     def step(self):
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
-        self.aaccel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
-        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
+        self.accel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=True)
@@ -110,8 +110,8 @@ class FSVehicle(Vehicle):
 
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
-        self.aaccel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
-        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
+        self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=True)
@@ -159,7 +159,7 @@ class FSVehicle(Vehicle):
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
-        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.aaccel_no_noise_no_failsafe)
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
         return super().step(accel=accel, ballistic=False)
