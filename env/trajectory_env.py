@@ -13,6 +13,7 @@ from data_loader import DataLoader
 from env.simulation import Simulation
 from env.utils import get_first_element, upload_to_s3
 from visualize.platoon_mpg import platoon_mpg
+from visualize.time_space_diagram import time_space_diagram
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -352,16 +353,21 @@ class TrajectoryEnv(gym.Env):
             print(f'Generating platoon MPG plot at {platoon_mpg_path}')
             plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
 
-            print('Generating time-space diagram plot')
-            print('TODO')
+            tsd_path = dir_path / 'time_space_diagram.png'
+            print(f'Generating time-space diagram plot at {tsd_path}')
+            time_space_diagram(emissions_path, save_path=tsd_path)
 
-            # upload emissions and metadata to S3
             print()
+
+            # upload data to S3
+
+            # metadata
             upload_to_s3(
                 'circles.data.pipeline',
                 f'metadata_table/date={date_now}/partition_name={source_id}_METADATA/{source_id}_METADATA.csv',
                 metadata_path, log=True
             )
+            # emissions
             upload_to_s3(
                 'circles.data.pipeline',
                 f'fact_vehicle_trace/date={date_now}/partition_name={source_id}/{source_id}.csv',
@@ -373,18 +379,15 @@ class TrajectoryEnv(gym.Env):
                  'road_grade': metadata['road_grade'][0]},
                 log=True
             )
-
+            # platoons MPG plot
             upload_to_s3(
                 'circles.data.pipeline',
                 f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
                 platoon_mpg_path, log=True
             )
-            print('TODO upload tsd to S3')
-
-            # TODO generate time space diagram and upload to
-            # upload_to_s3(
-            #     'circles.data.pipeline',
-            #     'time_space_diagram/date={0}/partition_name={1}/'
-            #     '{1}.png'.format(cur_date, source_id),
-            #     emission_files[0].replace('csv', 'png')
-            # ).
+            # time-space diagram
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'time_space_diagram/date={date_now}/partition_name={source_id}/{source_id}.png',
+                tsd_path, log=True
+            )
