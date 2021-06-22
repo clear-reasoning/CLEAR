@@ -129,9 +129,9 @@ class TrajectoryVehicle(Vehicle):
         if traj_data is None:
             return False
         self.pos, self.speed, self.accel = traj_data
-        self.accel_no_noise_with_failsafe, \
-            self.accel_with_noise_no_failsafe, \
-            self.aaccel_no_noise_no_failsafe = self.accel
+        self.accel_no_noise_with_failsafe = self.accel
+        self.accel_with_noise_no_failsafe = self.accel
+        self.aaccel_no_noise_no_failsafe = self.accel
         return True
 
 
@@ -140,9 +140,9 @@ class RLVehicle(Vehicle):
         super().__init__(**kwargs)
 
     def step(self):
-        self.accel_no_noise_with_failsafe, \
-            self.accel_with_noise_no_failsafe, \
-            self.aaccel_no_noise_no_failsafe = self.accel
+        self.accel_no_noise_with_failsafe = self.accel
+        self.accel_with_noise_no_failsafe = self.accel
+        self.aaccel_no_noise_no_failsafe = self.accel
         return super().step(ballistic=True)
 
     def set_accel(self, accel):
