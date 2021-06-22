@@ -73,9 +73,9 @@ class TrajectoryEnv(gym.Env):
         # create simulation
         self.create_simulation()
 
-        print('Running experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
+        print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
         print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-        print(f'with human controller {self.human_controller} ({self.human_kwargs})')
+        print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
         if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
             raise ValueError('Training is only supported with 1 AV in the platoon.')
 
@@ -276,7 +276,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
+    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True, additional_metadata={}):
         # create emissions dir if it doesn't exist
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
         dir_path = Path(emissions_dir, now)
@@ -303,13 +303,16 @@ class TrajectoryEnv(gym.Env):
 
             # create metadata file
             source_id = f'flow_{uuid.uuid4().hex}'
+            is_baseline = str(additional_metadata.get('is_baseline', False))
+            submitter_name = additional_metadata.get('author', 'blank')
+            strategy = additional_metadata.get('strategy', 'blank')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_time': [time_now],
                 'network': ['Single-Lane Trajectory'],
-                'is_baseline': ['False'],
-                'submitter_name': ['Nathan'],
-                'strategy': ['Strategy'],
+                'is_baseline': [is_baseline],
+                'submitter_name': [submitter_name],
+                'strategy': [strategy],
                 'version': ['3.0'],
                 'on_ramp': ['False'],
                 'penetration_rate': ['0'],

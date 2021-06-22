@@ -106,6 +106,12 @@ def parse_args_simulate():
         help='If set, a .csv emission file will be generated.')
     parser.add_argument('--s3', default=False, action='store_true',
         help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
+    parser.add_argument('--s3_baseline', default=False, action='store_true',
+        help='If set, the data will be uploaded to S3 as a baseline.')
+    parser.add_argument('--s3_author', type=str, default='blank',
+        help='Submitter name that will be used when uploading to S3.')
+    parser.add_argument('--s3_strategy', type=str, default='blank',
+        help='Strategy name that will be used when uploading to S3.')
 
     parser.add_argument('--horizon', type=int, default=None,
         help='Number of environment steps to simulate. If None, use a whole trajectory.')

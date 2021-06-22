@@ -102,7 +102,13 @@ print()
 
 # generate_emissions
 if args.gen_emissions:
-    test_env.gen_emissions(upload_to_leaderboard=args.s3)
+    print('Generating emissions...')
+    metadata = {
+        'is_baseline': args.s3_baseline,
+        'author': args.s3_author,
+        'strategy': args.s3_strategy,
+    }
+    test_env.gen_emissions(upload_to_leaderboard=args.s3, additional_metadata=metadata)
 
 # print stuff
 print('\nMetrics:')
