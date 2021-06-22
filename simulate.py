@@ -49,7 +49,6 @@ else:
     env_config.update({
         'use_fs': False,
         'discrete': False,
-        'whole_trajectory': True,
         'av_controller': args.av_controller,
         'av_kwargs': args.av_kwargs,
         'human_controller': 'idm',
@@ -58,6 +57,7 @@ else:
 
 env_config.update({
     'platoon': args.platoon,
+    'whole_trajectory': True,
 })
 
 # create env

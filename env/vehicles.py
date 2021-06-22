@@ -132,7 +132,6 @@ class TrajectoryVehicle(Vehicle):
         self.accel_no_noise_with_failsafe = self.accel
         self.accel_with_noise_no_failsafe = self.accel
         self.accel_no_noise_no_failsafe = self.accel
-        return True
 
 
 class RLVehicle(Vehicle):
