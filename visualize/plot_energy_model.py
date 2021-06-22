@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from env.energy_models import PFMMidsizeSedan
+from env.energy_models import PFM2019RAV4
 
 
 def main():
     speeds = np.arange(0, 30, 0.1)
     accels = np.arange(-3, 1.5, 0.05)
 
-    energy_model = PFMMidsizeSedan()
+    energy_model = PFM2019RAV4()
 
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
