@@ -11,7 +11,7 @@ import uuid
 from data_loader import DataLoader
 from env.simulation import Simulation
 from env.utils import get_first_element, upload_to_s3
-from visualize.platoon_mpg import platton_mpg
+from visualize.platoon_mpg import platoon_mpg
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -282,7 +282,7 @@ class TrajectoryEnv(gym.Env):
         print(f'Saved emissions file at {emissions_path}')
 
         if platoon:
-            platton_mpg(emissions_path)
+            platoon_mpg(emissions_path)
 
         if upload_to_leaderboard:
             # get date & time in appropriate format

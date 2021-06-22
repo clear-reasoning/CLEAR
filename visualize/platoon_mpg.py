@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import pandas as pd
 
-def platton_mpg(emissions_path):
+def platoon_mpg(emissions_path):
 	df = pd.read_csv(emissions_path)
 
 	id_dict = {int(veh_id.split('_')[0]):{'veh_id': veh_id} for veh_id in df['id'].unique()}
@@ -30,7 +30,7 @@ def platton_mpg(emissions_path):
 	df = df.sort_values('id_num', ascending=False)
 
 	av_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id']]
-	df['platoon_id'] = pd.cut(df['id_num'], [0] + av_nums + [100], right=False, include_lowest=True, labels=[1, 2, 3, 4, 5])
+	df['platoon_id'] = pd.cut(df['id_num'], [0] + av_nums + [100], right=False, include_lowest=True, labels=range(1, len(av_nums)+2))
 
 	platoon_df = df[df['id'].isin(local_ids.keys())].groupby('platoon_id')[['total_miles', 'total_gallons']].sum()
 	platoon_df['mpg'] = platoon_df['total_miles'] / platoon_df['total_gallons']
@@ -80,5 +80,5 @@ def platton_mpg(emissions_path):
 
 	plt.tight_layout()
 
-	image_save_path = '{}.png'.format(emissions_path.split('.')[0])
+	image_save_path = '{}.png'.format(emissions_path.as_posix().split('.')[0])
 	plt.savefig(image_save_path)
