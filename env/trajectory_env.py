@@ -296,14 +296,14 @@ class TrajectoryEnv(gym.Env):
                 'source_id': [source_id],
                 'submission_time': [time_now],
                 'network': ['Single-Lane Trajectory'],
-                'is_baseline': [False],
+                'is_baseline': ['False'],
                 'submitter_name': ['Nathan'],
                 'strategy': ['Strategy'],
                 'version': ['3.0'],
-                'on_ramp': [False],
-                'penetration_rate': [0],
-                'road_grade': [False],
-                'is_benchmark': [False],
+                'on_ramp': ['False'],
+                'penetration_rate': ['0'],
+                'road_grade': ['False'],
+                'is_benchmark': ['False'],
             })
             metadata_path = path / 'metadata.csv'
             metadata.to_csv(metadata_path, index=False)
