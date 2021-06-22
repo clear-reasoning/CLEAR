@@ -85,7 +85,8 @@ def parse_args_train():
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
-             '"human*3" can be used as a shortcut for "human human human".')
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
 
@@ -105,11 +106,21 @@ def parse_args_simulate():
         help='If set, a .csv emission file will be generated.')
     parser.add_argument('--s3', default=False, action='store_true',
         help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
+    parser.add_argument('--s3_baseline', default=False, action='store_true',
+        help='If set, the data will be uploaded to S3 as a baseline.')
+    parser.add_argument('--s3_author', type=str, default='blank',
+        help='Submitter name that will be used when uploading to S3.')
+    parser.add_argument('--s3_strategy', type=str, default='blank',
+        help='Strategy name that will be used when uploading to S3.')
 
+    parser.add_argument('--horizon', type=int, default=None,
+        help='Number of environment steps to simulate. If None, use a whole trajectory.')
     parser.add_argument('--platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
-             '"human*3" can be used as a shortcut for "human human human".')
-    parser.add_argument('--av_controller', type=str, default='rl',
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3". '
+             'Available presets: "scenario1".')
+    parser.add_argument('--av_controller', type=str, default='idm',
         help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
     parser.add_argument('--av_kwargs', type=str, default='{}',
         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
