@@ -365,7 +365,7 @@ class TrajectoryEnv(gym.Env):
             upload_to_s3(
                 'circles.data.pipeline',
                 f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
-                emissions_path.replace('csv', 'png')
+                emissions_path.as_posix().replace('csv', 'png')
             )
             print('TODO upload tsd to S3')
 
