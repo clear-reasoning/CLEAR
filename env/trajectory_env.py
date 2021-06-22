@@ -43,6 +43,7 @@ DEFAULT_ENV_CONFIG = {
 
 # platoon presets that can be passed to the "platoon" env param
 PLATOON_PRESETS= {
+    # scenario 1: 4 AVs with human cars inbetween, some of which are sensing cars used to collect metrics on
     'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
 }
 
@@ -69,7 +70,12 @@ class TrajectoryEnv(gym.Env):
 
         # create simulation
         self.create_simulation()
+
         print('Running experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
+        print(f'with av controller {self.av_controller} ({self.av_kwargs})')
+        print(f'with human controller {self.human_controller} ({self.human_kwargs})')
+        if len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
+            print('Training with several AVs is not yet supported.')
 
         # define action space
         if self.discrete:
@@ -153,10 +159,10 @@ class TrajectoryEnv(gym.Env):
             print(f'Setting scenario preset "{self.platoon}"')
             self.platoon = PLATOON_PRESETS[self.platoon]
 
-        # parse (subplatoon)*n
+        # replace (subplatoon)*n into subplatoon ... subplatoon (n times)
         replace1 = lambda match: ' '.join([match.group(1)] * int(match.group(2)))
         self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
-        # parse veh#tag1...#tagk*n
+        # parse veh#tag1...#tagk*n into (veh, [tag1, ..., tagk], n)
         self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
 
         # spawn vehicles
@@ -262,7 +268,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True, platoon=False):
+    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
         # create emissions dir if it doesn't exist
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
         path = Path(emissions_dir, now)
@@ -280,9 +286,6 @@ class TrajectoryEnv(gym.Env):
             .sort_values(by=['time', 'id']) \
             .to_csv(emissions_path, index=False)
         print(f'Saved emissions file at {emissions_path}')
-
-        if platoon:
-            platoon_mpg(emissions_path)
 
         if upload_to_leaderboard:
             # get date & time in appropriate format
@@ -334,6 +337,12 @@ class TrajectoryEnv(gym.Env):
             leaderboard_emissions_path = path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
+            print('Generating platoon plot')
+            platoon_mpg(emissions_path)
+
+            print('Generating time-space diagram plot')
+            print('TODO')
+
             # upload emissions and metadata to S3
             print()
             upload_to_s3(
@@ -352,12 +361,13 @@ class TrajectoryEnv(gym.Env):
                  'road_grade': metadata['road_grade'][0]},
                 log=True
             )
-            if platoon:
-                upload_to_s3(
-                    'circles.data.pipeline',
-                    f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
-                    emissions_path.replace('csv', 'png')
-                )
+
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
+                emissions_path.replace('csv', 'png')
+            )
+            print('TODO upload tsd to S3')
 
             # TODO generate time space diagram and upload to
             # upload_to_s3(

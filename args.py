@@ -83,7 +83,7 @@ def parse_args_train():
     parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
         help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
 
-    parser.add_argument('--env_platoon', type=str, default='av human*5',
+    parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
              '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
              'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')

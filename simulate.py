@@ -93,7 +93,7 @@ print()
 
 # generate_emissions
 if args.gen_emissions:
-    test_env.gen_emissions(upload_to_leaderboard=args.s3, platoon=args.platoon)
+    test_env.gen_emissions(upload_to_leaderboard=args.s3)
 
 # print stuff
 print('\nMetrics:')
