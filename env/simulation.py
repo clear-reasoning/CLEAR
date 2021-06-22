@@ -121,7 +121,7 @@ class Simulation(object):
             self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
             self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] / 3600.0 * self.timestep)
             self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles'][-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
-            self.add_data(veh, 'realized_accel', (veh.prev_speed - veh.speed) / self.dt)
+            self.add_data(veh, 'realized_accel', (veh.prev_speed - veh.speed) / veh.dt)
             self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
             self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)
