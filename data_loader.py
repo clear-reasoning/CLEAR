@@ -10,7 +10,8 @@ from collections import defaultdict
 from env.accel_controllers import IDMController
 from env.energy_models import PFM2019RAV4
 from env.simulation import Simulation
-from env.utils import lat_long_distance, moving_sum, pairwise, counter
+from env.utils import get_bearing, get_driving_direction, get_valid_lat_long, \
+                      lat_long_distance, moving_sum, pairwise, counter
 from visualize.plotter import Plotter
 
 
@@ -59,14 +60,11 @@ def _preprocess_data():
     """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
     file_paths = list(Path('dataset/data_v2').glob('**/*.csv'))
     for fp in file_paths:
-        print(fp)
+        print(f'Reading {fp}')
 
         # load
         df = pd.read_csv(fp, index_col=0)
         df = df.reset_index(drop=True)
-
-        if 'smooth' in sys.argv:
-            df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)
         # sometimes there are missing timesteps
         # fix that by doing linear interpolation on the missing timesteps
         dt = 0.1
@@ -80,7 +78,10 @@ def _preprocess_data():
                     df.loc[idx]['Time'] = round(df.loc[idx]['Time'], 3)
         df = df.sort_index().reset_index(drop=True)
         assert(all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(df['Time'])))
-        
+
+        # smooth accelerations
+        df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)
+
         # compute total ego distances traveled from GPS coordinates
         distances = itertools.accumulate(
             pairwise(zip(df['LatitudeGPS'], df['LongitudeGPS'])),
@@ -89,8 +90,58 @@ def _preprocess_data():
         )
         df['DistanceGPS'] = list(distances)
 
-        # save
-        df.to_csv(str(fp).replace('data_v2', 'data_v2_preprocessed'), encoding='utf-8', index=True, index_label='index')
+        # keep only westbound trajectories, and cut out the on and off ramp parts
+        df['MileMarker'] = 74.3 - df['DistanceGPS']
+
+        bears = []
+        for i in range(len(df['LatitudeGPS'])-1):
+            j = np.deg2rad(df['LongitudeGPS'][i])
+            k = np.deg2rad(df['LongitudeGPS'][i+1])
+            m = np.deg2rad(df['LatitudeGPS'][i])
+            n = np.deg2rad(df['LatitudeGPS'][i+1])
+            bears.append(get_bearing(j,m,k,n))
+        bears.append(0)
+        df['Bearing'] = bears
+
+        directions = []
+        for i in range(len(df['Bearing'])):
+            directions.append(get_driving_direction(df['Bearing'][i]))
+        df['DrivingDir'] = directions
+        
+        valid_points = []
+        for i in range(len(df['LatitudeGPS'])):
+            lat = df['LatitudeGPS'][i]
+            long = df['LongitudeGPS'][i]
+            valid_points.append(get_valid_lat_long(lat,long))
+        df['ValidPt'] = valid_points
+
+        switches = np.abs(np.diff(df['ValidPt']))
+        switching_points = np.argwhere(switches==1)
+        num_switches = len(switching_points)
+        
+        i = 0
+        k = 0
+        while i < num_switches:
+            #Find points at which it switches out of valid space:
+            start_point = switching_points[i][0]
+            end_point = switching_points[i+1][0]
+            
+            #get the direction it's going in:
+            direction = df['DrivingDir'][start_point]
+
+            if direction == 'West':
+                # extract sub-trajectory
+                sub_df = df.iloc[start_point:end_point]
+            
+                # save trajectory
+                file_path = str(fp).replace('data_v2', 'data_v2_preprocessed')
+                file_path = file_path.replace('.csv', f'_{k}_{end_point - start_point}.csv')
+                sub_df.to_csv(file_path, encoding='utf-8', index=True, index_label='index')
+                print(f'Wrote {file_path}')
+
+                k += 1
+
+            i += 2
 
 
 if __name__ == '__main__':
