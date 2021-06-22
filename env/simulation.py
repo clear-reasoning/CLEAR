@@ -17,7 +17,7 @@ class Simulation(object):
         self.vehicles = []
         self.vlength = 5
 
-        self.step_counter = -1
+        self.step_counter = 0
         self.time_counter = 0
 
         self.energy_model = PFM2019RAV4()
@@ -33,7 +33,7 @@ class Simulation(object):
         else:
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
-    def add_vehicle(self, controller='idm', kind=None, gap=20, **controller_kwargs):
+    def add_vehicle(self, controller='idm', kind=None, tags=None, gap=20, **controller_kwargs):
         """Add a vehicle behind the platoon.
 
         controller: 'idm' or 'rl' or 'trajectory' (do not use trajectory)
@@ -52,6 +52,7 @@ class Simulation(object):
             vid=self.vids,
             controller=controller,
             kind=kind,
+            tags=tags,
             pos=0 if len(self.vehicles) == 0 else self.vehicles[-1].pos - gap - self.vlength,
             speed=0 if len(self.vehicles) == 0 else self.vehicles[-1].speed,
             accel=0,

@@ -5,11 +5,15 @@ from gym.spaces import Discrete, Box
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import re
+import time
 import uuid
 
 from data_loader import DataLoader
 from env.simulation import Simulation
 from env.utils import get_first_element, upload_to_s3
+from visualize.platoon_mpg import plot_platoon_mpg
+from visualize.time_space_diagram import plot_time_space_diagram
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -39,9 +43,15 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
 }
 
+# platoon presets that can be passed to the "platoon" env param
+PLATOON_PRESETS= {
+    # scenario 1: 4 AVs with human cars inbetween, some of which are sensing cars used to collect metrics on
+    'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
+}
+
 
 class TrajectoryEnv(gym.Env):
-    def __init__(self, config):
+    def __init__(self, config, _simulate=False):
         super().__init__()
 
         # extract params from config
@@ -49,6 +59,8 @@ class TrajectoryEnv(gym.Env):
         for k, v in self.config.items():
             setattr(self, k, v)
         self.collect_rollout = False
+        self.simulate = _simulate
+        self.log_time_counter = time.time()
 
         assert (self.use_fs == False)  # TODO(nl) need an FS wrapper in the vehicle class
 
@@ -57,17 +69,16 @@ class TrajectoryEnv(gym.Env):
         if self.whole_trajectory:
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
-            # 1 more than horizon to get the next_state at the last env step
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=(self.horizon + 1) * self.num_steps_per_sim)
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
 
         # create simulation
         self.create_simulation()
-        print('Using the following platoon: leader ' + ' '.join(self.platoon_lst))
+
+        print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
         print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-        print(f'with human controller {self.human_controller} ({self.human_kwargs})')
-        self.n_avs = max(1, self.platoon_lst.count('av'))
-        if self.n_avs > 1:
-            print('Training with several AVs is not yet supported.')
+        print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
+        if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
+            raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
         if self.discrete:
@@ -147,26 +158,32 @@ class TrajectoryEnv(gym.Env):
             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
 
         # parse platoons
-        self.platoon_lst = []
-        for veh in self.platoon.split():
-            if len(vsplit := veh.split('*')) == 2:
-                self.platoon_lst += [vsplit[0]] * int(vsplit[1])
-            else:
-                self.platoon_lst.append(veh)
-        assert set(self.platoon_lst).issubset(set(['av', 'human']))
+        if self.platoon in PLATOON_PRESETS:
+            print(f'Setting scenario preset "{self.platoon}"')
+            self.platoon = PLATOON_PRESETS[self.platoon]
+
+        # replace (subplatoon)*n into subplatoon ... subplatoon (n times)
+        replace1 = lambda match: ' '.join([match.group(1)] * int(match.group(2)))
+        self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
+        # parse veh#tag1...#tagk*n into (veh, [tag1, ..., tagk], n)
+        self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
 
         # spawn vehicles
         self.avs = []
         self.humans = []
-        for veh_type in self.platoon_lst:
-            if veh_type == 'av':
-                self.avs.append(
-                    self.sim.add_vehicle(controller=self.av_controller, kind='av', gap=20, **eval(self.av_kwargs))
-                )
-            elif veh_type == 'human':
-                self.humans.append(
-                    self.sim.add_vehicle(controller=self.human_controller, kind='human', gap=20, **eval(self.human_kwargs))
-                )
+        for vtype, vtags, vcount in self.platoon_lst:
+            for _ in range(int(vcount) if vcount else 1):
+                tags = vtags.split('#')[1:]
+                if vtype == 'av':
+                    self.avs.append(
+                        self.sim.add_vehicle(controller=self.av_controller, kind='av', tags=tags, gap=20, **eval(self.av_kwargs))
+                    )
+                elif vtype == 'human':
+                    self.humans.append(
+                        self.sim.add_vehicle(controller=self.human_controller, kind='human', tags=tags, gap=20, **eval(self.human_kwargs))
+                    )
+                else:
+                    raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
 
         # define which vehicles are used for the MPG reward
         self.mpg_cars = self.avs + (self.humans if self.include_idm_mpg else [])
@@ -194,6 +211,12 @@ class TrajectoryEnv(gym.Env):
 
         # execute one simulation step
         end_of_horizon = not self.sim.step()
+
+        # print progress every 5s if running from simulate.py
+        if self.simulate and (end_of_horizon or time.time() - self.log_time_counter > 5.0):
+            steps, max_steps = self.sim.step_counter, self.traj['size']
+            print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
+            self.log_time_counter = time.time()
 
         # compute reward & done
         h = self.avs[0].get_headway()
@@ -254,12 +277,12 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True):
+    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True, additional_metadata={}):
         # create emissions dir if it doesn't exist
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-        path = Path(emissions_dir, now)
-        path.mkdir(parents=True, exist_ok=True)
-        emissions_path = path / 'emissions.csv'
+        dir_path = Path(emissions_dir, now)
+        dir_path.mkdir(parents=True, exist_ok=True)
+        emissions_path = dir_path / 'emissions.csv'
 
         # generate emissions dict
         self.emissions = defaultdict(list)
@@ -281,20 +304,23 @@ class TrajectoryEnv(gym.Env):
 
             # create metadata file
             source_id = f'flow_{uuid.uuid4().hex}'
+            is_baseline = str(additional_metadata.get('is_baseline', False))
+            submitter_name = additional_metadata.get('author', 'blank')
+            strategy = additional_metadata.get('strategy', 'blank')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_time': [time_now],
                 'network': ['Single-Lane Trajectory'],
-                'is_baseline': [False],
-                'submitter_name': ['Nathan'],
-                'strategy': ['Strategy'],
+                'is_baseline': [is_baseline],
+                'submitter_name': [submitter_name],
+                'strategy': [strategy],
                 'version': ['3.0'],
-                'on_ramp': [False],
-                'penetration_rate': [0],
-                'road_grade': [False],
-                'is_benchmark': [False],
+                'on_ramp': ['False'],
+                'penetration_rate': ['0'],
+                'road_grade': ['False'],
+                'is_benchmark': ['False'],
             })
-            metadata_path = path / 'metadata.csv'
+            metadata_path = dir_path / 'metadata.csv'
             metadata.to_csv(metadata_path, index=False)
 
             # custom emissions for leaderboard
@@ -320,16 +346,28 @@ class TrajectoryEnv(gym.Env):
                 'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
                 'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
                 'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id']]
-            leaderboard_emissions_path = path / 'emissions_leaderboard.csv'
+            leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
-            # upload emissions and metadata to S3
+            platoon_mpg_path = dir_path / 'platoon_mpg.png'
+            print(f'Generating platoon MPG plot at {platoon_mpg_path}')
+            plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
+
+            tsd_path = dir_path / 'time_space_diagram.png'
+            print(f'Generating time-space diagram plot at {tsd_path}')
+            plot_time_space_diagram(emissions_path, save_path=tsd_path)
+
             print()
+
+            # upload data to S3
+
+            # metadata
             upload_to_s3(
                 'circles.data.pipeline',
                 f'metadata_table/date={date_now}/partition_name={source_id}_METADATA/{source_id}_METADATA.csv',
                 metadata_path, log=True
             )
+            # emissions
             upload_to_s3(
                 'circles.data.pipeline',
                 f'fact_vehicle_trace/date={date_now}/partition_name={source_id}/{source_id}.csv',
@@ -341,11 +379,15 @@ class TrajectoryEnv(gym.Env):
                  'road_grade': metadata['road_grade'][0]},
                 log=True
             )
-
-            # TODO generate time space diagram and upload to
-            # upload_to_s3(
-            #     'circles.data.pipeline',
-            #     'time_space_diagram/date={0}/partition_name={1}/'
-            #     '{1}.png'.format(cur_date, source_id),
-            #     emission_files[0].replace('csv', 'png')
-            # ).
+            # platoons MPG plot
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
+                platoon_mpg_path, log=True
+            )
+            # time-space diagram
+            upload_to_s3(
+                'circles.data.pipeline',
+                f'time_space_diagram/date={date_now}/partition_name={source_id}/{source_id}.png',
+                tsd_path, log=True
+            )

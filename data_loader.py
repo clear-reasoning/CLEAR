@@ -43,10 +43,17 @@ class DataLoader(object):
             if chunk_size is None:
                 yield dict(traj)
             start_idx = random.randint(0, traj['size'] - chunk_size)
-            yield {
-                k: v[start_idx:start_idx+chunk_size] if isinstance(v, np.ndarray) else v
-                for k, v in traj.items()
+            traj_chunk = {
+                k: traj[k][start_idx:start_idx+chunk_size]
+                for k in ['times', 'positions', 'velocities', 'accelerations']
             }
+            traj_chunk.update({
+                'path': traj['path'],
+                'timestep': traj['timestep'],
+                'duration': round(np.max(traj_chunk['times']) - np.min(traj_chunk['times']), 3),
+                'size': len(traj_chunk['times']),
+            })
+            yield traj_chunk
 
 
 ###################################################################################################

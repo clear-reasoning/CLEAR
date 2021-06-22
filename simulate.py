@@ -60,8 +60,17 @@ env_config.update({
     'whole_trajectory': True,
 })
 
+if args.horizon is not None:
+    env_config.update({
+        'whole_trajectory': False,
+        'horizon': args.horizon,
+    })
+
+if args.s3:
+    assert (args.platoon == 'scenario1')
+
 # create env
-test_env = TrajectoryEnv(config=env_config)
+test_env = TrajectoryEnv(config=env_config, _simulate=True)
 
 # execute controller on traj
 state = test_env.reset()
@@ -93,7 +102,13 @@ print()
 
 # generate_emissions
 if args.gen_emissions:
-    test_env.gen_emissions(upload_to_leaderboard=args.s3)
+    print('Generating emissions...')
+    metadata = {
+        'is_baseline': args.s3_baseline,
+        'author': args.s3_author,
+        'strategy': args.s3_strategy,
+    }
+    test_env.gen_emissions(upload_to_leaderboard=args.s3, additional_metadata=metadata)
 
 # print stuff
 print('\nMetrics:')
