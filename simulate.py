@@ -60,6 +60,12 @@ env_config.update({
     'whole_trajectory': True,
 })
 
+if args.horizon is not None:
+    env_config.update({
+        'whole_trajectory': False,
+        'horizon': args.horizon,
+    })
+
 # create env
 test_env = TrajectoryEnv(config=env_config)
 

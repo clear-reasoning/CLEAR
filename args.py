@@ -107,6 +107,8 @@ def parse_args_simulate():
     parser.add_argument('--s3', default=False, action='store_true',
         help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
 
+    parser.add_argument('--horizon', type=int, default=None,
+        help='Number of environment steps to simulate. If None, use a whole trajectory.')
     parser.add_argument('--platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
              '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
