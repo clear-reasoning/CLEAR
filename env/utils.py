@@ -16,6 +16,25 @@ def lat_long_distance(pos1, pos2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
+def get_bearing(lat1,lon1,lat2,lon2):
+    dLon = lon2 - lon1;
+    y = np.sin(dLon) * np.cos(lat2);
+    x = np.cos(lat1)*np.sin(lat2) - np.sin(lat1)*np.cos(lat2)*np.cos(dLon);
+    brng = np.rad2deg(np.arctan2(y, x));
+    if brng < 0: brng+= 360
+    return brng
+
+def get_driving_direction(bearing):
+    if(bearing> 340 and bearing <360):return 'West'
+    elif(bearing> 150 and bearing <190):return 'East'
+    else:return None
+    
+def get_valid_lat_long(lat,long):
+    is_valid = False
+    if long < -86.58 and long > -86.685 and lat > 35.98 and lat < 36.07: is_valid = True
+    
+    return is_valid
+
 def pairwise(iterable):
     """Return successive overlapping pairs taken from the input iterable."""
     # pairwise('ABCDEFG') --> AB BC CD DE EF FG
