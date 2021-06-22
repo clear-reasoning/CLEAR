@@ -17,7 +17,7 @@ class Simulation(object):
         self.vehicles = []
         self.vlength = 5
 
-        self.step_counter = -1
+        self.step_counter = 0
         self.time_counter = 0
 
         self.energy_model = PFM2019RAV4()
