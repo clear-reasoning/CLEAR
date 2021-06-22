@@ -3,6 +3,7 @@ import importlib
 import json
 import numpy as np
 from pathlib import Path
+import random
 import re
 
 from args import parse_args_simulate
@@ -15,6 +16,11 @@ from visualize.plotter import Plotter
 
 # parse command line arguments
 args = parse_args_simulate()
+
+# set seed
+if args.seed is not None:
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
 # load AV controller
 if args.av_controller.lower() == 'rl':
@@ -71,6 +77,7 @@ if args.s3:
 
 # create env
 test_env = TrajectoryEnv(config=env_config, _simulate=True)
+print('Using trajectory', test_env.traj['path'], '\n')
 
 # execute controller on traj
 state = test_env.reset()
