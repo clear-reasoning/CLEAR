@@ -67,8 +67,8 @@ class TimeHeadwayFollowerStopper(object):
 
         # other parameters
         self.h_1 = 0.4
-        self.h_2 = 1.2
-        self.h_3 = 1.8
+        self.h_2 = 0.6
+        self.h_3 = 0.8
         self.dx_1_0 = 4.5
         self.dx_2_0 = 5.25
         self.dx_3_0 = 6.0
@@ -88,9 +88,9 @@ class TimeHeadwayFollowerStopper(object):
         dx = headway
         dv_minus = min(lead_vel - this_vel, 0)
 
-        dx_1 = self.dx_1_0 + 1 / (2 * self.d_1) * dv_minus ** 2 + self.h_1 * this_vel
-        dx_2 = self.dx_2_0 + 1 / (2 * self.d_2) * dv_minus ** 2 + self.h_2 * this_vel
-        dx_3 = self.dx_3_0 + 1 / (2 * self.d_3) * dv_minus ** 2 + self.h_3 * this_vel
+        dx_1 = 1 / (2 * self.d_1) * dv_minus ** 2 + max(self.dx_1_0, self.h_1 * this_vel)
+        dx_2 = 1 / (2 * self.d_2) * dv_minus ** 2 + max(self.dx_2_0, self.h_2 * this_vel)
+        dx_3 = 1 / (2 * self.d_3) * dv_minus ** 2 + max(self.dx_3_0, self.h_3 * this_vel)
         v = min(max(lead_vel, 0), self.v_des)
         # compute the desired velocity
         if dx <= dx_1:
