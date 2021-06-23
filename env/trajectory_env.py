@@ -324,6 +324,17 @@ class TrajectoryEnv(gym.Env):
             metadata.to_csv(metadata_path, index=False)
 
             # custom emissions for leaderboard
+            def change_id(vid):
+                if vid is None: return None
+                elif '#sensor' in vid: return f'sensor_{vid}'
+                elif 'human' in vid: return f'human_{vid}'
+                elif 'av' in vid: return f'av_{vid}'
+                elif 'trajectory' in vid: return f'human_{vid}'
+                else: raise ValueError(f'Unknown vehicle type: {vid}')
+
+            self.emissions['id'] = list(map(change_id, self.emissions['id']))
+            self.emissions['leader_id'] = list(map(change_id, self.emissions['leader_id']))
+            self.emissions['follower_id'] = list(map(change_id, self.emissions['follower_id']))
             self.emissions['x'] = self.emissions['position']
             self.emissions['y'] = [0] * len(self.emissions['x'])
             self.emissions['leader_rel_speed'] = self.emissions['speed_difference']
