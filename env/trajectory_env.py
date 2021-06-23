@@ -316,7 +316,7 @@ class TrajectoryEnv(gym.Env):
                 'strategy': [strategy],
                 'version': ['3.0'],
                 'on_ramp': ['False'],
-                'penetration_rate': ['0'],
+                'penetration_rate': ['x'],
                 'road_grade': ['False'],
                 'is_benchmark': ['False'],
             })
