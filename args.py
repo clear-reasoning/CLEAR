@@ -117,7 +117,7 @@ def parse_args_simulate():
 
     parser.add_argument('--horizon', type=int, default=None,
         help='Number of environment steps to simulate. If None, use a whole trajectory.')
-    parser.add_argument('--seed', type=int, default=None,
+    parser.add_argument('--seed', type=int, default=3,
         help='Seed to have a constant random behavior, eg to use the same trajectory across several runs.')
     parser.add_argument('--platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
