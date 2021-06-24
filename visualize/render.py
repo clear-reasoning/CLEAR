@@ -104,12 +104,12 @@ for i in range(len(timesteps)):
         pos_y = mid_y
         radius = 3 * zoom
 
-        if car_type.startswith('leader'):
+        if 'leader' in car_type:
             car_color = (0, 255, 0)
-        if car_type.startswith('av'):
-            car_color = (255, 0, 0)
-        if car_type.startswith('human'):
+        elif 'human' in car_type:
             car_color = (255, 255, 255)
+        elif 'av' in car_type:
+            car_color = (255, 0, 0)
 
         pygame.draw.circle(screen, car_color, (pos_x, pos_y), radius)
 

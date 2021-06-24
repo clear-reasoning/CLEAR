@@ -47,7 +47,7 @@ Running `python simulate.py` with the `--gen_emissions` flag will generate a `.c
 
 - `python visualize/time_space_diagram.py {path_to_emissions.csv}` to generate a time-space diagram
 - `python visualize/platoon_mpg.py {path_to_emissions.csv}` to generate a platoon MPG graph (valid if you ran `simulate.py` with the `--platoon scenario1` flag)
-- `python visualize/render.py {path_to_emissions.csv}` to render your controller in a Pygame window
+- `python visualize/render.py {path_to_emissions.csv}` to render your controller in a Pygame window (not functional right now)
 
 Additionally, a good number of plots and metrics are generated when running `simulate.py` with the `--gen_metrics` flag. 
 
