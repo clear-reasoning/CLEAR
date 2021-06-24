@@ -104,6 +104,8 @@ def parse_args_simulate():
         help='If set, print information about the loaded controller when {av_controller} is "rl".')
     parser.add_argument('--gen_emissions', default=False, action='store_true',
         help='If set, a .csv emission file will be generated.')
+    parser.add_argument('--gen_metrics', default=False, action='store_true',
+        help='If set, some figures will be generated and some metrics printed.')
     parser.add_argument('--s3', default=False, action='store_true',
         help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
     parser.add_argument('--s3_baseline', default=False, action='store_true',
@@ -132,6 +134,9 @@ def parse_args_simulate():
     parser.add_argument('--human_kwargs', type=str, default='{}',
         help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+
+    parser.add_argument('--all_trajectories', default=False, action='store_true',
+        help='If set, the script will be ran for all the trajectories in the dataset.')
 
     args = parser.parse_args()
     return args

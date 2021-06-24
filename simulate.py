@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 import importlib
 import json
@@ -74,64 +75,94 @@ if args.horizon is not None:
 
 if args.s3:
     assert (args.platoon == 'scenario1')
+    assert (args.all_trajectories == False)
 
 # create env
 test_env = TrajectoryEnv(config=env_config, _simulate=True)
-print('Using trajectory', test_env.traj['path'], '\n')
 
 # execute controller on traj
-state = test_env.reset()
-done = False
-test_env.start_collecting_rollout()
-while not done:
-    if args.av_controller == 'rl':
-        action = [
-            get_first_element(model.predict(test_env.get_state(av_idx=i), deterministic=True))
-            for i in range(len(test_env.avs))
-        ]
-    else:
-        action = 0  # do not change (controllers should be implemented via Vehicle objects)
-    state, reward, done, infos = test_env.step(action)
-test_env.stop_collecting_rollout()
-
-tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
-rollout_dict = tb_callback.get_rollout_dict(test_env)
-
-# plot stuff
-print()
+mpgs = defaultdict(list)
 now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-plotter = Plotter(f'figs/simulate/{now}')
-for group, metrics in rollout_dict.items():
-    for k, v in metrics.items():
-        plotter.plot(v, title=k, grid=True, linewidth=1.0)
-    plotter.save(group, log='\t')
-print()
 
-# generate_emissions
-if args.gen_emissions:
-    print('Generating emissions...')
-    metadata = {
-        'is_baseline': args.s3_baseline,
-        'author': args.s3_author,
-        'strategy': args.s3_strategy,
-    }
-    test_env.gen_emissions(upload_to_leaderboard=args.s3, additional_metadata=metadata)
+while True:
+    try:
+        state = test_env.reset()
+    except StopIteration:
+        print('Done.')
+        break
 
-# print stuff
-print('\nMetrics:')
-episode_reward = np.sum(rollout_dict['training']['rewards'])
-av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
-print('\tepisode_reward', episode_reward)
-print('\tav_mpg', av_mpg)
-for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
-    has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
-    print(f'\thas_{penalty}', has_penalty)
+    print('Using trajectory', test_env.traj['path'], '\n')
+    done = False
+    test_env.start_collecting_rollout()
+    while not done:
+        if args.av_controller == 'rl':
+            action = [
+                get_first_element(model.predict(test_env.get_state(av_idx=i), deterministic=True))
+                for i in range(len(test_env.avs))
+            ]
+        else:
+            action = 0  # do not change (controllers should be implemented via Vehicle objects)
+        state, reward, done, infos = test_env.step(action)
+    test_env.stop_collecting_rollout()
 
-for (name, array) in [
-    ('reward', rollout_dict['training']['rewards']),
-    ('headway', rollout_dict['sim_data_av']['headway']),
-    ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
-    ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
-]:
-    print(f'\tmin_{name}', np.min(array))
-    print(f'\tmax_{name}', np.max(array))
+    for veh in test_env.sim.vehicles:
+        mpg = test_env.sim.data_by_vehicle[veh.name]['avg_mpg'][-1]
+        mpgs[veh.name].append(mpg)
+
+    for k, v in mpgs.items():
+        print(k, np.mean(v), np.std(v))
+
+    # generate_emissions
+    if args.all_trajectories:
+        traj_name = Path(test_env.traj['path']).stem
+        emissions_path = f'emissions/{now}/emissions_{args.av_controller}_{traj_name}.csv'
+    else:
+        emissions_path = None
+
+    if args.gen_emissions:
+        print('Generating emissions...')
+        metadata = {
+            'is_baseline': args.s3_baseline,
+            'author': args.s3_author,
+            'strategy': args.s3_strategy,
+        }
+        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=args.s3, 
+                               additional_metadata=metadata)
+
+    if args.gen_metrics:
+        # plot stuff
+        print()
+        now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
+        plotter = Plotter(f'figs/simulate/{now}')
+        for group, metrics in rollout_dict.items():
+            for k, v in metrics.items():
+                plotter.plot(v, title=k, grid=True, linewidth=1.0)
+            plotter.save(group, log='\t')
+        print()
+
+        tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
+        rollout_dict = tb_callback.get_rollout_dict(test_env)
+
+        # print stuff
+        print('\nMetrics:')
+        episode_reward = np.sum(rollout_dict['training']['rewards'])
+        av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        print('\tepisode_reward', episode_reward)
+        print('\tav_mpg', av_mpg)
+        for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
+            has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
+            print(f'\thas_{penalty}', has_penalty)
+
+        for (name, array) in [
+            ('reward', rollout_dict['training']['rewards']),
+            ('headway', rollout_dict['sim_data_av']['headway']),
+            ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
+            ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
+        ]:
+            print(f'\tmin_{name}', np.min(array))
+            print(f'\tmax_{name}', np.max(array))
+
+    if not args.all_trajectories:
+        break
+
+

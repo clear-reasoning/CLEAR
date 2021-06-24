@@ -277,12 +277,18 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_dir='emissions', upload_to_leaderboard=True, additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, additional_metadata={}):
         # create emissions dir if it doesn't exist
-        now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
-        dir_path = Path(emissions_dir, now)
+        if emissions_path is None: 
+            emissions_path = 'emissions'
+        emissions_path = Path(emissions_path)
+        if emissions_path.suffix == '.csv':
+            dir_path = emissions_path.parent
+        else:                
+            now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
+            dir_path = Path(emissions_path, now)
+            emissions_path = dir_path / 'emissions.csv'
         dir_path.mkdir(parents=True, exist_ok=True)
-        emissions_path = dir_path / 'emissions.csv'
 
         # generate emissions dict
         self.emissions = defaultdict(list)
