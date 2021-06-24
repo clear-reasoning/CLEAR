@@ -1,5 +1,4 @@
-
-
+from collections import defaultdict
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -132,3 +131,57 @@ class TensorboardPlotter(Plotter):
         self.logger.record(log_name, Figure(fig, close=True), exclude=('stdout', 'log', 'json', 'csv'))
         plt.close(fig)
         self.plot_data.clear()
+
+
+class BarPlot(object):
+    def __init__(self):
+        self.plot_data = defaultdict(lambda: defaultdict(dict))
+        self.labels = set()
+        self.groups = set()
+        self.subplot_metadata = dict()
+
+    def add(self, top, bottom=0, group='group', label='label', subplot=0):
+        self.plot_data[subplot][group][label] = (round(top - bottom, 2), round(bottom, 2))
+        self.groups.add(group)
+        self.labels.add(label)
+
+    def configure_subplot(self, subplot, title, ylabel):
+        self.subplot_metadata[subplot] = {
+            'title': title,
+            'ylabel': ylabel,
+        }
+        
+    def save(self, *save_path):
+        fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6*len(self.plot_data)))
+        if not isinstance(axes, np.ndarray):
+            axes = [axes]
+
+        for i, (subplot, data) in enumerate(self.plot_data.items()):
+            ax = axes[i]
+
+            groups = sorted(list(self.groups))
+            x = np.arange(len(groups))
+            bar_width = 0.35
+            for i, label in enumerate(sorted(list(self.labels))):
+                tops, bottoms = list(zip(*[data[group][label] for group in groups]))
+                rects = ax.bar(x - bar_width * i, tops, bar_width, label=label, align='edge', bottom=bottoms)
+                ax.bar_label(rects, padding=3, label_type='edge')
+
+            if subplot in self.subplot_metadata:
+                ax.set_ylabel(self.subplot_metadata[subplot]['ylabel'])
+                ax.set_title(self.subplot_metadata[subplot]['title'])
+
+            ax.set_xticks(x)
+            ax.set_xticklabels(groups)
+            ax.legend()
+
+        # create save dir if it doesn't exist
+        save_path = Path(*save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # save figure
+        fig.tight_layout()
+        fig.savefig(save_path)
+        plt.close(fig)
+        print(f'Wrote {save_path}')
+
