@@ -130,6 +130,9 @@ while True:
                                additional_metadata=metadata)
 
     if args.gen_metrics:
+        tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
+        rollout_dict = tb_callback.get_rollout_dict(test_env)
+
         # plot stuff
         print()
         now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
@@ -139,9 +142,6 @@ while True:
                 plotter.plot(v, title=k, grid=True, linewidth=1.0)
             plotter.save(group, log='\t')
         print()
-
-        tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
-        rollout_dict = tb_callback.get_rollout_dict(test_env)
 
         # print stuff
         print('\nMetrics:')
