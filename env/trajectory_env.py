@@ -299,7 +299,7 @@ class TrajectoryEnv(gym.Env):
         # sort and save emissions file
         pd.DataFrame(self.emissions) \
             .sort_values(by=['time', 'id']) \
-            .to_csv(emissions_path, index=False)
+            .to_csv(emissions_path, index=False, float_format="%g")
         print(f'Saved emissions file at {emissions_path}')
 
         if upload_to_leaderboard:
