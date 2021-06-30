@@ -41,6 +41,8 @@ DEFAULT_ENV_CONFIG = {
     # human controller & params
     'human_controller': 'idm',
     'human_kwargs': '{}',
+    # set to use one specific trajectory
+    'fixed_traj_path': None,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -70,6 +72,7 @@ class TrajectoryEnv(gym.Env):
             self.trajectories = self.data_loader.get_all_trajectories()
         else:
             self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
+        self.traj = None
 
         # create simulation
         self.create_simulation()
@@ -147,7 +150,13 @@ class TrajectoryEnv(gym.Env):
 
     def create_simulation(self):
         # collect the next trajectory
-        self.traj = next(self.trajectories)
+        if self.fixed_traj_path is not None and self.traj is None:
+            self.traj = next(self.trajectories)
+            while self.fixed_traj_path is not None and str(self.traj['path']) != str(self.fixed_traj_path):
+                self.traj = next(self.trajectories)
+        
+        if not self.fixed_traj_path:
+            self.traj = next(self.trajectories)
 
         # create a simulation object
         self.time_step = self.traj['timestep']

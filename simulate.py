@@ -4,7 +4,6 @@ import importlib
 import json
 import numpy as np
 from pathlib import Path
-import random
 import re
 
 from args import parse_args_simulate
@@ -17,11 +16,6 @@ from visualize.plotter import Plotter
 
 # parse command line arguments
 args = parse_args_simulate()
-
-# set seed
-if args.seed is not None:
-    random.seed(args.seed)
-    np.random.seed(args.seed)
 
 # load AV controller
 if args.av_controller.lower() == 'rl':
@@ -65,6 +59,7 @@ else:
 env_config.update({
     'platoon': args.platoon,
     'whole_trajectory': True,
+    'fixed_traj_path': (args.traj_path if not args.all_trajectories else None),
 })
 
 if args.horizon is not None:
