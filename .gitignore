@@ -13,3 +13,5 @@ emissions*
 dataset/
 *.sh
 *.onnx
+*trajectory.egg-info/
+*.idea/
