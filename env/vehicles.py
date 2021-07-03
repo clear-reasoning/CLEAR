@@ -148,13 +148,23 @@ class RLVehicle(Vehicle):
         self.accel = self.apply_failsafe(accel)
         return self.accel
 
-# TODO(nl) add FS-wrapped RL vehicle
+class FSWrappedRLVehicle(Vehicle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-# if self.use_fs:
-#     self.follower_stopper.v_des += action
-#     self.follower_stopper.v_des = max(self.follower_stopper.v_des, 0)
-#     self.follower_stopper.v_des = min(self.follower_stopper.v_des, self.max_speed)
-#     # TODO(eugenevinitsky) decide on the integration scheme, whether we want this to depend on current or next pos
-#     accel = self.follower_stopper.get_accel(self.av['speed'], self.leader_speeds[self.traj_idx],
-#                                             self.leader_positions[self.traj_idx] - self.av['pos'],
-#                                             self.time_step)
+        self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
+        self.fs.v_des = self.speed
+
+    def step(self):
+        self.fs.v_des = self.get_leader_speed()
+
+        accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+        self.accel_with_noise_no_failsafe = accel
+        self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
+        self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
+        accel = self.apply_failsafe(accel)
+
+        return super().step(accel=accel, ballistic=True)
+
+    def set_vdes(self, vdes):
+        self.fs.v_des = vdes

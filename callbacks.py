@@ -116,7 +116,7 @@ class TensorboardCallback(BaseCallback):
         config['av_controller'] = av_controller
         if av_controller == 'idm':
             config['av_kwargs'] = 'dict(v0=45,noise=0)'
-        test_env = TrajectoryEnv(config=config)
+        test_env = TrajectoryEnv(config=config, _verbose=False)
 
         # execute controller on traj
         state = test_env.reset()

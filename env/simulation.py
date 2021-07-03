@@ -1,5 +1,5 @@
 from collections import defaultdict
-from env.vehicles import FSVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
+from env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from env.energy_models import PFM2019RAV4
 from env.utils import get_last_or
 
@@ -45,6 +45,7 @@ class Simulation(object):
             'fs': FSVehicle,
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
+            'rl_fs': FSWrappedRLVehicle,
             'fs': FSVehicle
         }[controller]
 

@@ -53,7 +53,7 @@ PLATOON_PRESETS= {
 
 
 class TrajectoryEnv(gym.Env):
-    def __init__(self, config, _simulate=False):
+    def __init__(self, config, _simulate=False, _verbose=True):
         super().__init__()
 
         # extract params from config
@@ -64,7 +64,10 @@ class TrajectoryEnv(gym.Env):
         self.simulate = _simulate
         self.log_time_counter = time.time()
 
-        assert (self.use_fs == False)  # TODO(nl) need an FS wrapper in the vehicle class
+        if self.use_fs:
+            assert self.av_controller == 'rl'
+            assert not self.discrete
+            self.av_controller = 'rl_fs'
 
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader()
@@ -77,18 +80,23 @@ class TrajectoryEnv(gym.Env):
         # create simulation
         self.create_simulation()
 
-        print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
-        print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-        print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
-        if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
-            raise ValueError('Training is only supported with 1 AV in the platoon.')
+        self._verbose = _verbose
+        if self._verbose:
+            print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
+            print(f'with av controller {self.av_controller} ({self.av_kwargs})')
+            print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
+            if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
+                raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
         if self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(-1, 1, self.num_actions)
         else:
-            self.action_space = Box(low=-3.0, high=1.5, shape=(1,), dtype=np.float32)
+            if self.use_fs:
+                self.action_space = Box(low=-2.0, high=2.0, shape=(1,), dtype=np.float32)
+            else:
+                self.action_space = Box(low=-3.0, high=1.5, shape=(1,), dtype=np.float32)
 
         # get number of states
         n_states = len(self.get_base_state())
@@ -115,9 +123,6 @@ class TrajectoryEnv(gym.Env):
             'leader_speed': (av.get_leader_speed(), 40.0),
             'headway': (av.get_headway(), 100.0),
         }
-
-        if self.use_fs:
-            state['vdes'] = (self.follower_stopper.v_des, 40.0)
 
         return state
 
@@ -208,7 +213,7 @@ class TrajectoryEnv(gym.Env):
         # additional trajectory data that will be plotted in tensorboard
         metrics = {}
 
-        # apply acceleration action to AV
+        # apply action to AV
         if self.av_controller == 'rl':
             if type(actions) not in [list, np.ndarray]:
                 actions = [actions]
@@ -217,6 +222,15 @@ class TrajectoryEnv(gym.Env):
                 metrics['rl_accel_before_failsafe'] = accel
                 accel = av.set_accel(accel)  # returns accel with failsafes applied
                 metrics['rl_accel_after_failsafe'] = accel
+        elif self.av_controller == 'rl_fs':
+            # RL with FS wrapper
+            if type(actions) not in [list, np.ndarray]:
+                actions = [actions]
+            for av, action in zip(self.avs, actions):
+                vdes_command = av.speed + float(action)
+                metrics['vdes_delta'] = float(action)
+                metrics['vdes_command'] = vdes_command
+                accel = av.set_vdes(vdes_command)  # set v_des = v_av + action
 
         # execute one simulation step
         end_of_horizon = not self.sim.step()
