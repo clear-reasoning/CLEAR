@@ -156,8 +156,6 @@ class FSWrappedRLVehicle(Vehicle):
         self.fs.v_des = self.speed
 
     def step(self):
-        self.fs.v_des = self.get_leader_speed()
-
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
