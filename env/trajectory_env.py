@@ -115,9 +115,9 @@ class TrajectoryEnv(gym.Env):
             n_obs *= 2  # additional room for vf states
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
 
-    def get_base_state(self, av_idx=0):
+    def get_base_state(self, av_idx=None):
         """Dict of state_name: (state_value, state_normalization_scale)"""
-        av = self.avs[av_idx]
+        av = self.avs[av_idx if av_idx is not None else 0]
         state = {
             'speed': (av.speed, 40.0),
             'leader_speed': (av.get_leader_speed(), 40.0),
@@ -137,8 +137,11 @@ class TrajectoryEnv(gym.Env):
 
         return vf_state
 
-    def get_state(self, _store_state=False, av_idx=0):
-        if _store_state:
+    def get_state(self, _store_state=False, av_idx=None):
+        if av_idx is not None and _store_state == True:
+            raise ValueError('Training with several AVs is not supported.')
+
+        if _store_state or av_idx is not None:
             # preprend new state to the saved past states
             state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
             self.past_states = np.roll(self.past_states, len(state))
