@@ -126,3 +126,4 @@ class Simulation(object):
             self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
             self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)
+            self.add_data(veh, 'vdes', veh.fs.v_des if hasattr(veh, 'fs') else -1)
