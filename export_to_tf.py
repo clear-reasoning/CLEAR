@@ -4,6 +4,7 @@ import os
 
 import onnx
 from onnx_tf.backend import prepare
+import tensorflow as tf
 import torch
 from torch import nn
 
@@ -36,9 +37,14 @@ if config['algorithm'] == '<class \'algos.ppo.ppo.PPO\'>':
             self.mlp_extractor = baselines_model.policy.policy_extractor
             self.action_net = baselines_model.policy.action_net
 
-        def forward(self, x):
+        def forward(self, in_vector):
+            # x : [av_speed, leader_speed, headway]
+            x = torch.div(in_vector, torch.tensor([40.0, 40.0, 100.0]))
             x = self.mlp_extractor(x)
-            return self.action_net(x)
+            action = torch.clamp(self.action_net(x), min=-3.0, max=1.5)  # acceleration
+            dt = 0.05
+            vdes = (torch.matmul(in_vector, torch.tensor([[1.], [0.], [0.]]))) + action * dt
+            return vdes
 
 
     policy = Policy(model)
@@ -46,8 +52,12 @@ elif config['algorithm'] == '<class \'algos.td3.td3.TD3\'>':
     from stable_baselines3 import TD3
     model = TD3.load(args.cp_path, env=env)
 
-x = torch.Tensor([[0, 0, 0]])
-torch_out = policy(x)
+for torch_in in [
+    [[5, 5, 20]], [[30, 10, 50]], [[5, 20, 30]]
+]:
+    x = torch.Tensor(torch_in)
+    torch_out = policy(x)
+    print(f'input: {torch_in}, output: {torch_out}')
 
 if args.logdir:
   output_logdir = args.logdir
