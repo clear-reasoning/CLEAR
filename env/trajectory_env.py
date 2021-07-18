@@ -230,10 +230,11 @@ class TrajectoryEnv(gym.Env):
             if type(actions) not in [list, np.ndarray]:
                 actions = [actions]
             for av, action in zip(self.avs, actions):
-                vdes_command = av.speed + float(action)
-                metrics['vdes_delta'] = float(action)
+                vdes_command = av.speed + float(action) * self.time_step
+                metrics['rl_accel'] = float(action)
                 metrics['vdes_command'] = vdes_command
-                accel = av.set_vdes(vdes_command)  # set v_des = v_av + action
+                metrics['vdes_delta'] = float(action) * self.time_step
+                av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # execute one simulation step
         end_of_horizon = not self.sim.step()
