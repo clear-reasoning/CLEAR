@@ -1,11 +1,11 @@
 """
 Generate emissions for all trajectories with IDM
 
-    python simulate.py --seed 13 --av_controller idm --av_kwargs "dict(noise=0)" --all_trajectories --gen_emissions
+    python simulate.py --av_controller idm --av_kwargs "dict(noise=0)" --all_trajectories --gen_emissions
 
 Generate emissions for all trajectories with an RL controller
     
-    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip --seed 13 --av_controller rl --all_trajectories --gen_emissions
+    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip --av_controller rl --all_trajectories --gen_emissions
 
 Then use this script to generate metrics and plot stuff
 
@@ -17,6 +17,11 @@ eg.
 
 Each input folder should contain the same number of emissions files, from the same trajectories
 and from only one AV controller.
+
+Generated folders:
+- idm baseline: emissions/23Jun21_15h16m06s/
+- rl controller w/ accel output (cra): emissions/23Jun21_15h20m11s/
+- rl controller wrapped in fs (sadifs2): emissions/06Jul21_16h18m30s/
 """
 from collections import defaultdict
 from datetime import datetime
@@ -32,8 +37,8 @@ data = defaultdict(dict)
 emissions_folders = map(Path, sys.argv[1:])
 for path in emissions_folders:
     for csv_path in path.glob('*.csv'):
-        split = csv_path.stem.split('_')
-        av_controller = split[1]
+        split = csv_path.stem.replace('rl_fs', 'rl-fs').split('_')
+        av_controller = split[1].replace('rl-fs', 'rl_fs')
         traj_name = '_'.join(split[2:])
         # if traj_name not in ['2021-03-29-12-47-15_2T3MWRFVXLW056972_masterArray_0_4214', '2021-04-27-21-37-32_2T3MWRFVXLW056972_masterArray_0_4353', '2021-03-17-21-37-10_2T3MWRFVXLW056972_masterArray_1_4689']:
         #     continue  # TMP
@@ -57,9 +62,9 @@ for traj_name, dfs in data.items():
     for av_controller, df in dfs.items():
         data_by_vid = dict(tuple(df.groupby(df['id'], as_index=False)))
 
-        traj_id = [vid for vid in data_by_vid.keys() if vid.split('_')[2] == 'leader'][0]
-        av_ids = [vid for vid in data_by_vid.keys() if vid.split('_')[2] == 'av']
-        human_ids = [vid for vid in data_by_vid.keys() if vid.split('_')[2] == 'human']
+        traj_id = [vid for vid in data_by_vid.keys() if 'leader' in vid.split('_')][0]
+        av_ids = [vid for vid in data_by_vid.keys() if 'av' in vid.split('_')]
+        human_ids = [vid for vid in data_by_vid.keys() if 'human' in vid.split('_')]
 
         # plot traj length
         distance = data_by_vid[traj_id]['total_distance_traveled'].iloc[-1]
@@ -128,7 +133,7 @@ plot.configure_subplot(subplot='mpg_avs_humans', title='AVs + Humans MPG', ylabe
 for max_speed in [10, 20, 30, 40]:
     plot.configure_subplot(subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}', title=f'AVs + Humans MPG by speed ({max_speed-10}m/s to {max_speed}m/s)', ylabel='Average MPG')
 
-plot.save('tmp.png')
+# plot.save('tmp.png')
 # plot.save('figs/controller_analysis', now, 'global_metrics.png')
 
 
@@ -140,7 +145,7 @@ for max_speed, av_controllers in mpgs_by_speed.items():
 
 print()
 for max_speed, av_controllers in mpgs_by_speed.items():
-    improv = round((np.mean(av_controllers['rl']) / np.mean(av_controllers['idm']) - 1) * 100, 1)
+    improv = round((np.mean(av_controllers['rl_fs']) / np.mean(av_controllers['idm']) - 1) * 100, 1)
     print(f'{max_speed-10}m/s to {max_speed}m/s \t energy improvement: {improv}%')
 
 
