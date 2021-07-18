@@ -15,3 +15,5 @@ dataset/
 *.onnx
 *trajectory.egg-info/
 *.idea/
+output/
+*onxx*
