@@ -1,6 +1,5 @@
-import math
 import numpy as np
-from env.failsafes import safe_velocity
+from trajectory.env.failsafes import safe_velocity
 
 
 class IDMController(object):

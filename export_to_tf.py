@@ -8,7 +8,7 @@ import tensorflow as tf
 import torch
 from torch import nn
 
-from env.trajectory_env import TrajectoryEnv
+from trajectory.env.trajectory_env import TrajectoryEnv
 parser = argparse.ArgumentParser()
 parser.add_argument('--cp_path', type=str, help='Path to the checkpoint you want to convert.'
                                                 'This should include the .zip file that you want opened')

@@ -9,11 +9,11 @@ import re
 import time
 import uuid
 
-from data_loader import DataLoader
-from env.simulation import Simulation
-from env.utils import get_first_element, upload_to_s3
-from visualize.platoon_mpg import plot_platoon_mpg
-from visualize.time_space_diagram import plot_time_space_diagram
+from trajectory.data_loader import DataLoader
+from trajectory.env.simulation import Simulation
+from trajectory.env.utils import get_first_element, upload_to_s3
+from trajectory.visualize.platoon_mpg import plot_platoon_mpg
+from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
 # env params that will be used except for params explicitely set in the command-line arguments
@@ -160,10 +160,11 @@ class TrajectoryEnv(gym.Env):
     def create_simulation(self):
         # collect the next trajectory
         if self.fixed_traj_path is not None and self.traj is None:
-            self.traj = next(self.trajectories)
-            while self.fixed_traj_path is not None and str(self.traj['path']) != str(self.fixed_traj_path):
-                self.traj = next(self.trajectories)
-        
+            self.traj = next(
+                t for t in self.data_loader.trajectories
+                if str(t['path']).split("/")[-1]
+                == self.fixed_traj_path.split("/")[-1])
+
         if not self.fixed_traj_path:
             self.traj = next(self.trajectories)
 
@@ -317,6 +318,8 @@ class TrajectoryEnv(gym.Env):
             dir_path = Path(emissions_path, now)
             emissions_path = dir_path / 'emissions.csv'
         dir_path.mkdir(parents=True, exist_ok=True)
+        self.emissions_path = emissions_path
+        self.dir_path = dir_path
 
         # generate emissions dict
         self.emissions = defaultdict(list)
@@ -436,3 +439,4 @@ class TrajectoryEnv(gym.Env):
                 f'time_space_diagram/date={date_now}/partition_name={source_id}/{source_id}.png',
                 tsd_path, log=True
             )
+

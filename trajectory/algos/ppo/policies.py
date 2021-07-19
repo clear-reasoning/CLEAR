@@ -1,32 +1,11 @@
-
-import collections
-from abc import ABC, abstractmethod
-from functools import partial
 from itertools import zip_longest
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Tuple, Type, Union
 
-import gym
-import numpy as np
 import torch as th
-from torch import nn
 
-from stable_baselines3.common.distributions import (
-    BernoulliDistribution,
-    CategoricalDistribution,
-    DiagGaussianDistribution,
-    Distribution,
-    MultiCategoricalDistribution,
-    StateDependentNoiseDistribution,
-    make_proba_distribution,
-)
-from stable_baselines3.common.preprocessing import get_action_dim, maybe_transpose, preprocess_obs
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor, FlattenExtractor, MlpExtractor, NatureCNN, create_mlp
-from stable_baselines3.common.type_aliases import Schedule
-from stable_baselines3.common.utils import get_device, is_vectorized_observation
-from stable_baselines3.common.vec_env.obs_dict_wrapper import ObsDictWrapper
+from stable_baselines3.common.utils import get_device
 
-
-from algos.pop_art import PopArt
+from trajectory.algos.pop_art import PopArt
 
 from functools import partial
 
@@ -44,7 +23,6 @@ from stable_baselines3.common.type_aliases import Schedule
 
 
 from stable_baselines3.common.policies import (
-    BasePolicy,
     ActorCriticPolicy
 )
 

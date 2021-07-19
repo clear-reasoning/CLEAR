@@ -1,7 +1,7 @@
 from collections import defaultdict
-from env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
-from env.energy_models import PFM2019RAV4
-from env.utils import get_last_or
+from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
+from trajectory.env.energy_models import PFM2019RAV4
+from trajectory.env.utils import get_last_or
 
 
 class Simulation(object):

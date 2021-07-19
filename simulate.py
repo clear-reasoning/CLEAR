@@ -4,14 +4,15 @@ import importlib
 import json
 import numpy as np
 from pathlib import Path
+import os
 import re
 
+import trajectory.config as tc
 from args import parse_args_simulate
-from callbacks import TensorboardCallback
-from env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
-from env.utils import get_first_element
-from env.simulation import Simulation
-from visualize.plotter import Plotter
+from trajectory.callbacks import TensorboardCallback
+from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
+from trajectory.env.utils import get_first_element
+from trajectory.visualize.plotter import Plotter
 
 
 # parse command line arguments
@@ -63,7 +64,8 @@ else:
 env_config.update({
     'platoon': args.platoon,
     'whole_trajectory': True,
-    'fixed_traj_path': (args.traj_path if not args.all_trajectories and args.traj_path != 'None' else None),
+    'fixed_traj_path': (os.path.join(tc.PROJECT_PATH, args.traj_path)
+                        if not args.all_trajectories and args.traj_path != 'None' else None),
 })
 
 if args.horizon is not None:

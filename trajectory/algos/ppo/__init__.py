@@ -3,7 +3,7 @@
 from stable_baselines3.common.policies import (
     register_policy,
 )
-from algos.ppo.policies import SplitActorCriticPolicy
+from trajectory.algos.ppo.policies import SplitActorCriticPolicy
 
 MlpPolicySplit = SplitActorCriticPolicy
 

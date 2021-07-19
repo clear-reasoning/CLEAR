@@ -1,13 +1,12 @@
-import json
 import os
 
-from env.trajectory_env import *
-from env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
+from trajectory.env.trajectory_env import *
+from trajectory.env.accel_controllers import IDMController, TimeHeadwayFollowerStopper
 
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
-from env.failsafes import safe_velocity
+from trajectory.env.failsafes import safe_velocity
 
 PLOT_HEATMAPS = False
 PLOT_PLOTS = False
@@ -50,7 +49,6 @@ if __name__ == '__main__':
     if custom_cp_path is not None:
         from stable_baselines3 import PPO
         # from stable
-        from stable_baselines3.common.policies import ActorCriticPolicy
         model = PPO.load(custom_cp_path, env=env) #, custom_objects={'policy_class': ActorCriticPolicy})
 
     state = env.reset()

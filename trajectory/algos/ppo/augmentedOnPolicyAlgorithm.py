@@ -13,7 +13,7 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedul
 from stable_baselines3.common.utils import safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.buffers import RolloutBuffer
-from algos.ppo.policies import SplitActorCriticPolicy
+from trajectory.algos.ppo.policies import SplitActorCriticPolicy
 
 
 class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
