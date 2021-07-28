@@ -5,14 +5,14 @@ from pathlib import Path
 import random
 import sys
 import time
+import os
 from collections import defaultdict
 
-from env.accel_controllers import IDMController
-from env.energy_models import PFM2019RAV4
-from env.simulation import Simulation
-from env.utils import get_bearing, get_driving_direction, get_valid_lat_long, \
+import trajectory.config as tc
+from trajectory.env.simulation import Simulation
+from trajectory.env.utils import get_bearing, get_driving_direction, get_valid_lat_long, \
                       lat_long_distance, moving_sum, pairwise, counter
-from visualize.plotter import Plotter
+from trajectory.visualize.plotter import Plotter
 
 
 class DataLoader(object):
@@ -29,7 +29,8 @@ class DataLoader(object):
             } for fp, data in self.get_raw_data()]
 
     def get_raw_data(self):
-        file_paths = list(Path('dataset/data_v2_preprocessed').glob('**/*.csv'))
+        file_paths = list(Path(os.path.join(
+            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed')).glob('**/*.csv'))
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
 
@@ -65,7 +66,7 @@ def smooth_data(target, n, mu = 0.5):
 
 def _preprocess_data():
     """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
-    file_paths = list(Path('dataset/data_v2').glob('**/*.csv'))
+    file_paths = list(Path('../dataset/data_v2').glob('**/*.csv'))
     for fp in file_paths:
         print(f'Reading {fp}')
 

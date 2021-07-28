@@ -11,9 +11,9 @@ import random
 from stable_baselines3.common.callbacks import BaseCallback
 import time
 
-from env.trajectory_env import TrajectoryEnv
-from env.utils import duration_to_str, get_first_element
-from visualize.plotter import TensorboardPlotter
+from trajectory.env.trajectory_env import TrajectoryEnv
+from trajectory.env.utils import duration_to_str, get_first_element
+from trajectory.visualize.plotter import TensorboardPlotter
 
 
 class TensorboardCallback(BaseCallback):

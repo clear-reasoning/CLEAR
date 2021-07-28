@@ -1,18 +1,15 @@
-from datetime import datetime
-import json
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
-import torch
 
-from algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
-from algos.ppo.ppo import PPO as AugmentedPPO
-from algos.td3.policies import CustomTD3Policy
-from callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
-from env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
-from env.utils import dict_to_json
+from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
+from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
+from trajectory.algos import CustomTD3Policy
+from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
+from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
+from trajectory.env.utils import dict_to_json
 
 register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 

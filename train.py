@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from args import parse_args_train
-from env.utils import dict_to_json, partition
+from trajectory.env.utils import dict_to_json, partition
 from setup_exp import run_experiment
 
 

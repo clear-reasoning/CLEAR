@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from env.energy_models import PFM2019RAV4
+from trajectory.env.energy_models import PFM2019RAV4
 
 
 def main():

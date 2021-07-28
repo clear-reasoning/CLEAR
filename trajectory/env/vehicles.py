@@ -1,5 +1,5 @@
-from env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
-from env.failsafes import safe_velocity
+from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
+from trajectory.env.failsafes import safe_velocity
 import numpy as np
 
 

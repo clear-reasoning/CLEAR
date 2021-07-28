@@ -1,7 +1,7 @@
 from collections import defaultdict
-from env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
-from env.energy_models import PFM2019RAV4
-from env.utils import get_last_or
+from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
+from trajectory.env.energy_models import PFM2019RAV4
+from trajectory.env.utils import get_last_or
 
 
 class Simulation(object):
@@ -126,3 +126,4 @@ class Simulation(object):
             self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
             self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)
+            self.add_data(veh, 'vdes', veh.fs.v_des if hasattr(veh, 'fs') else -1)
