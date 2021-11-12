@@ -87,7 +87,7 @@ for i in range(len(timesteps)):
 
     shift_x = 0
     for car_type, car_x in zip(car_types[i], car_positions[i]):
-        if car_type.startswith('leader'):
+        if 'leader' in car_type:
             shift_x = mid_x - car_x * zoom
 
     for pos_x in range(-1000, 22000, interval):
@@ -104,23 +104,27 @@ for i in range(len(timesteps)):
         pos_y = mid_y
         radius = 3 * zoom
 
+        car_type_display = car_type
         if 'leader' in car_type:
             car_color = (0, 255, 0)
+            car_type_display = 'Trajectory leader'
         elif 'human' in car_type:
             car_color = (255, 255, 255)
+            car_type_display = 'IDM'
         elif 'av' in car_type:
             car_color = (255, 0, 0)
+            car_type_display = 'AV'
 
         pygame.draw.circle(screen, car_color, (pos_x, pos_y), radius)
 
-        img = font.render(car_type, True, (0, 0, 0))
-        screen.blit(img, (pos_x - img.get_width() // 2, pos_y - 20 * zoom - img.get_height() // 2))
+        img = font.render(car_type_display, True, (0, 0, 0))
+        screen.blit(img, (pos_x - img.get_width() // 2, pos_y - 15 * zoom - img.get_height() // 2))
 
-        img = font.render(f'{round(car_speed, 1)}' + (' m/s' if car_type.startswith('leader') else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed, 1)}' + (' m/s' if 'leader' in car_type else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom - img.get_height() // 2))
-        img = font.render(f'{round(car_speed * 3.6, 1)}' + (' km/h' if car_type.startswith('leader') else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed * 3.6, 1)}' + (' km/h' if 'leader' in car_type else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom + 15 - img.get_height() // 2))
-        img = font.render(f'{round(car_speed * 2.237, 1)}' + (' mph' if car_type.startswith('leader') else ''), True, (0, 0, 0))
+        img = font.render(f'{round(car_speed * 2.237, 1)}' + (' mph' if 'leader' in car_type else ''), True, (0, 0, 0))
         screen.blit(img, (pos_x - img.get_width() // 2, pos_y + 15 * zoom + 30 - img.get_height() // 2))
 
     pygame.display.flip()
