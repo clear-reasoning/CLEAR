@@ -74,7 +74,7 @@ if args.horizon is not None:
         'horizon': args.horizon,
     })
 
-if args.s3:
+if args.data_pipeline:
     assert (args.platoon == 'scenario1')
     assert (args.all_trajectories == False)
 
@@ -137,7 +137,7 @@ while True:
             'author': args.s3_author,
             'strategy': args.s3_strategy,
         }
-        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=args.s3, 
+        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=args.data_pipeline,
                                additional_metadata=metadata)
 
     if args.gen_metrics:
