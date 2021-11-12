@@ -17,3 +17,6 @@ dataset/
 *.idea/
 output/
 *onxx*
+*_paper_*/
+*_analysis_*/
+*.mp4
