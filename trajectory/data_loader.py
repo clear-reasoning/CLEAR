@@ -16,17 +16,25 @@ from trajectory.visualize.plotter import Plotter
 
 
 class DataLoader(object):
-    def __init__(self):
-        self.trajectories = [{
+    def __init__(self, positions_from_speeds=True):
+        self.trajectories = []
+        for fp, data in self.get_raw_data():
+            if positions_from_speeds:
+                positions = [0]
+                for speed in np.array(data['Velocity'])[:-1] / 3.6:
+                    positions.append(positions[-1] + 0.1 * speed)
+            else:
+                positions = np.array(data['DistanceGPS'])
+            self.trajectories.append({
                 'path': fp,
                 'timestep': round(data['Time'][1] - data['Time'][0], 3),
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
-                'positions': np.array(data['DistanceGPS']),
+                'positions': positions,  # np.array(data['DistanceGPS']),
                 'velocities': np.array(data['Velocity']) / 3.6,
                 'accelerations': np.array(data['Acceleration'])
-            } for fp, data in self.get_raw_data()]
+            })
 
     def get_raw_data(self):
         file_paths = list(Path(os.path.join(
