@@ -49,6 +49,10 @@ class Simulation(object):
             'fs': FSVehicle
         }[controller]
 
+        if gap < 0 and len(self.vehicles) > 0:
+            leader_speed = self.vehicles[-1].speed
+            gap = leader_speed * 1.1
+
         veh = vehicle_class(
             vid=self.vids,
             controller=controller,

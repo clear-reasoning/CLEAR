@@ -195,11 +195,11 @@ class TrajectoryEnv(gym.Env):
                 tags = vtags.split('#')[1:]
                 if vtype == 'av':
                     self.avs.append(
-                        self.sim.add_vehicle(controller=self.av_controller, kind='av', tags=tags, gap=20, **eval(self.av_kwargs))
+                        self.sim.add_vehicle(controller=self.av_controller, kind='av', tags=tags, gap=-1, **eval(self.av_kwargs))
                     )
                 elif vtype == 'human':
                     self.humans.append(
-                        self.sim.add_vehicle(controller=self.human_controller, kind='human', tags=tags, gap=20, **eval(self.human_kwargs))
+                        self.sim.add_vehicle(controller=self.human_controller, kind='human', tags=tags, gap=-1, **eval(self.human_kwargs))
                     )
                 else:
                     raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
