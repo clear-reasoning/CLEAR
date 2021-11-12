@@ -136,7 +136,7 @@ class Simulation(object):
                     cutin_proba = -8.975e-4 * s + 1.002e-4 * s * s
                 else:
                     cutin_proba = 1.347e-3 * s + 8.912e-6 * s * s
-                if random.random() <= cutin_proba:
+                if cutin_proba > 0 and random.random() <= cutin_proba:
                     # gap_ratio = new_veh.front_gap / av.gap_before_insert
                     gap_ratio = random.gauss(mu=43.9, sigma=21.75) 
                     # TODO(nl) handle boundaries better and make sure we're not inserting on a collision
@@ -155,7 +155,7 @@ class Simulation(object):
 
             v = veh.leader.speed
             cutout_proba = 8.763e-3 * v - 2.1e-4 * v * v
-            if random.random() <= cutout_proba:
+            if cutout_proba > 0 and random.random() <= cutout_proba:
                 # TODO(nl) if leader is trajectory vehicle, we can't remove it
                 # maybe instead shift its position to double the gap or something similar
                 if veh.leader.kind != 'leader' and i != 0:
