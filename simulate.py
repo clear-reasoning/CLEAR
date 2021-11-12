@@ -55,10 +55,7 @@ else:
     env_config.update({
         'use_fs': False,
         'discrete': False,
-        'av_controller': args.av_controller,
-        'av_kwargs': args.av_kwargs,
         'human_controller': 'idm',
-        'human_kwargs': args.human_kwargs,
     })
 
 env_config.update({
@@ -66,6 +63,9 @@ env_config.update({
     'whole_trajectory': True,
     'fixed_traj_path': (os.path.join(tc.PROJECT_PATH, args.traj_path)
                         if not args.all_trajectories and args.traj_path != 'None' else None),
+    'av_controller': args.av_controller,
+    'av_kwargs': args.av_kwargs,
+    'human_kwargs': args.human_kwargs,
 })
 
 if args.horizon is not None:
