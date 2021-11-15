@@ -1,9 +1,8 @@
-import boto3
 import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
 import numpy as np
-from sim-metrics-backend.submit_data import submitData, uploadPng
+from sim_metrics_backend.submit_data import submitData, uploadPng
 
 def lat_long_distance(pos1, pos2):
     """Returns distance in meters between two (latitude, longitude) points (Haversine formula)"""

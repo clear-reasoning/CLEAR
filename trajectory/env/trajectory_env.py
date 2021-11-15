@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from datetime import timezone
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
@@ -335,9 +336,8 @@ class TrajectoryEnv(gym.Env):
 
         if upload_to_leaderboard:
             # get date & time in appropriate format
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             date_now = now.date().isoformat()
-            time_now = now.time().isoformat()
 
             # create metadata file
             source_id = f'flow_{uuid.uuid4().hex}'
@@ -346,7 +346,7 @@ class TrajectoryEnv(gym.Env):
             strategy = additional_metadata.get('strategy', 'blank')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
-                'submission_time': [time_now],
+                'submission_date': [date_now],
                 'network': ['Single-Lane Trajectory'],
                 'is_baseline': [is_baseline],
                 'submitter_name': [submitter_name],
@@ -387,13 +387,14 @@ class TrajectoryEnv(gym.Env):
             self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['target_accel_no_noise_with_failsafe']
             self.emissions['source_id'] = [source_id] * len(self.emissions['x'])
             self.emissions['run_id'] = ['run_0'] * len(self.emissions['x'])
+            self.emissions['submission_date'] = [date_now] * len(self.emissions['x'])
 
             emissions_df = pd.DataFrame(self.emissions).sort_values(by=['time', 'id'])
             emissions_df = emissions_df[['time', 'id', 'x', 'y', 'speed', 'headway',
                 'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
                 'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
                 'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
-                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id']]
+                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id', 'submission_date']]
             leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
