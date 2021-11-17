@@ -43,6 +43,8 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
     # set to use one specific trajectory
     'fixed_traj_path': None,
+    # enable lane changing
+    'lane_changing': False,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -170,7 +172,7 @@ class TrajectoryEnv(gym.Env):
 
         # create a simulation object
         self.time_step = self.traj['timestep']
-        self.sim = Simulation(timestep=self.time_step)
+        self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing)
 
         # populate simulation with a trajectoy leader
         self.sim.add_vehicle(controller='trajectory', kind='leader',
@@ -288,6 +290,9 @@ class TrajectoryEnv(gym.Env):
         # if end_of_horizon:
         #     mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
         #     reward += np.mean(mpgs)
+
+        if crash:
+            print('CRASH', self.avs[0].vid)
 
         # log some metrics
         metrics['crash'] = int(crash)
