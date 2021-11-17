@@ -35,7 +35,8 @@ python simulate.py --av_controller idm|fs --gen_emissions --gen_metrics --platoo
 
 Run `python simulate.py -h` for a description of all available args.
 
-To send a controller through the leaderboard pipeline, use `--gen_emissions --s3 --s3_author {your_name} --s3_strategy {controller_name}`.
+To send a controller through the leaderboard pipeline, use `--data_pipeline {your_name} {strategy/controller_name} 0`.
+Change 0 to 1 in case your run should be marked as the baseline on the leaderboard.
 
 **Steps to evaluate your custom controller**
 

@@ -398,9 +398,9 @@ class TrajectoryEnv(gym.Env):
             leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
-            platoon_mpg_path = dir_path / 'platoon_mpg.png'
-            print(f'Generating platoon MPG plot at {platoon_mpg_path}')
-            plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
+            # platoon_mpg_path = dir_path / 'platoon_mpg.png'
+            # print(f'Generating platoon MPG plot at {platoon_mpg_path}')
+            # plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
 
             tsd_path = dir_path / 'time_space_diagram.png'
             print(f'Generating time-space diagram plot at {tsd_path}')
@@ -418,10 +418,10 @@ class TrajectoryEnv(gym.Env):
             upload_to_pipeline(
                 leaderboard_emissions_path, type='emission', log=True
             )
-            # platoons MPG plot
-            upload_to_pipeline(
-                platoon_mpg_path, type='platoon_mpg', log=True
-            )
+            # # platoons MPG plot
+            # upload_to_pipeline(
+            #     platoon_mpg_path, type='platoon_mpg', log=True
+            # )
             # time-space diagram
             upload_to_pipeline(
                 tsd_path, type='tsd', log=True
