@@ -242,10 +242,23 @@ class TrajectoryEnv(gym.Env):
         end_of_horizon = not self.sim.step()
 
         # print progress every 5s if running from simulate.py
-        if self.simulate and (end_of_horizon or time.time() - self.log_time_counter > 5.0):
-            steps, max_steps = self.sim.step_counter, self.traj['size']
-            print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
-            self.log_time_counter = time.time()
+        if self.simulate:
+            # veh_str = ''
+            # for v in self.sim.vehicles:
+            #     if h := v.get_headway():
+            #         veh_str += ' ' * (int(h) // 10)
+            #     if v.kind == 'human':
+            #         veh_str += 'O'
+            #     elif v.kind == 'av':
+            #         veh_str += 'X'
+            #     elif v.kind == 'leader':
+            #         veh_str += '∆'
+            # print(veh_str[::-1])
+
+            if end_of_horizon or time.time() - self.log_time_counter > 5.0:
+                steps, max_steps = self.sim.step_counter, self.traj['size']
+                print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
+                self.log_time_counter = time.time()
 
         # compute reward & done
         h = self.avs[0].get_headway()

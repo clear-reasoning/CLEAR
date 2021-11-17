@@ -123,8 +123,6 @@ class Simulation(object):
 
         # TODO(nl) create vehicle types fo that we can add another vehicle from that type from sim
         # without needing to know human controller or human kwargs defined in the environment
-            # pos=0 if idx_leader is None else self.vehicles[idx_leader].pos - gap - self.vlength,
-            # speed=initial_speed if initial_speed is not None else (0 if idx_leader is None else self.vehicles[idx_leader].speed),
         avs_idx = []
         for i, veh in enumerate(self.vehicles):
             if veh.kind == 'av':

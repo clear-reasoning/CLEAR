@@ -100,13 +100,13 @@ def parse_args_simulate():
     parser.add_argument('--cp_path', type=str, default=None,
         help='Path to a saved model checkpoint. '
              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
-    parser.add_argument('--verbose', default=False, action='store_true',
+    parser.add_argument('--verbose', default=False, action='store_true',  # not needed
         help='If set, print information about the loaded controller when {av_controller} is "rl".')
-    parser.add_argument('--gen_emissions', default=False, action='store_true',
+    parser.add_argument('--gen_emissions', default=False, action='store_true',  # by default yes, otherwise --fast, save all in one folder
         help='If set, a .csv emission file will be generated.')
     parser.add_argument('--gen_metrics', default=False, action='store_true',
         help='If set, some figures will be generated and some metrics printed.')
-    parser.add_argument('--s3', default=False, action='store_true',
+    parser.add_argument('--s3', default=False, action='store_true',  # all these in 1
         help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
     parser.add_argument('--s3_baseline', default=False, action='store_true',
         help='If set, the data will be uploaded to S3 as a baseline.')
