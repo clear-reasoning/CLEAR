@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from datetime import timezone
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
@@ -11,7 +12,7 @@ import uuid
 
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
-from trajectory.env.utils import get_first_element, upload_to_s3
+from trajectory.env.utils import get_first_element, upload_to_pipeline
 from trajectory.visualize.platoon_mpg import plot_platoon_mpg
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
@@ -308,12 +309,12 @@ class TrajectoryEnv(gym.Env):
 
     def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, additional_metadata={}):
         # create emissions dir if it doesn't exist
-        if emissions_path is None: 
+        if emissions_path is None:
             emissions_path = 'emissions'
         emissions_path = Path(emissions_path)
         if emissions_path.suffix == '.csv':
             dir_path = emissions_path.parent
-        else:                
+        else:
             now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
             dir_path = Path(emissions_path, now)
             emissions_path = dir_path / 'emissions.csv'
@@ -335,9 +336,8 @@ class TrajectoryEnv(gym.Env):
 
         if upload_to_leaderboard:
             # get date & time in appropriate format
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             date_now = now.date().isoformat()
-            time_now = now.time().isoformat()
 
             # create metadata file
             source_id = f'flow_{uuid.uuid4().hex}'
@@ -346,7 +346,7 @@ class TrajectoryEnv(gym.Env):
             strategy = additional_metadata.get('strategy', 'blank')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
-                'submission_time': [time_now],
+                'submission_date': [date_now],
                 'network': ['Single-Lane Trajectory'],
                 'is_baseline': [is_baseline],
                 'submitter_name': [submitter_name],
@@ -387,13 +387,14 @@ class TrajectoryEnv(gym.Env):
             self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['target_accel_no_noise_with_failsafe']
             self.emissions['source_id'] = [source_id] * len(self.emissions['x'])
             self.emissions['run_id'] = ['run_0'] * len(self.emissions['x'])
+            self.emissions['submission_date'] = [date_now] * len(self.emissions['x'])
 
             emissions_df = pd.DataFrame(self.emissions).sort_values(by=['time', 'id'])
             emissions_df = emissions_df[['time', 'id', 'x', 'y', 'speed', 'headway',
                 'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
                 'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
                 'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
-                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id']]
+                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id', 'submission_date']]
             leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
@@ -410,33 +411,19 @@ class TrajectoryEnv(gym.Env):
             # upload data to S3
 
             # metadata
-            upload_to_s3(
-                'circles.data.pipeline',
-                f'metadata_table/date={date_now}/partition_name={source_id}_METADATA/{source_id}_METADATA.csv',
-                metadata_path, log=True
+            upload_to_pipeline(
+                metadata_path, type='metadata', log=True
             )
             # emissions
-            upload_to_s3(
-                'circles.data.pipeline',
-                f'fact_vehicle_trace/date={date_now}/partition_name={source_id}/{source_id}.csv',
-                leaderboard_emissions_path,
-                {'network': metadata['network'][0],
-                 'is_baseline': metadata['is_baseline'][0],
-                 'version': metadata['version'][0],
-                 'on_ramp': metadata['on_ramp'][0],
-                 'road_grade': metadata['road_grade'][0]},
-                log=True
+            upload_to_pipeline(
+                leaderboard_emissions_path, type='emission', log=True
             )
             # platoons MPG plot
-            upload_to_s3(
-                'circles.data.pipeline',
-                f'platoon_mpg/date={date_now}/partition_name={source_id}/{source_id}.png',
-                platoon_mpg_path, log=True
+            upload_to_pipeline(
+                platoon_mpg_path, type='platoon_mpg', log=True
             )
             # time-space diagram
-            upload_to_s3(
-                'circles.data.pipeline',
-                f'time_space_diagram/date={date_now}/partition_name={source_id}/{source_id}.png',
-                tsd_path, log=True
+            upload_to_pipeline(
+                tsd_path, type='tsd', log=True
             )
 
