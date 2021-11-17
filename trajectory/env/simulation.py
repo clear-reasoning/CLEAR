@@ -1,12 +1,14 @@
 from collections import defaultdict
+from re import I
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
+import scipy.stats as stats
 
 
 class Simulation(object):
-    def __init__(self, timestep):
+    def __init__(self, timestep, enable_lane_changing=False):
         """Simulation object
 
         timestep: dt in seconds
@@ -27,6 +29,11 @@ class Simulation(object):
         self.data_by_vehicle = defaultdict(lambda: defaultdict(list))
 
         self.vids = 0
+
+        self.enable_lane_changing = enable_lane_changing
+
+        self.n_cutins = 0
+        self.n_cutouts = 0
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -115,51 +122,55 @@ class Simulation(object):
             if num_steps is not None and i >= num_steps:
                 running = False
 
-    def step(self):
-        self.step_counter += 1
-        self.time_counter += self.timestep
-
-        ## Lane changing
-
+    def handle_lane_changes(self):
         # TODO(nl) create vehicle types fo that we can add another vehicle from that type from sim
         # without needing to know human controller or human kwargs defined in the environment
-        avs_idx = []
-        for i, veh in enumerate(self.vehicles):
-            if veh.kind == 'av':
-                avs_idx.append((i, veh))
+        i = 1  # index 1 is vehicle behind leader (second vehicle in the platoon)
+        while i < len(self.vehicles):
+            veh = self.vehicles[i]
 
-        for i, veh in avs_idx:
             if (s := veh.get_headway()) > 5:
                 if veh.leader.speed <= 25:
-                    cutin_proba = -8.975e-4 * s + 1.002e-4 * s * s
+                    cutin_proba = -8.975e-4 * s + 1.002e-4 * s * s  # assumes a constant time-step of 0.1s
                 else:
-                    cutin_proba = 1.347e-3 * s + 8.912e-6 * s * s
+                    cutin_proba = 1.347e-3 * s + 8.912e-6 * s * s  # assumes a constant time-step of 0.1s
+
                 if cutin_proba > 0 and random.random() <= cutin_proba:
-                    # gap_ratio = new_veh.front_gap / av.gap_before_insert
+                    # TODO(nl) normalize Gaussian correctly
                     gap_ratio = random.gauss(mu=43.9, sigma=21.75) 
-                    # TODO(nl) handle boundaries better and make sure we're not inserting on a collision
                     gap_ratio = min(max(gap_ratio, 5), 2 * 43.9 - 5) 
                     gap_ratio = gap_ratio / 100.0
 
+                    print('CUTIN', gap_ratio, s, gap_ratio * s, veh.vid)
                     self.add_vehicle(
                         controller='idm', 
                         kind='human', 
                         gap=gap_ratio * s, 
                         initial_speed=(veh.speed + veh.leader.speed) / 2.0, 
                         insert_at_index=i)
+                    self.n_cutins += 1
 
-                    # update AV index, used by cutout computations
-                    i += 1  
+                    # inserted vehicle in front of veh, so increment its index
+                    i += 1
 
             v = veh.leader.speed
-            cutout_proba = 8.763e-3 * v - 2.1e-4 * v * v
+            cutout_proba = 8.763e-3 * v - 2.1e-4 * v * v  # assumes a constant time-step of 0.1s
             if cutout_proba > 0 and random.random() <= cutout_proba:
                 # TODO(nl) if leader is trajectory vehicle, we can't remove it
                 # maybe instead shift its position to double the gap or something similar
-                if veh.leader.kind != 'leader' and i != 0:
+                if veh.leader.kind == 'human':
                     self.remove_vehicle(i - 1)
+                    self.n_cutouts += 1
+                    # removed vehicle in front of veh, so decrement its index
+                    i -= 1
+            i += 1
 
-        ## Stepping
+    def step(self):
+        self.step_counter += 1
+        self.time_counter += self.timestep
+
+        if self.enable_lane_changing:
+            self.handle_lane_changes()
 
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
@@ -171,6 +182,8 @@ class Simulation(object):
                 return False
 
         self.collect_data()
+
+        # print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
 
         return True
 
