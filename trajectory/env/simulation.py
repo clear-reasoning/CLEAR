@@ -146,7 +146,7 @@ class Simulation(object):
                         controller='idm', 
                         kind='human', 
                         gap=gap_ratio * s, 
-                        initial_speed=(veh.speed + veh.leader.speed) / 2.0, 
+                        initial_speed=random.uniform(veh.speed, veh.leader.speed), 
                         insert_at_index=i)
                     self.n_cutins += 1
 
