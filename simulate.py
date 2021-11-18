@@ -109,17 +109,6 @@ while True:
         state, reward, done, infos = test_env.step(action)
     test_env.stop_collecting_rollout()
 
-    for veh in test_env.sim.vehicles:
-        mpg = test_env.sim.data_by_vehicle[veh.name]['avg_mpg'][-1]
-        mpgs[veh.name].append(mpg)
-
-    all_mpgs = []
-    for k, v in mpgs.items():
-        print(k, np.mean(v), np.std(v))
-        if 'av' in k or 'human' in k:
-            all_mpgs.append(np.mean(v))
-    print('Avg mpg of AV + humans: ', np.mean(all_mpgs))
-
     # generate_emissions
     if args.all_trajectories:
         traj_name = Path(test_env.traj['path']).stem
