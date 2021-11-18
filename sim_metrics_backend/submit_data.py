@@ -32,7 +32,7 @@ METADATA_SQL = 'INSERT INTO `metadata_table` ('\
 
 SERVER_USER = 'circles'
 SERVER_ADDR = 'circles.banatao.berkeley.edu'
-SERVER_PATH = '~/sdb/uploaded-pngs/'
+SERVER_PATH = '~/sdb/{}/'
 
 
 def submit(data, isMeta, cnx):
@@ -66,7 +66,7 @@ def submit(data, isMeta, cnx):
 
 
 def submitData(filePath, isMeta):
-    cnx = connect()  # get database connection
+    cnx = connect(user='circles.user', host='circles.banatao.berkeley.edu')  # get database connection
 
     try:
         csvData = pd.read_csv(filePath)
@@ -78,10 +78,10 @@ def submitData(filePath, isMeta):
     cnx.close()
 
 
-def uploadPng(filePath):
+def uploadPng(filePath, image_type):
     # need to run ssh-keygen or put in password every time.
     os.system("scp %s %s@%s:%s" %
-              (filePath, SERVER_USER, SERVER_ADDR, SERVER_PATH))
+              (filePath, SERVER_USER, SERVER_ADDR, SERVER_PATH.format(image_type)))
 
 
 if __name__ == '__main__':

@@ -6,13 +6,13 @@ from mysql.connector import errorcode
 DB_NAME = "circles"
 
 
-def connect(database=DB_NAME):
+def connect(database=DB_NAME, user='root', host='localhost'):
     try:
         cnx = mysql.connector.connect(
-            user='root',
+            user=user,
             password='404PineApple',
             database=database,
-            host='localhost',
+            host=host,
             allow_local_infile=True
         )
         if cnx.is_connected():
