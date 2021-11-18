@@ -193,8 +193,6 @@ class Simulation(object):
 
         self.collect_data()
 
-        # print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
-
         return True
 
     def add_data(self, veh, key, value):
