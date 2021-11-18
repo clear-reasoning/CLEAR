@@ -24,7 +24,7 @@ FLOW_DATA_SQL = 'INSERT INTO `fact_vehicle_trace` ('\
     'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
 
 METADATA_SQL = 'INSERT INTO `metadata_table` ('\
-    '`source_id`,`submission_time`,`network`,'\
+    '`source_id`,`submission_date`,`network`,'\
     '`is_baseline`,`submitter_name`,`strategy`,'\
     '`version`,`on_ramp`,`penetration_rate`,'\
     '`road_grade`,`is_benchmark`)'\
