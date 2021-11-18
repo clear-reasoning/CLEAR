@@ -342,8 +342,8 @@ class TrajectoryEnv(gym.Env):
 
         # generate emissions dict
         self.emissions = defaultdict(list)
-        for veh in self.sim.vehicles:
-            for k, v in self.sim.data_by_vehicle[veh.name].items():
+        for veh in self.sim.data_by_vehicle.keys():
+            for k, v in self.sim.data_by_vehicle[veh].items():
                 self.emissions[k] += v
 
         # sort and save emissions file
