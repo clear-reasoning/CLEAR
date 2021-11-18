@@ -434,11 +434,11 @@ class TrajectoryEnv(gym.Env):
 
             # metadata
             upload_to_pipeline(
-                metadata_path, type='metadata', log=True
+                metadata_path, file_type='metadata', log=True
             )
             # emissions
             upload_to_pipeline(
-                leaderboard_emissions_path, type='emission', log=True
+                leaderboard_emissions_path, file_type='emission', log=True
             )
             # # platoons MPG plot
             # upload_to_pipeline(
@@ -446,6 +446,6 @@ class TrajectoryEnv(gym.Env):
             # )
             # time-space diagram
             upload_to_pipeline(
-                tsd_path, type='tsd', log=True
+                tsd_path, file_type='tsd', log=True
             )
 
