@@ -132,43 +132,47 @@ class Simulation(object):
         # gap ratio (gap of inserted vehicle / gap of ego vehicle) on cut-in
         gap_ratio_fn = lambda: min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
 
+        # iterate over the list of vehicles, starting from index 1 (vehicle behind leader,
+        # ie second vehicle in the platoon) since we don't want to insert in front of leader
+        i = 1
         while i < len(self.vehicles):
             veh = self.vehicles[i]
 
-            if (s := veh.get_headway()) > 5:
-                if veh.leader.speed <= 25:
-                    cutin_proba = (1.9e-2 + -8.975e-4 * s + 1.002e-4 * s * s) / 100.0 # assumes a constant time-step of 0.1s
-                else:
-                    cutin_proba = (-5.068e-3 + 1.347e-3 * s + 8.912e-6 * s * s) / 100.0  # assumes a constant time-step of 0.1s
+            # handle cut-ins: first make sure there's enough room to insert 
+            # a vehicle (with a 1m safety margin on both sides)
+            if (gap := veh.get_headway()) > veh.length + 2.0:
+                if random.random() <= cutin_proba_fn(gap, veh.leader.speed):
+                    gap_ratio = gap_ratio_fn()
+                    inserted_gap = gap_ratio * gap
+                    inserted_speed = random.uniform(veh.speed, veh.leader.speed)
 
-                if cutin_proba > 0 and random.random() <= cutin_proba:
-                    # TODO(nl) normalize Gaussian correctly
-                    gap_ratio = random.gauss(mu=43.9, sigma=21.75) 
-                    gap_ratio = min(max(gap_ratio, 5), 2 * 43.9 - 5) 
-                    gap_ratio = gap_ratio / 100.0
+                    # clip inserted_gap to insert vehicle without collision and with the 1m margin
+                    inserted_gap = min(max(inserted_gap, veh.leader.pos - veh.pos - veh.length - 1.0), 1.0)
 
-                    print('CUTIN', gap_ratio, s, gap_ratio * s, veh.vid)
-                    self.add_vehicle(
+                    # add vehicle in front of veh
+                    new_veh = self.add_vehicle(
                         controller='idm', 
                         kind='human', 
-                        gap=gap_ratio * s, 
-                        initial_speed=random.uniform(veh.speed, veh.leader.speed), 
+                        gap=inserted_gap, 
+                        initial_speed=inserted_speed, 
                         insert_at_index=i)
                     self.n_cutins += 1
 
-                    # inserted vehicle in front of veh, so increment its index
+                    # increment index to skip newly inserted vehicle in loop
                     i += 1
 
-            v = veh.leader.speed
-            cutout_proba = (-8.98e-3 + 8.763e-3 * v - 2.1e-4 * v * v) / 100.0  # assumes a constant time-step of 0.1s
-            if cutout_proba > 0 and random.random() <= cutout_proba:
-                # TODO(nl) if leader is trajectory vehicle, we can't remove it
-                # maybe instead shift its position to double the gap or something similar
-                if veh.leader.kind == 'human':
+            # handle cut-outs: first make sure we wouldn't remove an
+            # AV or the trajectory leader
+            if veh.leader.kind == 'human':
+                if random.random() <= cutout_proba_fn(veh.leader.speed):
+                    # remove vehicle in front of veh
                     self.remove_vehicle(i - 1)
                     self.n_cutouts += 1
-                    # removed vehicle in front of veh, so decrement its index
+
+                    # removed a vehicle so decrement index to not skip a vehicle in loop
                     i -= 1
+
+            # move to next vehicle in platoon
             i += 1
 
     def step(self):
@@ -189,7 +193,7 @@ class Simulation(object):
 
         self.collect_data()
 
-        print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
+        # print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
 
         return True
 
