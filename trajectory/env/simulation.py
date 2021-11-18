@@ -123,9 +123,15 @@ class Simulation(object):
                 running = False
 
     def handle_lane_changes(self):
-        # TODO(nl) create vehicle types fo that we can add another vehicle from that type from sim
-        # without needing to know human controller or human kwargs defined in the environment
-        i = 1  # index 1 is vehicle behind leader (second vehicle in the platoon)
+        # cut-in and cut-out probabilities (between 0 and 1) per 0.1s timestep
+        cutin_proba_fn = lambda space_gap, leader_speed: \
+             (1.9e-2 + -8.975e-4 * space_gap + 1.002e-4 * space_gap * space_gap) / 100.0 if leader_speed <= 25.0 \
+             else (-5.068e-3 + 1.347e-3 * space_gap + 8.912e-6 * space_gap * space_gap) / 100.0
+        cutout_proba_fn = lambda leader_speed: \
+            (-8.98e-3 + 8.763e-3 * leader_speed - 2.1e-4 * leader_speed * leader_speed) / 100.0
+        # gap ratio (gap of inserted vehicle / gap of ego vehicle) on cut-in
+        gap_ratio_fn = lambda: min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
+
         while i < len(self.vehicles):
             veh = self.vehicles[i]
 
