@@ -50,8 +50,12 @@ DEFAULT_ENV_CONFIG = {
 
 # platoon presets that can be passed to the "platoon" env param
 PLATOON_PRESETS= {
-    # scenario 1: 4 AVs with human cars inbetween, some of which are sensing cars used to collect metrics on
     'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
+    '2avs_4%': 'av human*24 av human*24',
+    '2avs_5%': 'av human*19 av human*19',
+    '2avs_7%': 'av human*13 av human*13',
+    '2avs_10%': 'av human*9 av human*9',
+    '2avs_12.5%': 'av human*7 av human*7',
 }
 
 
