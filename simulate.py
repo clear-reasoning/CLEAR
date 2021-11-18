@@ -75,10 +75,6 @@ if args.horizon is not None:
         'horizon': args.horizon,
     })
 
-if args.s3:
-    assert (args.platoon == 'scenario1')
-    assert (args.all_trajectories == False)
-
 # create env
 test_env = TrajectoryEnv(config=env_config, _simulate=True)
 
@@ -131,15 +127,21 @@ while True:
     else:
         emissions_path = None
 
-    if args.gen_emissions:
+    if args.gen_emissions or args.data_pipeline is not None:
         print('Generating emissions...')
-        metadata = {
-            'is_baseline': args.s3_baseline,
-            'author': args.s3_author,
-            'strategy': args.s3_strategy,
-        }
-        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=args.s3, 
-                               additional_metadata=metadata)
+        if args.data_pipeline is not None:
+            metadata = {
+                'is_baseline': args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ya'],
+                'author': args.data_pipeline[0],
+                'strategy': args.data_pipeline[1]
+            }
+            print(f'Data will be uploaded to leaderboard with metadata {metadata}')
+            test_env.gen_emissions(emissions_path=emissions_path, 
+                                   upload_to_leaderboard=True,
+                                   additional_metadata=metadata)
+        else:
+            test_env.gen_emissions(emissions_path=emissions_path,
+                                   upload_to_leaderboard=False)
 
     if args.gen_metrics:
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut

@@ -1,9 +1,8 @@
-import boto3
 import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
 import numpy as np
-
+from sim_metrics_backend.submit_data import submitData, uploadPng
 
 def lat_long_distance(pos1, pos2):
     """Returns distance in meters between two (latitude, longitude) points (Haversine formula)"""
@@ -28,11 +27,11 @@ def get_driving_direction(bearing):
     if(bearing> 340 and bearing <360):return 'West'
     elif(bearing> 150 and bearing <190):return 'East'
     else:return None
-    
+
 def get_valid_lat_long(lat,long):
     is_valid = False
     if long < -86.58 and long > -86.685 and lat > 35.98 and lat < 36.07: is_valid = True
-    
+
     return is_valid
 
 def pairwise(iterable):
@@ -103,9 +102,16 @@ def get_first_element(arr):
     except:
         return val
 
-def upload_to_s3(bucket_name, bucket_key, file_path, metadata={}, log=False):
-    s3 = boto3.resource("s3")
-    s3.Bucket(bucket_name).upload_file(str(file_path), str(bucket_key),
-                                       ExtraArgs={"Metadata": metadata})
+def upload_to_pipeline(file_path, type, log=False):
+    """Update files to the datapipeline."""
+    if type == 'metadata':
+        submitData(file_path, True)
+    elif type == 'emission':
+        submitData(file_path, False)
+    elif type == 'platoon_mpg':
+        uploadPng(file_path)
+    elif type == 'tsd':
+        uploadPng(file_path)
+
     if log:
-        print(f'Uploaded {file_path} to s3://{bucket_name}/{bucket_key}')
+        print(f'Uploaded {file_path} to data pipeline.')

@@ -15,7 +15,7 @@ def parse_args_train():
     parser.add_argument('--s3', default=False, action='store_true',
         help='If set, experiment data will be uploaded to s3://trajectory.env/. '
              'AWS credentials must have been set in ~/.aws in order to use this.')
-    
+
     parser.add_argument('--iters', type=int, default=1, nargs='+',
         help='Number of iterations (rollouts) to train for.'
              'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
@@ -106,14 +106,11 @@ def parse_args_simulate():
         help='If set, a .csv emission file will be generated.')
     parser.add_argument('--gen_metrics', default=False, action='store_true',
         help='If set, some figures will be generated and some metrics printed.')
-    parser.add_argument('--s3', default=False, action='store_true',  # all these in 1
-        help='If set, a the emission file and metadata will be uploaded to S3 leaderboard.')
-    parser.add_argument('--s3_baseline', default=False, action='store_true',
-        help='If set, the data will be uploaded to S3 as a baseline.')
-    parser.add_argument('--s3_author', type=str, default='blank',
-        help='Submitter name that will be used when uploading to S3.')
-    parser.add_argument('--s3_strategy', type=str, default='blank',
-        help='Strategy name that will be used when uploading to S3.')
+    parser.add_argument('--data_pipeline', default=None, nargs=3,
+        help='If set, the emission file and metadata will be uploaded to leaderboard. '
+             'Arguments are [author] [strategy name] [is baseline]. '
+             'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
+             'Note that [is baseline] should by default be set to False (or 0).')
 
     parser.add_argument('--horizon', type=int, default=None,
         help='Number of environment steps to simulate. If None, use a whole trajectory.')
