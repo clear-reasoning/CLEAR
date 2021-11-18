@@ -131,9 +131,9 @@ class Simulation(object):
 
             if (s := veh.get_headway()) > 5:
                 if veh.leader.speed <= 25:
-                    cutin_proba = -8.975e-4 * s + 1.002e-4 * s * s  # assumes a constant time-step of 0.1s
+                    cutin_proba = (1.9e-2 + -8.975e-4 * s + 1.002e-4 * s * s) / 100.0 # assumes a constant time-step of 0.1s
                 else:
-                    cutin_proba = 1.347e-3 * s + 8.912e-6 * s * s  # assumes a constant time-step of 0.1s
+                    cutin_proba = (-5.068e-3 + 1.347e-3 * s + 8.912e-6 * s * s) / 100.0  # assumes a constant time-step of 0.1s
 
                 if cutin_proba > 0 and random.random() <= cutin_proba:
                     # TODO(nl) normalize Gaussian correctly
@@ -154,7 +154,7 @@ class Simulation(object):
                     i += 1
 
             v = veh.leader.speed
-            cutout_proba = 8.763e-3 * v - 2.1e-4 * v * v  # assumes a constant time-step of 0.1s
+            cutout_proba = (-8.98e-3 + 8.763e-3 * v - 2.1e-4 * v * v) / 100.0  # assumes a constant time-step of 0.1s
             if cutout_proba > 0 and random.random() <= cutout_proba:
                 # TODO(nl) if leader is trajectory vehicle, we can't remove it
                 # maybe instead shift its position to double the gap or something similar
@@ -183,7 +183,7 @@ class Simulation(object):
 
         self.collect_data()
 
-        # print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
+        print(f'{len(self.vehicles)} vehicles, {self.n_cutins} cutins, {self.n_cutouts} cutouts, time {self.time_counter}')
 
         return True
 
