@@ -8,7 +8,7 @@ import scipy.stats as stats
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=False):
+    def __init__(self, timestep, enable_lane_changing=True):
         """Simulation object
 
         timestep: dt in seconds

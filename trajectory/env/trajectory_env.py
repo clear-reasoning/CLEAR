@@ -45,7 +45,7 @@ DEFAULT_ENV_CONFIG = {
     # set to use one specific trajectory
     'fixed_traj_path': None,
     # enable lane changing
-    'lane_changing': False,
+    'lane_changing': True,
 }
 
 # platoon presets that can be passed to the "platoon" env param

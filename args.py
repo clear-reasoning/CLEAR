@@ -132,8 +132,8 @@ def parse_args_simulate():
         help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
 
-    parser.add_argument('--lane_changing', default=False, action='store_true',
-        help='If set, enables lane-changing model.')
+    parser.add_argument('--no_lane_changing', default=False, action='store_true',
+        help='If set, disables lane-changing model.')
 
     parser.add_argument('--all_trajectories', default=False, action='store_true',
         help='If set, the script will be ran for all the trajectories in the dataset.')

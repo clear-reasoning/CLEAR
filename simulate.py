@@ -66,7 +66,7 @@ env_config.update({
     'av_controller': args.av_controller,
     'av_kwargs': args.av_kwargs,
     'human_kwargs': args.human_kwargs,
-    'lane_changing': args.lane_changing
+    'lane_changing': not args.no_lane_changing
 })
 
 if args.horizon is not None:
