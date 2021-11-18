@@ -124,6 +124,11 @@ while True:
                 'author': args.data_pipeline[0],
                 'strategy': args.data_pipeline[1]
             }
+            if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
+                pr = match[0]
+                if '.' not in pr:
+                    pr += '.0'
+                metadata['penetration_rate'] = pr
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
             test_env.gen_emissions(emissions_path=emissions_path, 
                                    upload_to_leaderboard=True,
