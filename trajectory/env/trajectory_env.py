@@ -367,6 +367,7 @@ class TrajectoryEnv(gym.Env):
             submitter_name = additional_metadata.get('author', 'blank')
             strategy = additional_metadata.get('strategy', 'blank')
             penetration_rate = additional_metadata.get('penetration_rate', 'x')
+            version = additional_metadata.get('version', '4.0')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_date': [date_now],
@@ -374,7 +375,7 @@ class TrajectoryEnv(gym.Env):
                 'is_baseline': [is_baseline],
                 'submitter_name': [submitter_name],
                 'strategy': [strategy],
-                'version': ['4.0'],
+                'version': [version],
                 'on_ramp': ['False'],
                 'penetration_rate': [penetration_rate],
                 'road_grade': ['False'],

@@ -66,7 +66,7 @@ env_config.update({
     'av_controller': args.av_controller,
     'av_kwargs': args.av_kwargs,
     'human_kwargs': args.human_kwargs,
-    'lane_changing': not args.no_lane_changing
+    'lane_changing': not args.no_lc
 })
 
 if args.horizon is not None:
@@ -129,6 +129,7 @@ while True:
                 if '.' not in pr:
                     pr += '.0'
                 metadata['penetration_rate'] = pr
+            metadata['version'] = '4.0 w/o lc' if args.no_lc else '4.0 w/ lc'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
             test_env.gen_emissions(emissions_path=emissions_path, 
                                    upload_to_leaderboard=True,
