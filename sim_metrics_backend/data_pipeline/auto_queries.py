@@ -1,6 +1,6 @@
 
 from numpy import source
-import luigiSqlTask
+import sim_metrics_backend.data_pipeline.luigiSqlTask
 
 import luigi
 
