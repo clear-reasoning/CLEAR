@@ -5,6 +5,7 @@ from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
 import scipy.stats as stats
+import numpy as np
 
 
 class Simulation(object):
@@ -132,6 +133,15 @@ class Simulation(object):
         # gap ratio (gap of inserted vehicle / gap of ego vehicle) on cut-in
         gap_ratio_fn = lambda: min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
 
+        # compute ratio of gained and lost vehicles from the initial count, to balance out cut-ins and cut-outs
+        n_vehicles = len(self.vehicles)
+        n_vehicles_initially = n_vehicles - self.n_cutins + self.n_cutouts
+        ratio_gained = (n_vehicles - n_vehicles_initially) / n_vehicles_initially
+        ratio_lost = (n_vehicles_initially - n_vehicles) / n_vehicles_initially
+        multiplier_coef = 10.0
+        cutin_multipier = np.exp(- multiplier_coef * ratio_gained)
+        cutout_multipier = np.exp(- multiplier_coef * ratio_lost)
+
         # iterate over the list of vehicles, starting from index 1 (vehicle behind leader,
         # ie second vehicle in the platoon) since we don't want to insert in front of leader
         i = 1
@@ -141,7 +151,7 @@ class Simulation(object):
             # handle cut-ins: first make sure there's enough room to insert 
             # a vehicle (with a 1m safety margin on both sides)
             if (gap := veh.get_headway()) > veh.length + 2.0:
-                if random.random() <= cutin_proba_fn(gap, veh.leader.speed):
+                if random.random() <= cutin_proba_fn(gap, veh.leader.speed) * cutin_multipier:
                     gap_ratio = gap_ratio_fn()
                     inserted_gap = gap_ratio * gap
                     inserted_speed = random.uniform(veh.speed, veh.leader.speed)
@@ -164,7 +174,7 @@ class Simulation(object):
             # handle cut-outs: first make sure we wouldn't remove an
             # AV or the trajectory leader
             if veh.leader.kind == 'human':
-                if random.random() <= cutout_proba_fn(veh.leader.speed):
+                if random.random() <= cutout_proba_fn(veh.leader.speed) * cutout_multipier:
                     # remove vehicle in front of veh
                     self.remove_vehicle(i - 1)
                     self.n_cutouts += 1
@@ -181,6 +191,9 @@ class Simulation(object):
 
         if self.enable_lane_changing:
             self.handle_lane_changes()
+
+            # if self.step_counter % 1000 == 0:
+            #     print(len(self.vehicles), self.n_cutins, self.n_cutouts)
 
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
