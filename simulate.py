@@ -66,6 +66,7 @@ env_config.update({
     'av_controller': args.av_controller,
     'av_kwargs': args.av_kwargs,
     'human_kwargs': args.human_kwargs,
+    'lane_changing': not args.no_lc
 })
 
 if args.horizon is not None:
@@ -108,17 +109,6 @@ while True:
         state, reward, done, infos = test_env.step(action)
     test_env.stop_collecting_rollout()
 
-    for veh in test_env.sim.vehicles:
-        mpg = test_env.sim.data_by_vehicle[veh.name]['avg_mpg'][-1]
-        mpgs[veh.name].append(mpg)
-
-    all_mpgs = []
-    for k, v in mpgs.items():
-        print(k, np.mean(v), np.std(v))
-        if 'av' in k or 'human' in k:
-            all_mpgs.append(np.mean(v))
-    print('Avg mpg of AV + humans: ', np.mean(all_mpgs))
-
     # generate_emissions
     if args.all_trajectories:
         traj_name = Path(test_env.traj['path']).stem
@@ -134,6 +124,12 @@ while True:
                 'author': args.data_pipeline[0],
                 'strategy': args.data_pipeline[1]
             }
+            if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
+                pr = match[0]
+                if '.' not in pr:
+                    pr += '.0'
+                metadata['penetration_rate'] = pr
+            metadata['version'] = '4.0 w/o lc' if args.no_lc else '4.0 w/ lc'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
             test_env.gen_emissions(emissions_path=emissions_path, 
                                    upload_to_leaderboard=True,

@@ -1797,7 +1797,7 @@ class QueryStrings(Enum):
         WITH agg AS (
             SELECT
                 l.date AS submission_date,
-                m.submission_time,
+                m.submission_date,
                 l.source_id,
                 m.submitter_name,
                 m.strategy,

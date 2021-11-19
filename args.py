@@ -100,9 +100,9 @@ def parse_args_simulate():
     parser.add_argument('--cp_path', type=str, default=None,
         help='Path to a saved model checkpoint. '
              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
-    parser.add_argument('--verbose', default=False, action='store_true',
+    parser.add_argument('--verbose', default=False, action='store_true',  # not needed
         help='If set, print information about the loaded controller when {av_controller} is "rl".')
-    parser.add_argument('--gen_emissions', default=False, action='store_true',
+    parser.add_argument('--gen_emissions', default=False, action='store_true',  # by default yes, otherwise --fast, save all in one folder
         help='If set, a .csv emission file will be generated.')
     parser.add_argument('--gen_metrics', default=False, action='store_true',
         help='If set, some figures will be generated and some metrics printed.')
@@ -114,7 +114,7 @@ def parse_args_simulate():
 
     parser.add_argument('--horizon', type=int, default=None,
         help='Number of environment steps to simulate. If None, use a whole trajectory.')
-    parser.add_argument('--traj_path', type=str, default='dataset/data_v2_preprocessed/2021-03-15-12-46-38_2T3MWRFVXLW056972_masterArray_1_6848.csv',
+    parser.add_argument('--traj_path', type=str, default='dataset/data_v2_preprocessed/2021-03-26-21-26-45_2T3MWRFVXLW056972_masterArray_1_6131.csv',
         help='Use a specific trajectory by default. Set to None to use a random trajectory.')
     parser.add_argument('--platoon', type=str, default='av human*5',
         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
@@ -131,6 +131,9 @@ def parse_args_simulate():
     parser.add_argument('--human_kwargs', type=str, default='{}',
         help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+
+    parser.add_argument('--no_lc', default=False, action='store_true',
+        help='If set, disables the lane-changing model.')
 
     parser.add_argument('--all_trajectories', default=False, action='store_true',
         help='If set, the script will be ran for all the trajectories in the dataset.')

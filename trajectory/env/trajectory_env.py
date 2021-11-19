@@ -44,12 +44,18 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
     # set to use one specific trajectory
     'fixed_traj_path': None,
+    # enable lane changing
+    'lane_changing': True,
 }
 
 # platoon presets that can be passed to the "platoon" env param
 PLATOON_PRESETS= {
-    # scenario 1: 4 AVs with human cars inbetween, some of which are sensing cars used to collect metrics on
     'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
+    '2avs_4%': 'av human*24 av human*24',
+    '2avs_5%': 'av human*19 av human*19',
+    '2avs_7%': 'av human*13 av human*13',
+    '2avs_10%': 'av human*9 av human*9',
+    '2avs_12.5%': 'av human*7 av human*7',
 }
 
 
@@ -171,7 +177,7 @@ class TrajectoryEnv(gym.Env):
 
         # create a simulation object
         self.time_step = self.traj['timestep']
-        self.sim = Simulation(timestep=self.time_step)
+        self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing)
 
         # populate simulation with a trajectoy leader
         self.sim.add_vehicle(controller='trajectory', kind='leader',
@@ -243,10 +249,23 @@ class TrajectoryEnv(gym.Env):
         end_of_horizon = not self.sim.step()
 
         # print progress every 5s if running from simulate.py
-        if self.simulate and (end_of_horizon or time.time() - self.log_time_counter > 5.0):
-            steps, max_steps = self.sim.step_counter, self.traj['size']
-            print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
-            self.log_time_counter = time.time()
+        if self.simulate:
+            # veh_str = ''
+            # for v in self.sim.vehicles:
+            #     if h := v.get_headway():
+            #         veh_str += ' ' * (int(h) // 10)
+            #     if v.kind == 'human':
+            #         veh_str += 'O'
+            #     elif v.kind == 'av':
+            #         veh_str += 'X'
+            #     elif v.kind == 'leader':
+            #         veh_str += '∆'
+            # print(veh_str[::-1])
+
+            if end_of_horizon or time.time() - self.log_time_counter > 5.0:
+                steps, max_steps = self.sim.step_counter, self.traj['size']
+                print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
+                self.log_time_counter = time.time()
 
         # compute reward & done
         h = self.avs[0].get_headway()
@@ -276,6 +295,9 @@ class TrajectoryEnv(gym.Env):
         # if end_of_horizon:
         #     mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
         #     reward += np.mean(mpgs)
+
+        if crash:
+            print('CRASH', self.avs[0].vid)
 
         # log some metrics
         metrics['crash'] = int(crash)
@@ -324,8 +346,8 @@ class TrajectoryEnv(gym.Env):
 
         # generate emissions dict
         self.emissions = defaultdict(list)
-        for veh in self.sim.vehicles:
-            for k, v in self.sim.data_by_vehicle[veh.name].items():
+        for veh in self.sim.data_by_vehicle.keys():
+            for k, v in self.sim.data_by_vehicle[veh].items():
                 self.emissions[k] += v
 
         # sort and save emissions file
@@ -344,6 +366,8 @@ class TrajectoryEnv(gym.Env):
             is_baseline = str(additional_metadata.get('is_baseline', False))
             submitter_name = additional_metadata.get('author', 'blank')
             strategy = additional_metadata.get('strategy', 'blank')
+            penetration_rate = additional_metadata.get('penetration_rate', 'x')
+            version = additional_metadata.get('version', '4.0')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_date': [date_now],
@@ -351,12 +375,14 @@ class TrajectoryEnv(gym.Env):
                 'is_baseline': [is_baseline],
                 'submitter_name': [submitter_name],
                 'strategy': [strategy],
-                'version': ['3.0'],
+                'version': [version],
                 'on_ramp': ['False'],
-                'penetration_rate': ['x'],
+                'penetration_rate': [penetration_rate],
                 'road_grade': ['False'],
                 'is_benchmark': ['False'],
             })
+            print('Metadata:', metadata)
+
             metadata_path = dir_path / 'metadata.csv'
             metadata.to_csv(metadata_path, index=False)
 
@@ -412,11 +438,11 @@ class TrajectoryEnv(gym.Env):
 
             # metadata
             upload_to_pipeline(
-                metadata_path, type='metadata', log=True
+                metadata_path, file_type='metadata', log=True
             )
             # emissions
             upload_to_pipeline(
-                leaderboard_emissions_path, type='emission', log=True
+                leaderboard_emissions_path, file_type='emission', log=True
             )
             # # platoons MPG plot
             # upload_to_pipeline(
@@ -424,6 +450,6 @@ class TrajectoryEnv(gym.Env):
             # )
             # time-space diagram
             upload_to_pipeline(
-                tsd_path, type='tsd', log=True
+                tsd_path, file_type='tsd', log=True
             )
 

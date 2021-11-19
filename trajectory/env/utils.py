@@ -102,16 +102,16 @@ def get_first_element(arr):
     except:
         return val
 
-def upload_to_pipeline(file_path, type, log=False):
+def upload_to_pipeline(file_path, file_type, log=False):
     """Update files to the datapipeline."""
-    if type == 'metadata':
+    if file_type == 'metadata':
         submitData(file_path, True)
-    elif type == 'emission':
+    elif file_type == 'emission':
         submitData(file_path, False)
-    elif type == 'platoon_mpg':
-        uploadPng(file_path)
-    elif type == 'tsd':
-        uploadPng(file_path)
+    elif file_type == 'platoon_mpg':
+        uploadPng(file_path, file_type)
+    elif file_type == 'tsd':
+        uploadPng(file_path, file_type)
 
     if log:
         print(f'Uploaded {file_path} to data pipeline.')
