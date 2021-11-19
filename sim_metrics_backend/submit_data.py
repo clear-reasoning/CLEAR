@@ -45,18 +45,12 @@ def submit(data, isMeta, cnx):
     while start < data.shape[0]:
         try:
             batchData = data[start:start+BATCH_SIZE].fillna(NAN_VALUES)
-            if isMeta == False:
-                # add submission date
-                submissionDate = time.strftime("%Y-%m-%d", time.localtime())
-                batchData.insert(
-                    batchData.shape[1], "submission_data", submissionDate)
             # convert to tuples in order to use executemany
             batchDataInTuples = [tuple(row) for row in batchData.values]
             sql = METADATA_SQL if isMeta == True else FLOW_DATA_SQL  # choose SQL
             cursor.executemany(sql, batchDataInTuples)
             start += BATCH_SIZE
         except mysql.connector.Error as err:
-            print(cursor.statement)
             print("error:", err.msg)
             break
     else:
