@@ -5,6 +5,10 @@ import mysql.connector  # pip install mysql-connector-python
 import time
 import os
 
+import sys
+sys.path.append('..')
+from data_pipeline.auto_queries import run_queries_on_new_data
+
 FLOW_DATA_TABLE_NAME = "fact_vehicle_trace"
 METADATA_TABLE_NAME = "metadata_table"
 BATCH_SIZE = 200
@@ -68,7 +72,7 @@ def submitData(filePath, isMeta):
         print("filePath: '{}' does not exist".format(filePath))
     # there are two types of files
     submit(csvData, isMeta, cnx)
-
+    run_queries_on_new_data(csvData)
     cnx.close()
 
 
