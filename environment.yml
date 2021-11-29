@@ -1,4 +1,4 @@
-name: trajectory
+name: trajectory-2
 channels:
   - defaults
 dependencies:
@@ -19,3 +19,6 @@ dependencies:
     - onnx_tf==1.8.0
     - tensorflow==2.5.0
     - boto3
+    - luigi==3.0.3
+    - mysql-connector-python==8.0.27
+    - mysql-connector-python-rf==2.2.2
