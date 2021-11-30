@@ -1,4 +1,4 @@
-name: trajectory-2
+name: trajectory
 channels:
   - defaults
 dependencies:
