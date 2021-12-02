@@ -18,7 +18,7 @@ def connect(database=DB_NAME, user='root', host='localhost'):
     -------
     cnx: MySQLConnection
         A connection object to mysql.
-    """ 
+    """
     cnx = None
     try:
         cnx = mysql.connector.connect(
@@ -36,7 +36,7 @@ def connect(database=DB_NAME, user='root', host='localhost'):
         elif err.errno == errorcode.ER_BAD_DB_ERROR:
             print("Database does not exist")
         else:
-            print(err)
+            raise err
     return cnx
 
 
