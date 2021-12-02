@@ -1,6 +1,5 @@
 
-from numpy import source
-import sim_metrics_backend.data_pipeline.luigiSqlTask
+from sim_metrics_backend.data_pipeline.luigiSqlTask import *
 
 import luigi
 
@@ -8,21 +7,20 @@ import pandas as pd
 
 import sys
 sys.path.append('..')
-from sim_metrics_backend.database import get_network, DB_NAME, connect
+from sim_metrics_backend.database import get_network
 from sim_metrics_backend.query import network_filters
 
 max_decel = -1.0
 leader_max_decel = -2.0
 
-def run_queries_on_new_data(newdata):
+def run_queries_on_new_data(cnx, newdata):
 
     source_ids = newdata['source_id'].unique()
-    run_luigi(source_ids)
+    run_luigi(cnx, source_ids)
 
 
-def run_luigi(source_ids):
+def run_luigi(cnt, source_ids):
 
-    cnt = connect(DB_NAME)
     network = get_network(cnt, source_ids[0])
 
     start_filter = network_filters[network]['warmup_steps']
@@ -46,11 +44,11 @@ def run_luigi(source_ids):
     # luigiTaskList.append(luigiSqlTask.FACT_VEHICLE_METRICS(partition_name = source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter = outflow_filter))
 
     # luigiTaskList.append(luigiSqlTask.FACT_VEHICLE_FUEL_EFFICIENCY_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    
+
     # luigiTaskList.append(luigiSqlTask.FACT_INFEASIBLE_FLAGS(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
     # luigiTaskList.append(luigiSqlTask.FACT_NETWORK_FUEL_EFFICIENCY_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
     # luigiTaskList.append(luigiSqlTask.FACT_SAFETY_METRICS_AGG(partition_name=source_ids, start_filter = start_filter, max_decel=max_decel, leader_max_decel=leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-   
+
     # luigiTaskList.append(luigiSqlTask.LEADERBOARD_CHART(partition_name=source_ids, start_filter = start_filter, max_decel=max_decel, leader_max_decel=leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
     # luigiTaskList.append(luigiSqlTask.LEADERBOARD_CHART_AGG(partition_name=source_ids, start_filter = start_filter, max_decel=max_decel, leader_max_decel=leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
 
@@ -58,20 +56,21 @@ def run_luigi(source_ids):
     Only add end point
     '''
     #problematic queries not response?
-    luigiTaskList.append(luigiSqlTask.FACT_SAFETY_METRICS_2D(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_SPACE_GAPS_BINNED(partition_name=source_ids))
-    luigiTaskList.append(luigiSqlTask.FACT_TIME_GAPS_BINNED(partition_name=source_ids))
+    source_ids = list(source_ids)
+    luigiTaskList.append(FACT_SAFETY_METRICS_2D(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_SPACE_GAPS_BINNED(partition_name=source_ids))
+    luigiTaskList.append(FACT_TIME_GAPS_BINNED(partition_name=source_ids))
 
-    luigiTaskList.append(luigiSqlTask.FACT_NETWORK_INFLOWS_OUTFLOWS(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_AV_TRACE(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_NETWORK_INFLOWS_OUTFLOWS(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_AV_TRACE(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
 
-    luigiTaskList.append(luigiSqlTask.FACT_VEHICLE_COUNTS_BY_TIME(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_FOLLOWERSTOPPER_ENVELOPE(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_NETWORK_METRICS_BY_DISTANCE_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_NETWORK_METRICS_BY_TIME_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_VEHICLE_FUEL_EFFICIENCY_BINNED(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_SAFETY_METRICS_BINNED(partition_name=source_ids, start_filter=start_filter, max_decel = max_decel, leader_max_decel = leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(luigiSqlTask.FACT_TOP_SCORES(partition_name=source_ids, start_filter=start_filter, max_decel = max_decel, leader_max_decel = leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_VEHICLE_COUNTS_BY_TIME(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_FOLLOWERSTOPPER_ENVELOPE(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_NETWORK_METRICS_BY_DISTANCE_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_NETWORK_METRICS_BY_TIME_AGG(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_VEHICLE_FUEL_EFFICIENCY_BINNED(partition_name=source_ids, start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_SAFETY_METRICS_BINNED(partition_name=source_ids, start_filter=start_filter, max_decel = max_decel, leader_max_decel = leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(FACT_TOP_SCORES(partition_name=source_ids, start_filter=start_filter, max_decel = max_decel, leader_max_decel = leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
 
 
 
