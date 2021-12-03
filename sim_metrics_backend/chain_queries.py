@@ -7,7 +7,7 @@ from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
-from query import QueryStrings
+from sim_metrics_backend.query import QueryStrings
 
 from luigi.contrib.mysqldb import MySqlTarget
 
@@ -33,7 +33,7 @@ class FACT_VEHICLE_TRACE(luigi.Task):
 
     def requires(self):
         return []
-    
+
     def run(self):
         connection = self.output().connect()
         self.output().touch(connection)
@@ -43,8 +43,8 @@ class FACT_VEHICLE_TRACE(luigi.Task):
     def output(self):
         return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table,
                            update_id=str(self.runtime))
-        
-        
+
+
 
 class MIDSIZE_SUV_FIT_DENOISED_ACCEL(luigi.Task):
     target_table = 'fact_energy_trace'
@@ -56,7 +56,7 @@ class MIDSIZE_SUV_FIT_DENOISED_ACCEL(luigi.Task):
     # password='404PineApple'
     # host='localhost'
     # database = 'circles'
-    
+
 
     def output(self):
         return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table,

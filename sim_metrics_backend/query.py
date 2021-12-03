@@ -233,7 +233,7 @@ diesel_g_to_joules = 42470
 diesel_galperhr_to_grampersec = 1.119
 
 DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(
-    __file__)), "../energy_models/model_coefficients")
+    __file__)), "./energy_models/model_coefficients")
 
 
 def load_coeffs(filename, mass, conversion=33.43e3, v_max_fit=40):
@@ -572,7 +572,7 @@ class QueryStrings(Enum):
             MIN(safety_value) AS safety_value_max
         FROM fact_safety_metrics
         WHERE 1 = 1
-            AND source_id = \'{partition}_FACT_SAFETY_METRICS_3D\'
+            AND source_id = \'{partition}\'
             AND safety_model = 'v3D'
         GROUP BY 1
         ;
@@ -600,7 +600,7 @@ class QueryStrings(Enum):
             COUNT(*) AS count
         FROM bins
         LEFT JOIN fact_safety_metrics fsm ON 1 = 1
-            AND fsm.source_id = \'{partition}_FACT_SAFETY_METRICS_3D\'
+            AND fsm.source_id = \'{partition}\'
             AND fsm.safety_value >= bins.lb
             AND fsm.safety_value < bins.ub
             AND fsm.safety_model = 'v3D'
@@ -648,15 +648,7 @@ class QueryStrings(Enum):
                 AND time_step >= {start_filter}
                 AND {inflow_filter}
                 AND {outflow_filter}
-                AND (source_id = \'{partition}_TACOMA_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_PRIUS_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_COMPACT_SEDAN_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_RAV4_2019_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_MIDSIZE_SUV_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL\'
-                    OR source_id = \'{partition}_CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL\')
+                AND source_id = \'{partition}\'
         ), dist_agg AS (
             SELECT
                 agg.source_id,
@@ -758,7 +750,7 @@ class QueryStrings(Enum):
                 AND e.id = v.id
                 AND e.time_step = v.time_step
                 AND e.source_id = v.source_id
-                AND e.source_id LIKE \'{partition}_%\'
+                AND e.source_id = \'{partition}\'
                 AND e.time_step >= {start_filter}
             WHERE 1 = 1
                 AND v.source_id = \'{partition}\'
@@ -1037,7 +1029,7 @@ class QueryStrings(Enum):
                 SUBSTRING_INDEX(id, '_', 1) AS id_type
             FROM fact_vehicle_fuel_efficiency_agg
             WHERE 1 = 1
-                AND source_id = \'{partition}_FACT_VEHICLE_FUEL_EFFICIENCY_AGG\'
+                AND source_id = \'{partition}\'
         ), dist_agg AS (
             SELECT
                 agg.source_id,
@@ -1523,64 +1515,64 @@ class QueryStrings(Enum):
             fe_all_rav4.efficiency_miles_per_gallon_local AS rav4_efficiency_miles_per_gallon_local
         FROM fact_network_throughput_agg AS nt
         JOIN fact_network_speed AS ns ON 1 = 1
-            AND ns.source_id = \'{partition}_FACT_NETWORK_SPEED\'
+            AND ns.source_id = \'{partition}\'
             AND nt.source_id = ns.source_id
         JOIN fact_vehicle_metrics AS vm ON 1 = 1
-            AND vm.source_id = \'{partition}_FACT_VEHICLE_METRICS\'
+            AND vm.source_id = \'{partition}\'
             AND nt.source_id = vm.source_id
         JOIN fact_network_fuel_efficiency_agg AS fe_all_prius_ev ON 1 = 1
-            AND fe_all_prius_ev.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_prius_ev.source_id = \'{partition}\'
             AND nt.source_id = fe_all_prius_ev.source_id
             AND fe_all_prius_ev.distribution_model_id = 'ALL_PRIUS_EV'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_tacoma ON 1 = 1
-            AND fe_all_tacoma.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_tacoma.source_id = \'{partition}\'
             AND nt.source_id = fe_all_tacoma.source_id
             AND fe_all_tacoma.distribution_model_id = 'ALL_TACOMA'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_midsize_sedan ON 1 = 1
-            AND fe_all_midsize_sedan.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_midsize_sedan.source_id = \'{partition}\'
             AND nt.source_id = fe_all_midsize_sedan.source_id
             AND fe_all_midsize_sedan.distribution_model_id = 'ALL_MIDSIZE_SEDAN'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_midsize_suv ON 1 = 1
-            AND fe_all_midsize_suv.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_midsize_suv.source_id = \'{partition}\'
             AND nt.source_id = fe_all_midsize_suv.source_id
             AND fe_all_midsize_suv.distribution_model_id = 'ALL_MIDSIZE_SUV'
         JOIN fact_network_fuel_efficiency_agg AS fe_distribution_v0 ON 1 = 1
-            AND fe_distribution_v0.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_distribution_v0.source_id = \'{partition}\'
             AND nt.source_id = fe_distribution_v0.source_id
             AND fe_distribution_v0.distribution_model_id = 'DISTRIBUTION_V0'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_rav4 ON 1 = 1
-            AND fe_all_rav4.source_id = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_rav4.source_id = \'{partition}\'
             AND nt.source_id = fe_all_rav4.source_id
             AND fe_all_rav4.distribution_model_id = 'ALL_RAV4'
         JOIN fact_safety_metrics_agg AS sm ON 1 = 1
-            AND sm.source_id = \'{partition}_FACT_SAFETY_METRICS_AGG\'
+            AND sm.source_id = \'{partition}\'
             AND nt.source_id = sm.source_id
         JOIN fact_infeasible_flags AS fif_all_prius_ev ON 1 = 1
-            AND fif_all_prius_ev.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_prius_ev.source_id = \'{partition}\'
             AND nt.source_id = fif_all_prius_ev.source_id
             AND fif_all_prius_ev.distribution_model_id = 'ALL_PRIUS_EV'
         JOIN fact_infeasible_flags AS fif_all_tacoma ON 1 = 1
-            AND fif_all_tacoma.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_tacoma.source_id = \'{partition}\'
             AND nt.source_id = fif_all_tacoma.source_id
             AND fif_all_tacoma.distribution_model_id = 'ALL_TACOMA'
         JOIN fact_infeasible_flags AS fif_all_midsize_sedan ON 1 = 1
-            AND fif_all_midsize_sedan.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_midsize_sedan.source_id = \'{partition}\'
             AND nt.source_id = fif_all_midsize_sedan.source_id
             AND fif_all_midsize_sedan.distribution_model_id = 'ALL_MIDSIZE_SEDAN'
         JOIN fact_infeasible_flags AS fif_all_midsize_suv ON 1 = 1
-            AND fif_all_midsize_suv.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_midsize_suv.source_id = \'{partition}\'
             AND nt.source_id = fif_all_midsize_suv.source_id
             AND fif_all_midsize_suv.distribution_model_id = 'ALL_MIDSIZE_SUV'
         LEFT JOIN fact_infeasible_flags AS fif_distribution_v0 ON 1 = 1
-            AND fif_distribution_v0.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_distribution_v0.source_id = \'{partition}\'
             AND nt.source_id = fif_distribution_v0.source_id
             AND fif_distribution_v0.distribution_model_id = 'DISTRIBUTION_V0'
         JOIN fact_infeasible_flags AS fif_all_rav4 ON 1 = 1
-            AND fif_all_rav4.source_id = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_rav4.source_id = \'{partition}\'
             AND nt.source_id = fif_all_rav4.source_id
             AND fif_all_rav4.distribution_model_id = 'ALL_RAV4'
         WHERE 1 = 1
-            AND nt.source_id = \'{partition}_FACT_NETWORK_THROUGHPUT_AGG\'
+            AND nt.source_id = \'{partition}\'
         ;"""
 
     FACT_NETWORK_INFLOWS_OUTFLOWS = """
@@ -1657,7 +1649,7 @@ class QueryStrings(Enum):
                     ROWS BETWEEN UNBOUNDED PRECEDING and CURRENT ROW) AS cumulative_power
             FROM fact_vehicle_trace vt
             JOIN fact_energy_trace et ON 1 = 1
-                AND et.source_id = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
+                AND et.source_id = \'{partition}\'
                 AND vt.id = et.id
                 AND vt.source_id = et.source_id
                 AND vt.time_step = et.time_step
@@ -1757,7 +1749,7 @@ class QueryStrings(Enum):
                     ROWS BETWEEN UNBOUNDED PRECEDING and CURRENT ROW) AS cumulative_power
             FROM fact_vehicle_trace vt
             JOIN fact_energy_trace et ON 1 = 1
-                AND et.source_id = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
+                AND et.source_id = \'{partition}\'
                 AND vt.id = et.id
                 AND vt.source_id = et.source_id
                 AND vt.time_step = et.time_step

@@ -7,7 +7,7 @@ import os
 
 import sys
 sys.path.append('..')
-from sim_metrics_backend.data_pipeline.auto_queries import run_queries_on_new_data
+from sim_metrics_backend.auto_queries import run_queries_on_new_data
 
 FLOW_DATA_TABLE_NAME = "fact_vehicle_trace"
 METADATA_TABLE_NAME = "metadata_table"
