@@ -6,7 +6,7 @@ from mysql.connector import errorcode
 DB_NAME = "circles"
 
 
-def connect(database=DB_NAME, user='root', host='localhost'):
+def connect(database=DB_NAME, user='circles.user', host='circles.banatao.berkeley.edu'):
     """Create a connection to a database.
 
     Parameters
@@ -23,10 +23,12 @@ def connect(database=DB_NAME, user='root', host='localhost'):
     try:
         cnx = mysql.connector.connect(
             user=user,
-            password='404PineApple',
             database=database,
             host=host,
-            allow_local_infile=True
+            allow_local_infile=True,
+            ssl_ca='./ssl-cert/ca.pem',
+            ssl_cert='./ssl-cert/client-cert.pem',
+            ssl_key='./ssl-cert/client-key.pem'
         )
         if cnx.is_connected():
             print("Connected to {} database".format(database))

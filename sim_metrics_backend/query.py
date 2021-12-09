@@ -80,28 +80,28 @@ prerequisites = {
                                              "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
     ),
     "FACT_NETWORK_METRICS_BY_DISTANCE_AGG": (
-         "fact_network_metrics_by_distance_agg", {"FACT_VEHICLE_TRACE",
-                                                  "TACOMA_FIT_DENOISED_ACCEL",
-                                                  "PRIUS_FIT_DENOISED_ACCEL",
-                                                  "COMPACT_SEDAN_FIT_DENOISED_ACCEL",
-                                                  "MIDSIZE_SEDAN_FIT_DENOISED_ACCEL",
-                                                  "RAV4_2019_FIT_DENOISED_ACCEL",
-                                                  "MIDSIZE_SUV_FIT_DENOISED_ACCEL",
-                                                  "LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL",
-                                                  "CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL",
-                                                  "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
+        "fact_network_metrics_by_distance_agg", {"FACT_VEHICLE_TRACE",
+                                                 "TACOMA_FIT_DENOISED_ACCEL",
+                                                 "PRIUS_FIT_DENOISED_ACCEL",
+                                                 "COMPACT_SEDAN_FIT_DENOISED_ACCEL",
+                                                 "MIDSIZE_SEDAN_FIT_DENOISED_ACCEL",
+                                                 "RAV4_2019_FIT_DENOISED_ACCEL",
+                                                 "MIDSIZE_SUV_FIT_DENOISED_ACCEL",
+                                                 "LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL",
+                                                 "CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL",
+                                                 "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
     ),
     "FACT_NETWORK_METRICS_BY_TIME_AGG": (
-         "fact_network_metrics_by_time_agg", {"FACT_VEHICLE_TRACE",
-                                              "TACOMA_FIT_DENOISED_ACCEL",
-                                              "PRIUS_FIT_DENOISED_ACCEL",
-                                              "COMPACT_SEDAN_FIT_DENOISED_ACCEL",
-                                              "MIDSIZE_SEDAN_FIT_DENOISED_ACCEL",
-                                              "RAV4_2019_FIT_DENOISED_ACCEL",
-                                              "MIDSIZE_SUV_FIT_DENOISED_ACCEL",
-                                              "LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL",
-                                              "CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL",
-                                              "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
+        "fact_network_metrics_by_time_agg", {"FACT_VEHICLE_TRACE",
+                                             "TACOMA_FIT_DENOISED_ACCEL",
+                                             "PRIUS_FIT_DENOISED_ACCEL",
+                                             "COMPACT_SEDAN_FIT_DENOISED_ACCEL",
+                                             "MIDSIZE_SEDAN_FIT_DENOISED_ACCEL",
+                                             "RAV4_2019_FIT_DENOISED_ACCEL",
+                                             "MIDSIZE_SUV_FIT_DENOISED_ACCEL",
+                                             "LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL",
+                                             "CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL",
+                                             "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
     ),
     "FACT_INFEASIBLE_FLAGS": (
         "fact_infeasible_flags", {"TACOMA_FIT_DENOISED_ACCEL",
@@ -115,10 +115,12 @@ prerequisites = {
                                   "CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL"}
     ),
     "FACT_VEHICLE_FUEL_EFFICIENCY_BINNED": (
-        "fact_vehicle_fuel_efficiency_binned", {"FACT_VEHICLE_FUEL_EFFICIENCY_AGG"}
+        "fact_vehicle_fuel_efficiency_binned", {
+            "FACT_VEHICLE_FUEL_EFFICIENCY_AGG"}
     ),
     "FACT_NETWORK_FUEL_EFFICIENCY_AGG": (
-        "fact_network_fuel_efficiency_agg", {"FACT_VEHICLE_FUEL_EFFICIENCY_AGG"}
+        "fact_network_fuel_efficiency_agg", {
+            "FACT_VEHICLE_FUEL_EFFICIENCY_AGG"}
     ),
     "FACT_SAFETY_METRICS_AGG": (
         "fact_safety_metrics_agg", {"FACT_SAFETY_METRICS_3D"}
@@ -195,30 +197,30 @@ tables = [
 summary_tables = ["leaderboard_chart_agg", "fact_top_scores"]
 
 network_filters = defaultdict(lambda: {
-        'inflow_filter': "x > 500",
-        'outflow_filter': "x < 2300",
-        'warmup_steps': 500 * 3 * 0.4
-    })
+    'inflow_filter': "x > 500",
+    'outflow_filter': "x < 2300",
+    'warmup_steps': 500 * 3 * 0.4
+})
 network_filters['I-210 without Ramps'] = {
-        'inflow_filter': "edge_id != 'ghost0'",
-        'outflow_filter': "edge_id != '119257908#3'",
-        'warmup_steps': 600 * 3 * 0.4
-    }
+    'inflow_filter': "edge_id != 'ghost0'",
+    'outflow_filter': "edge_id != '119257908#3'",
+    'warmup_steps': 600 * 3 * 0.4
+}
 network_filters['I-210'] = {
-        'inflow_filter': "edge_id != 'ghost0'",
-        'outflow_filter': "edge_id != '119257908#3'",
-        'warmup_steps': 600 * 3 * 0.4
-    }
+    'inflow_filter': "edge_id != 'ghost0'",
+    'outflow_filter': "edge_id != '119257908#3'",
+    'warmup_steps': 600 * 3 * 0.4
+}
 network_filters['I-24_subnetwork'] = {
-        'inflow_filter': "edge_id NOT IN ('Eastbound_4', 'Westbound_2')",
-        'outflow_filter': "edge_id NOT IN ('Eastbound_8', 'Eastbound_Off_2', 'Westbound_7')",
-        'warmup_steps': 10500 * 0.2
-    }
+    'inflow_filter': "edge_id NOT IN ('Eastbound_4', 'Westbound_2')",
+    'outflow_filter': "edge_id NOT IN ('Eastbound_8', 'Eastbound_Off_2', 'Westbound_7')",
+    'warmup_steps': 10500 * 0.2
+}
 network_filters['Single-Lane Trajectory'] = {
-        'inflow_filter': "source_id IS NOT NULL",
-        'outflow_filter': "source_id IS NOT NULL",
-        'warmup_steps': 0
-    }
+    'inflow_filter': "source_id IS NOT NULL",
+    'outflow_filter': "source_id IS NOT NULL",
+    'warmup_steps': 0
+}
 
 max_decel = -1.0
 leader_max_decel = -2.0
@@ -230,13 +232,15 @@ gasoline_galperhr_to_grampersec = 1.268
 diesel_g_to_joules = 42470
 diesel_galperhr_to_grampersec = 1.119
 
-DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../energy_models/model_coefficients")
+DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(
+    __file__)), "../energy_models/model_coefficients")
 
 
 def load_coeffs(filename, mass, conversion=33.43e3, v_max_fit=40):
     """Load in model coefficients from MATLAB files."""
     mat = loadmat(os.path.join(DIR_PATH, filename))
-    mat = {key: val.item() for key, val in mat.items() if type(val) == np.ndarray}
+    mat = {key: val.item() for key, val in mat.items()
+           if type(val) == np.ndarray}
     mat['mass'] = mass
     mat['conversion'] = conversion
     mat['v_max_fit'] = v_max_fit
@@ -249,7 +253,8 @@ RAV4_2019_COEFFS = load_coeffs("RAV4_coeffs.mat", mass=1717)
 MIDSIZE_SUV_COEFFS = load_coeffs("midSUV_coeffs.mat", mass=1897)
 LIGHT_DUTY_PICKUP_COEFFS = load_coeffs("Pickup_coeffs.mat", mass=2173)
 CLASS3_PND_TRUCK_COEFFS = load_coeffs("Class3PND_coeffs.mat", mass=5943)
-CLASS8_TRACTOR_TRAILER_COEFFS = load_coeffs("Class8Tractor_coeffs.mat", mass=25104)
+CLASS8_TRACTOR_TRAILER_COEFFS = load_coeffs(
+    "Class8Tractor_coeffs.mat", mass=25104)
 
 FET_FIRST_LINES = """
     SELECT
@@ -258,7 +263,9 @@ FET_FIRST_LINES = """
         speed,
         acceleration,
         road_grade,
-        edge_id,"""
+        edge_id,
+        follower_id,
+        distance,"""
 FET_COEFFS_FORMAT = """
         GREATEST({coeffs[beta0]}, {coeffs[C0]} +
             {coeffs[C1]} * speed +
@@ -337,12 +344,14 @@ PRIUS_FIT_FINAL_SELECT = """
             acceleration,
             road_grade,
             edge_id,
-            GREATEST(1663 * acceleration * speed +
+            follower_id,
+            distance,
+            1663 * acceleration * speed +
                 1.046 +
                 119.166 * speed +
                 0.337 * POW(speed,2) +
                 0.383 * POW(speed,3) +
-                GREATEST(0, 296.66 * acceleration * speed)) AS p_mod,
+                GREATEST(0, 296.66 * acceleration * speed) AS p_mod,
             source_id
         FROM {}
     )""" + FET_FIRST_LINES + """
@@ -360,13 +369,15 @@ COMPACT_SEDAN_FORMAT = FET_COEFFS_FORMAT.format(coeffs=COMPACT_SEDAN_COEFFS,
                                                 g2J_conversion=gasoline_g_to_joules,
                                                 galph2gps_conversion=gasoline_galperhr_to_grampersec,
                                                 energy_model_id='COMPACT_SEDAN_FIT_DENOISED_ACCEL')
-COMPACT_SEDAN_FIT_FINAL_SELECT = FET_FIRST_LINES + COMPACT_SEDAN_FORMAT + FET_LAST_LINES
+COMPACT_SEDAN_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    COMPACT_SEDAN_FORMAT + FET_LAST_LINES
 
 MIDSIZE_SEDAN_FORMAT = FET_COEFFS_FORMAT.format(coeffs=MIDSIZE_SEDAN_COEFFS,
                                                 g2J_conversion=gasoline_g_to_joules,
                                                 galph2gps_conversion=gasoline_galperhr_to_grampersec,
                                                 energy_model_id='MIDSIZE_SEDAN_FIT_DENOISED_ACCEL')
-MIDSIZE_SEDAN_FIT_FINAL_SELECT = FET_FIRST_LINES + MIDSIZE_SEDAN_FORMAT + FET_LAST_LINES
+MIDSIZE_SEDAN_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    MIDSIZE_SEDAN_FORMAT + FET_LAST_LINES
 
 RAV4_2019_FORMAT = FET_COEFFS_FORMAT.format(coeffs=RAV4_2019_COEFFS,
                                             g2J_conversion=gasoline_g_to_joules,
@@ -378,27 +389,32 @@ MIDSIZE_SUV_FORMAT = FET_COEFFS_FORMAT.format(coeffs=MIDSIZE_SUV_COEFFS,
                                               g2J_conversion=gasoline_g_to_joules,
                                               galph2gps_conversion=gasoline_galperhr_to_grampersec,
                                               energy_model_id='MIDSIZE_SUV_FIT_DENOISED_ACCEL')
-MIDSIZE_SUV_FIT_FINAL_SELECT = FET_FIRST_LINES + MIDSIZE_SUV_FORMAT + FET_LAST_LINES
+MIDSIZE_SUV_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    MIDSIZE_SUV_FORMAT + FET_LAST_LINES
 
 LIGHT_DUTY_PICKUP_FORMAT = FET_COEFFS_FORMAT.format(coeffs=LIGHT_DUTY_PICKUP_COEFFS,
                                                     g2J_conversion=gasoline_g_to_joules,
                                                     galph2gps_conversion=gasoline_galperhr_to_grampersec,
                                                     energy_model_id='LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL')
-LIGHT_DUTY_PICKUP_FIT_FINAL_SELECT = FET_FIRST_LINES + LIGHT_DUTY_PICKUP_FORMAT + FET_LAST_LINES
+LIGHT_DUTY_PICKUP_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    LIGHT_DUTY_PICKUP_FORMAT + FET_LAST_LINES
 
 CLASS3_PND_TRUCK_FORMAT = FET_COEFFS_FORMAT.format(coeffs=CLASS3_PND_TRUCK_COEFFS,
                                                    g2J_conversion=diesel_g_to_joules,
                                                    galph2gps_conversion=diesel_galperhr_to_grampersec,
                                                    energy_model_id='CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL')
-CLASS3_PND_TRUCK_FIT_FINAL_SELECT = FET_FIRST_LINES + CLASS3_PND_TRUCK_FORMAT + FET_LAST_LINES
+CLASS3_PND_TRUCK_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    CLASS3_PND_TRUCK_FORMAT + FET_LAST_LINES
 
 CLASS8_TRACTOR_TRAILER_FORMAT = FET_COEFFS_FORMAT.format(coeffs=CLASS8_TRACTOR_TRAILER_COEFFS,
                                                          g2J_conversion=diesel_g_to_joules,
                                                          galph2gps_conversion=diesel_galperhr_to_grampersec,
                                                          energy_model_id='CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL')
-CLASS8_TRACTOR_TRAILER_FIT_FINAL_SELECT = FET_FIRST_LINES + CLASS8_TRACTOR_TRAILER_FORMAT + FET_LAST_LINES
+CLASS8_TRACTOR_TRAILER_FIT_FINAL_SELECT = FET_FIRST_LINES + \
+    CLASS8_TRACTOR_TRAILER_FORMAT + FET_LAST_LINES
 
 DENOISED_ACCEL = """
+    INSERT IGNORE INTO fact_energy_trace(id,time_step,speed,acceleration,road_grade,edge_id,follower_id,distance,power,fuel_rate_mass,fuel_rate_vol,energy_model_id,source_id,infeasible_flag)
     WITH denoised_accel_cte AS (
         SELECT
             id,
@@ -409,76 +425,74 @@ DENOISED_ACCEL = """
                       realized_accel) AS acceleration,
             road_grade,
             edge_id,
+            follower_id,
+            distance,
             source_id
         FROM fact_vehicle_trace
         WHERE 1 = 1
-            AND date = \'{{date}}\'
-            AND partition_name=\'{{partition}}\'
+            AND source_id=\'{{partition}}\'
     )
-    {}"""
+    {};"""
 
 
 class QueryStrings(Enum):
     """An enumeration of all the pre-defined query strings."""
 
-    SAMPLE = """
-        SELECT *
-        FROM trajectory_table
-        WHERE date = \'{date}\'
-            AND partition_name=\'{partition}\'
-        LIMIT 15;
-        """
-
-    UPDATE_PARTITION = """
-        ALTER TABLE {table}
-        ADD IF NOT EXISTS PARTITION (date = \'{date}\', partition_name=\'{partition}\');
-        """
-
     TACOMA_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(TACOMA_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            TACOMA_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     PRIUS_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(PRIUS_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            PRIUS_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     COMPACT_SEDAN_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(COMPACT_SEDAN_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            COMPACT_SEDAN_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     MIDSIZE_SEDAN_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(MIDSIZE_SEDAN_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            MIDSIZE_SEDAN_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     RAV4_2019_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(RAV4_2019_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            RAV4_2019_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     MIDSIZE_SUV_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(MIDSIZE_SUV_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            MIDSIZE_SUV_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(LIGHT_DUTY_PICKUP_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            LIGHT_DUTY_PICKUP_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(CLASS3_PND_TRUCK_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            CLASS3_PND_TRUCK_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL = \
-        DENOISED_ACCEL.format(CLASS8_TRACTOR_TRAILER_FIT_FINAL_SELECT.format('denoised_accel_cte'))
+        DENOISED_ACCEL.format(
+            CLASS8_TRACTOR_TRAILER_FIT_FINAL_SELECT.format('denoised_accel_cte'))
 
     FACT_AV_TRACE = """
+        INSERT IGNORE INTO fact_av_trace(source_id, time_step, id, is_av, position, speed, acceleration, space_gap, time_gap, fs_region)
         WITH local_traces AS (
             SELECT
                 *,
-                SPLIT_PART(id, '_', 1) IN ('av', 'rl') AS is_av,
-                SPLIT_PART(follower_id, '_', 1) IN ('av', 'rl') AS leads_av,
+                SUBSTRING_INDEX(id, '_', 1) IN ('av', 'rl') AS is_av,
+                SUBSTRING_INDEX(follower_id, '_', 1) IN ('av', 'rl') AS leads_av,
                 4.5 + 1 / (2 * 1.5) * POW(LEAST(leader_rel_speed, 0), 2) + 0.4*speed AS dx_1,
                 5.25 + 1 / (2 * 1.0) * POW(LEAST(leader_rel_speed, 0), 2) + 1.2*speed AS dx_2,
                 6.0 + 1 / (2 * 0.5) * POW(LEAST(leader_rel_speed, 0), 2) + 1.8*speed AS dx_3
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
                 AND time_step >= {start_filter}
                 AND {inflow_filter}
                 AND {outflow_filter}
         )
         SELECT
+            source_id,
             time_step,
             id,
             is_av,
@@ -504,34 +518,47 @@ class QueryStrings(Enum):
     ;"""
 
     FACT_SAFETY_METRICS_2D = """
+        INSERT IGNORE INTO fact_safety_metrics(source_id, safety_model, time_step, id, safety_value)
+        WITH sub_vehicle_trace AS (
+            SELECT
+                source_id,
+                id,
+                time_step,
+                headway,
+                leader_rel_speed
+            FROM fact_vehicle_trace
+            WHERE 1 = 1
+                AND source_id = \'{partition}\'
+                AND time_step >= {start_filter}
+                AND {inflow_filter}
+                AND {outflow_filter}
+            ORDER BY headway, leader_rel_speed
+        )
         SELECT
-            vt.id,
+            vt.source_id,
+            'v2D_HJI' AS safety_model,
             vt.time_step,
+            vt.id,
             COALESCE((
                 value_lower_left*(headway_upper-headway)*(rel_speed_upper-leader_rel_speed) +
                 value_lower_right*(headway-headway_lower)*(rel_speed_upper-leader_rel_speed) +
                 value_upper_left*(headway_upper-headway)*(leader_rel_speed-rel_speed_lower) +
                 value_upper_right*(headway-headway_lower)*(leader_rel_speed-rel_speed_lower)
-            ) / ((headway_upper-headway_lower)*(rel_speed_upper-rel_speed_lower)), 200.0) AS safety_value,
-            'v2D_HJI' AS safety_model,
-            vt.source_id
-        FROM fact_vehicle_trace vt
+            ) / ((headway_upper-headway_lower)*(rel_speed_upper-rel_speed_lower)), 200.0) AS safety_value
+        FROM sub_vehicle_trace vt
         LEFT OUTER JOIN fact_safety_matrix sm ON 1 = 1
             AND vt.leader_rel_speed BETWEEN sm.rel_speed_lower AND sm.rel_speed_upper
             AND vt.headway BETWEEN sm.headway_lower AND sm.headway_upper
-        WHERE 1 = 1
-            AND vt.date = \'{date}\'
-            AND vt.partition_name = \'{partition}\'
-            AND vt.time_step >= {start_filter}
-            AND vt.{inflow_filter}
-            AND vt.{outflow_filter}
         ;
     """
 
     FACT_SAFETY_METRICS_3D = """
+        INSERT IGNORE INTO fact_safety_metrics(source_id, safety_model, time_step, id, safety_value)
         SELECT
-            id,
+            source_id,
+            'v3D' AS safety_model,
             time_step,
+            id,
             COALESCE(headway, 1000) + (CASE
                 WHEN -speed/{max_decel} > -(speed+COALESCE(leader_rel_speed, 0))/{leader_max_decel} THEN
                     -0.5*POW(COALESCE(leader_rel_speed, 0), 2)/{leader_max_decel} +
@@ -542,13 +569,10 @@ class QueryStrings(Enum):
                     -COALESCE(leader_rel_speed, 0)*speed/{max_decel} +
                     0.5*POW(speed,2)*{leader_max_decel}/POW({max_decel},2) +
                     -0.5*POW(speed,2)/{max_decel}
-                END) AS safety_value,
-            'v3D' AS safety_model,
-            source_id
+                END) AS safety_value
         FROM fact_vehicle_trace
         WHERE 1 = 1
-            AND date = \'{date}\'
-            AND partition_name = \'{partition}\'
+            AND source_id = \'{partition}\'
             AND leader_id IS NOT NULL
             AND time_step >= {start_filter}
             AND {inflow_filter}
@@ -557,24 +581,25 @@ class QueryStrings(Enum):
     """
 
     FACT_SAFETY_METRICS_AGG = """
+        INSERT IGNORE INTO fact_safety_metrics_agg(source_id,safety_rate,safety_value_max)
         SELECT
             source_id,
-            SUM(CASE WHEN safety_value > 0 THEN 1.0 ELSE 0.0 END) * 100.0 / COUNT() safety_rate,
+            SUM(CASE WHEN safety_value > 0 THEN 1.0 ELSE 0.0 END) * 100.0 / COUNT(*) safety_rate,
             MIN(safety_value) AS safety_value_max
         FROM fact_safety_metrics
         WHERE 1 = 1
-            AND date = \'{date}\'
-            AND partition_name = \'{partition}_FACT_SAFETY_METRICS_3D\'
+            AND source_id = \'{partition}\'
             AND safety_model = 'v3D'
         GROUP BY 1
         ;
     """
 
     FACT_SAFETY_METRICS_BINNED = """
+        INSERT IGNORE INTO fact_safety_metrics_binned(source_id,safety_value_bin,count)
         WITH unfilter_bins AS (
             SELECT
-                ROW_NUMBER() OVER() - 51 AS lb,
-                ROW_NUMBER() OVER() - 50 AS ub
+                CAST(ROW_NUMBER() OVER() AS SIGNED) - 51 AS lb,
+                CAST(ROW_NUMBER() OVER() AS SIGNED) - 50 AS ub
             FROM fact_safety_matrix
         ), bins AS (
             SELECT
@@ -586,20 +611,21 @@ class QueryStrings(Enum):
                 AND ub <= 15
         )
         SELECT
-            CONCAT('[', CAST(bins.lb AS VARCHAR), ', ', CAST(bins.ub AS VARCHAR), ')') AS safety_value_bin,
-            COUNT() AS count
+            fsm.source_id,
+            CONCAT('[', CAST(bins.lb AS CHAR(10)), ', ', CAST(bins.ub AS CHAR(10)), ')') AS safety_value_bin,
+            COUNT(*) AS count
         FROM bins
         LEFT JOIN fact_safety_metrics fsm ON 1 = 1
-            AND fsm.date = \'{date}\'
-            AND fsm.partition_name = \'{partition}_FACT_SAFETY_METRICS_3D\'
+            AND fsm.source_id = \'{partition}\'
             AND fsm.safety_value >= bins.lb
             AND fsm.safety_value < bins.ub
             AND fsm.safety_model = 'v3D'
-        GROUP BY 1
+        GROUP BY 1, 2
         ;
     """
 
     FACT_NETWORK_THROUGHPUT_AGG = """
+        INSERT IGNORE INTO fact_network_throughput_agg(source_id,throughput_per_hour)
         WITH min_time AS (
             SELECT
                 source_id,
@@ -607,8 +633,7 @@ class QueryStrings(Enum):
                 MIN(time_step) AS enter_time
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
                 AND {inflow_filter}
             GROUP BY 1, 2
         ), agg AS (
@@ -628,26 +653,18 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_INFEASIBLE_FLAGS = """
+        INSERT IGNORE INTO fact_infeasible_flags(source_id,distribution_model_id,percent_infeasible)
         WITH ranked_agg AS (
             SELECT
-                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS rank,
-                SPLIT_PART(id, '_', 1) AS id_type,
-                *
+                *,
+                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS 'rank',
+                SUBSTRING_INDEX(id, '_', 1) AS id_type
             FROM fact_energy_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
                 AND time_step >= {start_filter}
                 AND {inflow_filter}
                 AND {outflow_filter}
-                AND (partition_name = \'{partition}_TACOMA_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_PRIUS_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_COMPACT_SEDAN_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_RAV4_2019_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_MIDSIZE_SUV_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_LIGHT_DUTY_PICKUP_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_CLASS3_PND_TRUCK_FIT_DENOISED_ACCEL\'
-                    OR partition_name = \'{partition}_CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL\')
+                AND source_id = \'{partition}\'
         ), dist_agg AS (
             SELECT
                 agg.source_id,
@@ -728,42 +745,36 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_VEHICLE_FUEL_EFFICIENCY_AGG = """
-        WITH sub_fact_vehicle_trace AS (
+        INSERT IGNORE INTO fact_vehicle_fuel_efficiency_agg(source_id,id,energy_model_id,distance_meters,energy_joules,fuel_grams,fuel_gallons,efficiency_meters_per_joules,efficiency_miles_per_gallon,is_locally_measurable)
+        WITH sub_fact_energy_trace AS (
             SELECT
-                v.id,
-                v.source_id,
-                e.energy_model_id,
+                id,
+                source_id,
+                energy_model_id,
                 MAX(distance) - MIN(distance) AS distance_meters,
-                (MAX(e.time_step) - MIN(e.time_step)) / (COUNT(DISTINCT e.time_step) - 1) AS time_step_size_seconds,
-                SUM(e.power) AS power_watts,
-                SUM(e.fuel_rate_mass) AS fuel_rate_g_per_s,
-                SUM(e.fuel_rate_vol) AS fuel_rate_gal_per_hr,
+                (MAX(time_step) - MIN(time_step)) / (COUNT(DISTINCT time_step) - 1) AS time_step_size_seconds,
+                SUM(power) AS power_watts,
+                SUM(fuel_rate_mass) AS fuel_rate_g_per_s,
+                SUM(fuel_rate_vol) AS fuel_rate_gal_per_hr,
                 CASE
-                    WHEN v.id LIKE 'av_%' OR v.id LIKE 'rl_%' OR
-                         v.follower_id LIKE 'av_%' OR v.follower_id LIKE 'rl_%' THEN 1
+                    WHEN id LIKE 'av_%' OR id LIKE 'rl_%' OR
+                         follower_id LIKE 'av_%' OR follower_id LIKE 'rl_%' THEN 1
                     ELSE 0
                 END AS is_locally_measurable
-            FROM fact_vehicle_trace v
-            JOIN fact_energy_trace AS e ON  1 = 1
-                AND e.id = v.id
-                AND e.time_step = v.time_step
-                AND e.source_id = v.source_id
-                AND e.date = \'{date}\'
-                AND e.partition_name LIKE \'{partition}_%\'
-                AND e.time_step >= {start_filter}
-            WHERE 1 = 1
-                AND v.date = \'{date}\'
-                AND v.partition_name = \'{partition}\'
-                AND v.{inflow_filter}
-                AND v.{outflow_filter}
+            FROM fact_energy_trace
+            WHERE  1 = 1
+                AND time_step >= {start_filter}
+                AND source_id = \'{partition}\'
+                AND {inflow_filter}
+                AND {outflow_filter}
             GROUP BY 1, 2, 3, 9
             HAVING 1 = 1
                 AND MAX(distance) - MIN(distance) > 10
-                AND COUNT(DISTINCT e.time_step) > 10
+                AND COUNT(DISTINCT time_step) > 10
         )
         SELECT
-            id,
             source_id,
+            id,
             energy_model_id,
             distance_meters,
             power_watts * time_step_size_seconds AS energy_joules,
@@ -773,13 +784,14 @@ class QueryStrings(Enum):
             3600 / 1609.34 * distance_meters /
                 (fuel_rate_gal_per_hr * time_step_size_seconds) AS efficiency_miles_per_gallon,
             is_locally_measurable
-        FROM sub_fact_vehicle_trace
+        FROM sub_fact_energy_trace
         WHERE 1 = 1
             AND power_watts * time_step_size_seconds != 0
         ;
     """
 
     FACT_VEHICLE_FUEL_EFFICIENCY_BINNED = """
+        INSERT IGNORE INTO fact_vehicle_fuel_efficiency_binned(source_id,distribution_model_id,fuel_efficiency_bin,count)
         WITH unfilter_bins AS (
             SELECT
                 ROW_NUMBER() OVER() - 1 AS lb,
@@ -787,15 +799,15 @@ class QueryStrings(Enum):
             FROM fact_safety_matrix
         ), ranked_agg AS (
             SELECT
-                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS rank,
-                SPLIT_PART(id, '_', 1) AS id_type,
-                *
+                *,
+                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS 'rank',
+                SUBSTRING_INDEX(id, '_', 1) AS id_type
             FROM fact_vehicle_fuel_efficiency_agg
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}_FACT_VEHICLE_FUEL_EFFICIENCY_AGG\'
+                AND source_id = \'{partition}\'
         ), dist_agg AS (
             SELECT
+                agg.source_id,
                 agg.id,
                 agg.energy_model_id,
                 agg.efficiency_miles_per_gallon,
@@ -813,7 +825,8 @@ class QueryStrings(Enum):
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -824,12 +837,13 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.all_tacoma_fit
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), prius_binned AS (
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -840,12 +854,13 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.all_prius_ev_fit
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), midsize_sedan_binned AS (
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -856,12 +871,13 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.all_midsize_sedan
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), midsize_suv_binned AS (
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -872,12 +888,13 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.all_midsize_suv
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), distribution_v0_binned AS (
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -888,12 +905,13 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.distribution_v0
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), rav4_binned AS (
             SELECT
                 bins.lb*2 AS lb,
                 bins.ub*2 AS ub,
-                COUNT() AS count
+                source_id,
+                COUNT(*) AS count
             FROM unfilter_bins bins
             LEFT JOIN dist_agg ON 1 = 1
                 AND dist_agg.efficiency_miles_per_gallon >= bins.lb*2
@@ -904,9 +922,10 @@ class QueryStrings(Enum):
                         WHEN 'truck' THEN dist_agg.energy_model_id = 'CLASS8_TRACTOR_TRAILER_FIT_DENOISED_ACCEL'
                         ELSE dist_agg.energy_model_id = dist_agg.all_rav4
                     END
-            GROUP BY 1, 2
+            GROUP BY 1, 2, 3
         ), tacoma_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
@@ -914,6 +933,7 @@ class QueryStrings(Enum):
             ORDER BY lb
         ), prius_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
@@ -921,6 +941,7 @@ class QueryStrings(Enum):
             ORDER BY lb
         ), midsize_sedan_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
@@ -928,6 +949,7 @@ class QueryStrings(Enum):
             ORDER BY lb
         ), midsize_suv_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
@@ -935,20 +957,23 @@ class QueryStrings(Enum):
             ORDER BY lb
         ), distribution_v0_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
             FROM distribution_v0_binned
         ), rav4_ratio_to_report AS (
             SELECT
+                source_id,
                 lb,
                 ub,
                 100.0 * count / (SUM(count) OVER()) AS count
             FROM rav4_binned
         )
         SELECT
+            source_id,
             'ALL_TACOMA' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM tacoma_ratio_to_report
         WHERE 1 = 1
@@ -956,8 +981,9 @@ class QueryStrings(Enum):
             AND ub <= 100
         UNION ALL
         SELECT
+            source_id,
             'ALL_PRIUS_EV' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM prius_ratio_to_report
         WHERE 1 = 1
@@ -965,8 +991,9 @@ class QueryStrings(Enum):
             AND ub <= 100
         UNION ALL
         SELECT
+            source_id,
             'ALL_MIDSIZE_SEDAN' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM midsize_sedan_ratio_to_report
         WHERE 1 = 1
@@ -974,8 +1001,9 @@ class QueryStrings(Enum):
             AND ub <= 100
         UNION ALL
         SELECT
+            source_id,
             'ALL_MIDSIZE_SUV' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM midsize_suv_ratio_to_report
         WHERE 1 = 1
@@ -983,8 +1011,9 @@ class QueryStrings(Enum):
             AND ub <= 100
         UNION ALL
         SELECT
+            source_id,
             'DISTRIBUTION_V0' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM distribution_v0_ratio_to_report
         WHERE 1 = 1
@@ -992,8 +1021,9 @@ class QueryStrings(Enum):
             AND ub <= 100
         UNION ALL
         SELECT
+            source_id,
             'ALL_RAV4' AS distribution_model_id,
-            CONCAT('[', CAST(lb AS VARCHAR), ', ', CAST(ub AS VARCHAR), ')') AS fuel_efficiency_bin,
+            CONCAT('[', CAST(lb AS CHAR(10)), ', ', CAST(ub AS CHAR(10)), ')') AS fuel_efficiency_bin,
             count
         FROM rav4_ratio_to_report
         WHERE 1 = 1
@@ -1002,15 +1032,15 @@ class QueryStrings(Enum):
     ;"""
 
     FACT_NETWORK_FUEL_EFFICIENCY_AGG = """
+        INSERT IGNORE INTO fact_network_fuel_efficiency_agg(source_id,distribution_model_id,efficiency_meters_per_kilojoules,efficiency_miles_per_gallon,efficiency_meters_per_kilojoules_local,efficiency_miles_per_gallon_local)
         WITH ranked_agg AS (
             SELECT
-                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS rank,
-                SPLIT_PART(id, '_', 1) AS id_type,
-                *
+                *,
+                RANK() OVER(PARTITION BY energy_model_id ORDER BY id) AS 'rank',
+                SUBSTRING_INDEX(id, '_', 1) AS id_type
             FROM fact_vehicle_fuel_efficiency_agg
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}_FACT_VEHICLE_FUEL_EFFICIENCY_AGG\'
+                AND source_id = \'{partition}\'
         ), dist_agg AS (
             SELECT
                 agg.source_id,
@@ -1171,6 +1201,7 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_NETWORK_SPEED = """
+        INSERT IGNORE INTO fact_network_speed(source_id,avg_instantaneous_speed,avg_network_speed,total_vmt)
         WITH vehicle_agg AS (
             SELECT
                 id,
@@ -1181,8 +1212,7 @@ class QueryStrings(Enum):
                 MAX(distance) - MIN(distance) AS distance_delta
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
                 AND {inflow_filter}
                 AND {outflow_filter}
                 AND time_step >= {start_filter}
@@ -1198,11 +1228,12 @@ class QueryStrings(Enum):
     ;"""
 
     FACT_VEHICLE_METRICS = """
+        INSERT IGNORE INTO fact_vehicle_metrics(source_id,lane_changes_per_vehicle,space_gap_min,space_gap_max,space_gap_avg,space_gap_stddev,av_space_gap_min,av_space_gap_max,av_space_gap_avg,av_space_gap_stddev,time_gap_min,time_gap_max,time_gap_avg,time_gap_stddev,av_time_gap_min,av_time_gap_max,av_time_gap_avg,av_time_gap_stddev,speed_min,speed_max,speed_avg,speed_stddev,accel_min,accel_max,accel_avg,accel_stddev)
         WITH cte AS (
             SELECT
                 source_id,
                 id,
-                SPLIT_PART(id, '_', 1) IN ('av', 'rl') AS is_av,
+                SUBSTRING_INDEX(id, '_', 1) IN ('av', 'rl') AS is_av,
                 lane_id,
                 LAG(lane_id) OVER (PARTITION BY id ORDER BY time_step) AS lag_lane_id,
                 edge_id,
@@ -1214,8 +1245,7 @@ class QueryStrings(Enum):
                     realized_accel) AS accel
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
                 AND {inflow_filter}
                 AND {outflow_filter}
                 AND time_step >= {start_filter}
@@ -1230,18 +1260,18 @@ class QueryStrings(Enum):
             MAX(headway) AS space_gap_max,
             AVG(headway) AS space_gap_avg,
             STDDEV(headway) AS space_gap_stddev,
-            MIN(CASE WHEN is_av THEN headway ELSE nan() END) AS av_space_gap_min,
-            MAX(CASE WHEN is_av THEN headway ELSE nan() END) AS av_space_gap_max,
-            AVG(CASE WHEN is_av THEN headway ELSE nan() END) AS av_space_gap_avg,
-            STDDEV(CASE WHEN is_av THEN headway ELSE nan() END) AS av_space_gap_stddev,
+            MIN(CASE WHEN is_av THEN headway ELSE NULL END) AS av_space_gap_min,
+            MAX(CASE WHEN is_av THEN headway ELSE NULL END) AS av_space_gap_max,
+            AVG(CASE WHEN is_av THEN headway ELSE NULL END) AS av_space_gap_avg,
+            STDDEV(CASE WHEN is_av THEN headway ELSE NULL END) AS av_space_gap_stddev,
             MIN(headway / speed) AS time_gap_min,
             MAX(headway / speed) AS time_gap_max,
             AVG(headway / speed) AS time_gap_avg,
             STDDEV(headway / speed) AS time_gap_stddev,
-            MIN(CASE WHEN is_av THEN headway / speed ELSE nan() END) AS av_time_gap_min,
-            MAX(CASE WHEN is_av THEN headway / speed ELSE nan() END) AS av_time_gap_max,
-            AVG(CASE WHEN is_av THEN headway / speed ELSE nan() END) AS av_time_gap_avg,
-            STDDEV(CASE WHEN is_av THEN headway / speed ELSE nan() END) AS av_time_gap_stddev,
+            MIN(CASE WHEN is_av THEN headway / speed ELSE NULL END) AS av_time_gap_min,
+            MAX(CASE WHEN is_av THEN headway / speed ELSE NULL END) AS av_time_gap_max,
+            AVG(CASE WHEN is_av THEN headway / speed ELSE NULL END) AS av_time_gap_avg,
+            STDDEV(CASE WHEN is_av THEN headway / speed ELSE NULL END) AS av_time_gap_stddev,
             MIN(speed) AS speed_min,
             MAX(speed) AS speed_max,
             AVG(speed) AS speed_avg,
@@ -1257,6 +1287,7 @@ class QueryStrings(Enum):
     ;"""
 
     FACT_SPACE_GAPS_BINNED = """
+        INSERT IGNORE INTO fact_space_gaps_binned(source_id,safety_value_bin,space_gap_count,av_space_gap_count)
         WITH unfilter_bins AS (
             SELECT
                 ROW_NUMBER() OVER() AS lb,
@@ -1272,28 +1303,24 @@ class QueryStrings(Enum):
                 AND ub <= 200
         )
         SELECT
-            CAST(bins.lb AS VARCHAR) AS safety_value_bin,
+            vt.source_id,
+            CAST(bins.lb AS CHAR(10)) AS safety_value_bin,
+            COUNT(vt.headway) AS space_gap_count,
             SUM(CASE
                     WHEN
-                        vt.headway BETWEEN bins.lb AND bins.ub
-                    THEN 1
-                    ELSE 0
-                END) AS space_gap_count,
-            SUM(CASE
-                    WHEN
-                        SPLIT_PART(vt.id, '_', 1) IN ('av', 'rl') AND
-                        vt.headway BETWEEN bins.lb AND bins.ub
+                        SUBSTRING_INDEX(vt.id, '_', 1) IN ('av', 'rl')
                     THEN 1
                     ELSE 0
                 END) AS av_space_gap_count
         FROM bins
         LEFT JOIN fact_vehicle_trace vt ON 1 = 1
-            AND vt.date = \'{date}\'
-            AND vt.partition_name = \'{partition}\'
-        GROUP BY 1
+            AND vt.source_id = \'{partition}\'
+            AND vt.headway BETWEEN bins.lb AND bins.ub
+        GROUP BY 1, 2
     ;"""
 
     FACT_TIME_GAPS_BINNED = """
+        INSERT IGNORE INTO fact_time_gaps_binned(source_id,safety_value_bin,time_gap_count,av_time_gap_count)
         WITH unfilter_bins AS (
             SELECT
                 ROW_NUMBER() OVER() AS lb,
@@ -1309,32 +1336,28 @@ class QueryStrings(Enum):
                 AND ub <= 50
         )
         SELECT
-            CAST(bins.lb AS VARCHAR) AS safety_value_bin,
+            vt.source_id,
+            CAST(bins.lb AS CHAR(10)) AS safety_value_bin,
+            COUNT(vt.headway) AS time_gap_count,
             SUM(CASE
                     WHEN
-                        vt.headway / vt.speed BETWEEN bins.lb AND bins.ub
-                    THEN 1
-                    ELSE 0
-                END) AS time_gap_count,
-            SUM(CASE
-                    WHEN
-                        SPLIT_PART(vt.id, '_', 1) IN ('av', 'rl') AND
-                        vt.headway / vt.speed BETWEEN bins.lb AND bins.ub
+                        SUBSTRING_INDEX(vt.id, '_', 1) IN ('av', 'rl')
                     THEN 1
                     ELSE 0
                 END) AS av_time_gap_count
         FROM bins
         LEFT JOIN fact_vehicle_trace vt ON 1 = 1
-            AND vt.date = \'{date}\'
-            AND vt.partition_name = \'{partition}\'
-        GROUP BY 1
+            AND vt.source_id = \'{partition}\'
+            AND vt.headway / vt.speed BETWEEN bins.lb AND bins.ub
+        GROUP BY 1, 2
     ;"""
 
     FACT_FOLLOWERSTOPPER_ENVELOPE = """
+        INSERT IGNORE INTO fact_followerstopper_envelope(source_id,region_1_proportion,region_2_proportion,region_3_proportion,region_4_proportion,av_region_1_proportion,av_region_2_proportion,av_region_3_proportion,av_region_4_proportion)
         WITH cte AS (
             SELECT
                 source_id,
-                SPLIT_PART(id, '_', 1) IN ('rl', 'av') AS is_av,
+                SUBSTRING_INDEX(id, '_', 1) IN ('rl', 'av') AS is_av,
                 4.5 + 1 / (2 * 1.5) * POW(LEAST(leader_rel_speed, 0), 2) + 0.4*speed AS dx_1,
                 5.25 + 1 / (2 * 1.0) * POW(LEAST(leader_rel_speed, 0), 2) + 1.2*speed AS dx_2,
                 6.0 + 1 / (2 * 0.5) * POW(LEAST(leader_rel_speed, 0), 2) + 1.8*speed AS dx_3,
@@ -1342,8 +1365,7 @@ class QueryStrings(Enum):
                 time_step
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
                 AND {inflow_filter}
                 AND {outflow_filter}
                 AND time_step >= {start_filter}
@@ -1354,7 +1376,7 @@ class QueryStrings(Enum):
                 SUM(CASE WHEN headway > dx_1 AND headway <= dx_2 THEN 1 ELSE 0 END) AS region_2_count,
                 SUM(CASE WHEN headway > dx_2 AND headway <= dx_3 THEN 1 ELSE 0 END) AS region_3_count,
                 SUM(CASE WHEN headway > dx_3 THEN 1 ELSE 0 END) AS region_4_count,
-                COUNT() AS total_count,
+                COUNT(*) AS total_count,
                 SUM(CASE WHEN is_av AND headway <= dx_1 THEN 1 ELSE 0 END) AS av_region_1_count,
                 SUM(CASE WHEN is_av AND headway > dx_1 AND headway <= dx_2 THEN 1 ELSE 0 END) AS av_region_2_count,
                 SUM(CASE WHEN is_av AND headway > dx_2 AND headway <= dx_3 THEN 1 ELSE 0 END) AS av_region_3_count,
@@ -1389,6 +1411,62 @@ class QueryStrings(Enum):
     """
 
     LEADERBOARD_CHART = """
+        INSERT IGNORE INTO leaderboard_chart(source_id,
+                                            throughput_per_hour,
+                                            avg_instantaneous_speed,
+                                            avg_network_speed,
+                                            total_vmt,
+                                            lane_changes_per_vehicle,
+                                            space_gap_min,
+                                            space_gap_max,
+                                            space_gap_avg,
+                                            space_gap_stddev,
+                                            av_space_gap_min,
+                                            av_space_gap_max,
+                                            av_space_gap_avg,
+                                            av_space_gap_stddev,
+                                            time_gap_min,
+                                            time_gap_max,
+                                            time_gap_avg,
+                                            time_gap_stddev,
+                                            av_time_gap_min,
+                                            av_time_gap_max,
+                                            av_time_gap_avg,
+                                            av_time_gap_stddev,
+                                            speed_min,
+                                            speed_max,
+                                            speed_avg,
+                                            speed_stddev,
+                                            accel_min,
+                                            accel_max,
+                                            accel_avg,
+                                            accel_stddev,
+                                            safety_rate,
+                                            safety_value_max,
+                                            prius_percent_infeasible,
+                                            tacoma_percent_infeasible,
+                                            midsize_sedan_percent_infeasible,
+                                            midsize_suv_percent_infeasible,
+                                            distribution_v0_percent_infeasible,
+                                            rav4_percent_infeasible,
+                                            prius_efficiency_meters_per_kilojoules,
+                                            tacoma_efficiency_meters_per_kilojoules,
+                                            midsize_sedan_efficiency_meters_per_kilojoules,
+                                            midsize_suv_efficiency_meters_per_kilojoules,
+                                            distribution_v0_efficiency_meters_per_kilojoules,
+                                            rav4_efficiency_meters_per_kilojoules,
+                                            prius_efficiency_miles_per_gallon,
+                                            tacoma_efficiency_miles_per_gallon,
+                                            midsize_sedan_efficiency_miles_per_gallon,
+                                            midsize_suv_efficiency_miles_per_gallon,
+                                            distribution_v0_efficiency_miles_per_gallon,
+                                            rav4_efficiency_miles_per_gallon,
+                                            prius_efficiency_miles_per_gallon_local,
+                                            tacoma_efficiency_miles_per_gallon_local,
+                                            midsize_sedan_efficiency_miles_per_gallon_local,
+                                            midsize_suv_efficiency_miles_per_gallon_local,
+                                            distribution_v0_efficiency_miles_per_gallon_local,
+                                            rav4_efficiency_miles_per_gallon_local)
         SELECT
             nt.source_id,
             nt.throughput_per_hour,
@@ -1426,7 +1504,7 @@ class QueryStrings(Enum):
             fif_all_tacoma.percent_infeasible AS tacoma_percent_infeasible,
             fif_all_midsize_sedan.percent_infeasible AS midsize_sedan_percent_infeasible,
             fif_all_midsize_suv.percent_infeasible AS midsize_suv_percent_infeasible,
-            COALESCE(fif_distribution_v0.percent_infeasible, nan()) AS distribution_v0_percent_infeasible,
+            COALESCE(fif_distribution_v0.percent_infeasible, NULL) AS distribution_v0_percent_infeasible,
             fif_all_rav4.percent_infeasible AS rav4_percent_infeasible,
             fe_all_prius_ev.efficiency_meters_per_kilojoules AS prius_efficiency_meters_per_kilojoules,
             fe_all_tacoma.efficiency_meters_per_kilojoules AS tacoma_efficiency_meters_per_kilojoules,
@@ -1448,83 +1526,68 @@ class QueryStrings(Enum):
             fe_all_rav4.efficiency_miles_per_gallon_local AS rav4_efficiency_miles_per_gallon_local
         FROM fact_network_throughput_agg AS nt
         JOIN fact_network_speed AS ns ON 1 = 1
-            AND ns.date = \'{date}\'
-            AND ns.partition_name = \'{partition}_FACT_NETWORK_SPEED\'
+            AND ns.source_id = \'{partition}\'
             AND nt.source_id = ns.source_id
         JOIN fact_vehicle_metrics AS vm ON 1 = 1
-            AND vm.date = \'{date}\'
-            AND vm.partition_name = \'{partition}_FACT_VEHICLE_METRICS\'
+            AND vm.source_id = \'{partition}\'
             AND nt.source_id = vm.source_id
         JOIN fact_network_fuel_efficiency_agg AS fe_all_prius_ev ON 1 = 1
-            AND fe_all_prius_ev.date = \'{date}\'
-            AND fe_all_prius_ev.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_prius_ev.source_id = \'{partition}\'
             AND nt.source_id = fe_all_prius_ev.source_id
             AND fe_all_prius_ev.distribution_model_id = 'ALL_PRIUS_EV'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_tacoma ON 1 = 1
-            AND fe_all_tacoma.date = \'{date}\'
-            AND fe_all_tacoma.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_tacoma.source_id = \'{partition}\'
             AND nt.source_id = fe_all_tacoma.source_id
             AND fe_all_tacoma.distribution_model_id = 'ALL_TACOMA'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_midsize_sedan ON 1 = 1
-            AND fe_all_midsize_sedan.date = \'{date}\'
-            AND fe_all_midsize_sedan.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_midsize_sedan.source_id = \'{partition}\'
             AND nt.source_id = fe_all_midsize_sedan.source_id
             AND fe_all_midsize_sedan.distribution_model_id = 'ALL_MIDSIZE_SEDAN'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_midsize_suv ON 1 = 1
-            AND fe_all_midsize_suv.date = \'{date}\'
-            AND fe_all_midsize_suv.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_midsize_suv.source_id = \'{partition}\'
             AND nt.source_id = fe_all_midsize_suv.source_id
             AND fe_all_midsize_suv.distribution_model_id = 'ALL_MIDSIZE_SUV'
         JOIN fact_network_fuel_efficiency_agg AS fe_distribution_v0 ON 1 = 1
-            AND fe_distribution_v0.date = \'{date}\'
-            AND fe_distribution_v0.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_distribution_v0.source_id = \'{partition}\'
             AND nt.source_id = fe_distribution_v0.source_id
             AND fe_distribution_v0.distribution_model_id = 'DISTRIBUTION_V0'
         JOIN fact_network_fuel_efficiency_agg AS fe_all_rav4 ON 1 = 1
-            AND fe_all_rav4.date = \'{date}\'
-            AND fe_all_rav4.partition_name = \'{partition}_FACT_NETWORK_FUEL_EFFICIENCY_AGG\'
+            AND fe_all_rav4.source_id = \'{partition}\'
             AND nt.source_id = fe_all_rav4.source_id
             AND fe_all_rav4.distribution_model_id = 'ALL_RAV4'
         JOIN fact_safety_metrics_agg AS sm ON 1 = 1
-            AND sm.date = \'{date}\'
-            AND sm.partition_name = \'{partition}_FACT_SAFETY_METRICS_AGG\'
+            AND sm.source_id = \'{partition}\'
             AND nt.source_id = sm.source_id
         JOIN fact_infeasible_flags AS fif_all_prius_ev ON 1 = 1
-            AND fif_all_prius_ev.date = \'{date}\'
-            AND fif_all_prius_ev.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_prius_ev.source_id = \'{partition}\'
             AND nt.source_id = fif_all_prius_ev.source_id
             AND fif_all_prius_ev.distribution_model_id = 'ALL_PRIUS_EV'
         JOIN fact_infeasible_flags AS fif_all_tacoma ON 1 = 1
-            AND fif_all_tacoma.date = \'{date}\'
-            AND fif_all_tacoma.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_tacoma.source_id = \'{partition}\'
             AND nt.source_id = fif_all_tacoma.source_id
             AND fif_all_tacoma.distribution_model_id = 'ALL_TACOMA'
         JOIN fact_infeasible_flags AS fif_all_midsize_sedan ON 1 = 1
-            AND fif_all_midsize_sedan.date = \'{date}\'
-            AND fif_all_midsize_sedan.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_midsize_sedan.source_id = \'{partition}\'
             AND nt.source_id = fif_all_midsize_sedan.source_id
             AND fif_all_midsize_sedan.distribution_model_id = 'ALL_MIDSIZE_SEDAN'
         JOIN fact_infeasible_flags AS fif_all_midsize_suv ON 1 = 1
-            AND fif_all_midsize_suv.date = \'{date}\'
-            AND fif_all_midsize_suv.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_midsize_suv.source_id = \'{partition}\'
             AND nt.source_id = fif_all_midsize_suv.source_id
             AND fif_all_midsize_suv.distribution_model_id = 'ALL_MIDSIZE_SUV'
         LEFT JOIN fact_infeasible_flags AS fif_distribution_v0 ON 1 = 1
-            AND fif_distribution_v0.date = \'{date}\'
-            AND fif_distribution_v0.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_distribution_v0.source_id = \'{partition}\'
             AND nt.source_id = fif_distribution_v0.source_id
             AND fif_distribution_v0.distribution_model_id = 'DISTRIBUTION_V0'
         JOIN fact_infeasible_flags AS fif_all_rav4 ON 1 = 1
-            AND fif_all_rav4.date = \'{date}\'
-            AND fif_all_rav4.partition_name = \'{partition}_FACT_INFEASIBLE_FLAGS\'
+            AND fif_all_rav4.source_id = \'{partition}\'
             AND nt.source_id = fif_all_rav4.source_id
             AND fif_all_rav4.distribution_model_id = 'ALL_RAV4'
         WHERE 1 = 1
-            AND nt.date = \'{date}\'
-            AND nt.partition_name = \'{partition}_FACT_NETWORK_THROUGHPUT_AGG\'
+            AND nt.source_id = \'{partition}\'
         ;"""
 
     FACT_NETWORK_INFLOWS_OUTFLOWS = """
+        INSERT IGNORE INTO fact_network_inflows_outflows(time_step,source_id,inflow_rate,outflow_rate)
         WITH in_out_time_step AS (
             SELECT
                 id,
@@ -1533,12 +1596,11 @@ class QueryStrings(Enum):
                 MIN(CASE WHEN {outflow_filter} THEN 1000000 ELSE time_step - {start_filter} END) AS outflow_time_step
             FROM fact_vehicle_trace
             WHERE 1 = 1
-                AND date = \'{date}\'
-                AND partition_name = \'{partition}\'
+                AND source_id = \'{partition}\'
             GROUP BY 1, 2
         ), inflows AS (
             SELECT
-                CAST(inflow_time_step / 60 AS INTEGER) * 60 AS time_step,
+                CAST(inflow_time_step / 60 AS SIGNED) * 60 AS time_step,
                 source_id,
                 60 * COUNT(DISTINCT id) AS inflow_rate
             FROM in_out_time_step
@@ -1546,7 +1608,7 @@ class QueryStrings(Enum):
             GROUP BY 1, 2
         ), outflows AS (
             SELECT
-                CAST(outflow_time_step / 60 AS INTEGER) * 60 AS time_step,
+                CAST(outflow_time_step / 60 AS SIGNED) * 60 AS time_step,
                 source_id,
                 60 * COUNT(DISTINCT id) AS outflow_rate
             FROM in_out_time_step
@@ -1559,7 +1621,19 @@ class QueryStrings(Enum):
             COALESCE(i.inflow_rate, 0) AS inflow_rate,
             COALESCE(o.outflow_rate, 0) AS outflow_rate
         FROM inflows i
-        FULL OUTER JOIN outflows o ON 1 = 1
+        LEFT JOIN outflows o ON 1 = 1
+            AND i.time_step = o.time_step
+            AND i.source_id = o.source_id
+        WHERE 1 = 1
+            AND COALESCE(i.time_step, o.time_step) >= 0
+        UNION
+        SELECT
+            COALESCE(i.time_step, o.time_step) AS time_step,
+            COALESCE(i.source_id, o.source_id) AS source_id,
+            COALESCE(i.inflow_rate, 0) AS inflow_rate,
+            COALESCE(o.outflow_rate, 0) AS outflow_rate
+        FROM inflows i
+        RIGHT JOIN outflows o ON 1 = 1
             AND i.time_step = o.time_step
             AND i.source_id = o.source_id
         WHERE 1 = 1
@@ -1568,35 +1642,29 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_NETWORK_METRICS_BY_DISTANCE_AGG = """
+        INSERT IGNORE INTO fact_network_metrics_by_distance_agg(source_id,distance_meters_bin,cumulative_energy_avg,cumulative_energy_lower_bound,cumulative_energy_upper_bound,speed_avg,speed_upper_bound,speed_lower_bound,accel_avg,accel_upper_bound,accel_lower_bound,instantaneous_energy_avg,instantaneous_energy_upper_bound,instantaneous_energy_lower_bound)
         WITH joined_trace AS (
             SELECT
-                vt.id,
-                vt.source_id,
-                vt.time_step,
-                vt.distance - FIRST_VALUE(vt.distance)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC) AS distance_meters,
+                id,
+                source_id,
+                time_step,
+                distance - FIRST_VALUE(distance)
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC) AS distance_meters,
                 energy_model_id,
-                et.speed,
-                et.acceleration,
-                vt.time_step - LAG(vt.time_step, 1)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC) AS sim_step,
+                speed,
+                acceleration,
+                time_step - LAG(time_step, 1)
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC) AS sim_step,
                 SUM(power)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC
                     ROWS BETWEEN UNBOUNDED PRECEDING and CURRENT ROW) AS cumulative_power
-            FROM fact_vehicle_trace vt
-            JOIN fact_energy_trace et ON 1 = 1
-                AND et.date = \'{date}\'
-                AND et.partition_name = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
-                AND vt.id = et.id
-                AND vt.source_id = et.source_id
-                AND vt.time_step = et.time_step
-                AND et.energy_model_id = 'MIDSIZE_SEDAN_FIT_DENOISED_ACCEL'
+            FROM fact_energy_trace
             WHERE 1 = 1
-                AND vt.date = \'{date}\'
-                AND vt.partition_name = \'{partition}\'
-                AND vt.{inflow_filter}
-                AND vt.{outflow_filter}
-                AND vt.time_step >= {start_filter}
+                AND source_id = \'{partition}\'
+                AND energy_model_id = 'MIDSIZE_SEDAN_FIT_DENOISED_ACCEL'
+                AND {inflow_filter}
+                AND {outflow_filter}
+                AND time_step >= {start_filter}
         ), cumulative_energy AS (
             SELECT
                 id,
@@ -1611,7 +1679,7 @@ class QueryStrings(Enum):
         ), binned_cumulative_energy AS (
             SELECT
                 source_id,
-                CAST(distance_meters/10 AS INTEGER) * 10 AS distance_meters_bin,
+                CAST(distance_meters/10 AS SIGNED) * 10 AS distance_meters_bin,
                 AVG(speed) AS speed_avg,
                 AVG(speed) + STDDEV(speed) AS speed_upper_bound,
                 AVG(speed) - STDDEV(speed) AS speed_lower_bound,
@@ -1629,12 +1697,12 @@ class QueryStrings(Enum):
             SELECT DISTINCT
                 source_id,
                 id,
-                CAST(distance_meters/10 AS INTEGER) * 10 AS distance_meters_bin,
+                CAST(distance_meters/10 AS SIGNED) * 10 AS distance_meters_bin,
                 FIRST_VALUE(energy_joules)
-                    OVER (PARTITION BY id, CAST(distance_meters/10 AS INTEGER) * 10
+                    OVER (PARTITION BY id, CAST(distance_meters/10 AS SIGNED) * 10
                     ORDER BY time_step ASC) AS energy_start,
                 LAST_VALUE(energy_joules)
-                    OVER (PARTITION BY id, CAST(distance_meters/10 AS INTEGER) * 10
+                    OVER (PARTITION BY id, CAST(distance_meters/10 AS SIGNED) * 10
                     ORDER BY time_step ASC) AS energy_end
             FROM cumulative_energy
         ), binned_energy AS (
@@ -1670,34 +1738,28 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_NETWORK_METRICS_BY_TIME_AGG = """
+        INSERT IGNORE INTO fact_network_metrics_by_time_agg(source_id,time_seconds_bin,cumulative_energy_avg,cumulative_energy_lower_bound,cumulative_energy_upper_bound,speed_avg,speed_upper_bound,speed_lower_bound,accel_avg,accel_upper_bound,accel_lower_bound,instantaneous_energy_avg,instantaneous_energy_upper_bound,instantaneous_energy_lower_bound)
         WITH joined_trace AS (
             SELECT
-                vt.id,
-                vt.source_id,
-                vt.time_step - FIRST_VALUE(vt.time_step)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC) AS time_step,
+                id,
+                source_id,
+                time_step - FIRST_VALUE(time_step)
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC) AS time_step,
                 energy_model_id,
-                et.speed,
-                et.acceleration,
-                vt.time_step - LAG(vt.time_step, 1)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC) AS sim_step,
+                speed,
+                acceleration,
+                time_step - LAG(time_step, 1)
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC) AS sim_step,
                 SUM(power)
-                    OVER (PARTITION BY vt.id, vt.source_id ORDER BY vt.time_step ASC
+                    OVER (PARTITION BY id, source_id ORDER BY time_step ASC
                     ROWS BETWEEN UNBOUNDED PRECEDING and CURRENT ROW) AS cumulative_power
-            FROM fact_vehicle_trace vt
-            JOIN fact_energy_trace et ON 1 = 1
-                AND et.date = \'{date}\'
-                AND et.partition_name = \'{partition}_MIDSIZE_SEDAN_FIT_DENOISED_ACCEL\'
-                AND vt.id = et.id
-                AND vt.source_id = et.source_id
-                AND vt.time_step = et.time_step
-                AND et.energy_model_id = 'MIDSIZE_SEDAN_FIT_DENOISED_ACCEL'
+            FROM fact_energy_trace
             WHERE 1 = 1
-                AND vt.date = \'{date}\'
-                AND vt.partition_name = \'{partition}\'
-                AND vt.{inflow_filter}
-                AND vt.{outflow_filter}
-                AND vt.time_step >= {start_filter}
+                AND source_id = \'{partition}\'
+                AND energy_model_id = 'MIDSIZE_SEDAN_FIT_DENOISED_ACCEL'
+                AND {inflow_filter}
+                AND {outflow_filter}
+                AND time_step >= {start_filter}
         ), cumulative_energy AS (
             SELECT
                 id,
@@ -1711,7 +1773,7 @@ class QueryStrings(Enum):
         ), binned_cumulative_energy AS (
             SELECT
                 source_id,
-                CAST(time_step/10 AS INTEGER) * 10 AS time_seconds_bin,
+                CAST(time_step/10 AS SIGNED) * 10 AS time_seconds_bin,
                 AVG(speed) AS speed_avg,
                 AVG(speed) + STDDEV(speed) AS speed_upper_bound,
                 AVG(speed) - STDDEV(speed) AS speed_lower_bound,
@@ -1729,12 +1791,12 @@ class QueryStrings(Enum):
             SELECT DISTINCT
                 source_id,
                 id,
-                CAST(time_step/10 AS INTEGER) * 10 AS time_seconds_bin,
+                CAST(time_step/10 AS SIGNED) * 10 AS time_seconds_bin,
                 FIRST_VALUE(energy_joules)
-                    OVER (PARTITION BY id, CAST(time_step/10 AS INTEGER) * 10
+                    OVER (PARTITION BY id, CAST(time_step/10 AS SIGNED) * 10
                     ORDER BY time_step ASC) AS energy_start,
                 LAST_VALUE(energy_joules)
-                    OVER (PARTITION BY id, CAST(time_step/10 AS INTEGER) * 10
+                    OVER (PARTITION BY id, CAST(time_step/10 AS SIGNED) * 10
                     ORDER BY time_step ASC) AS energy_end
             FROM cumulative_energy
         ), binned_energy AS (
@@ -1770,6 +1832,7 @@ class QueryStrings(Enum):
         ;"""
 
     FACT_VEHICLE_COUNTS_BY_TIME = """
+        INSERT IGNORE INTO fact_vehicle_counts_by_time(source_id,time_step,vehicle_count)
         WITH counts AS (
             SELECT
                 vt.source_id,
@@ -1777,8 +1840,7 @@ class QueryStrings(Enum):
                 COUNT(DISTINCT vt.id) AS vehicle_count
             FROM fact_vehicle_trace vt
             WHERE 1 = 1
-                AND vt.date = \'{date}\'
-                AND vt.partition_name = \'{partition}\'
+                AND vt.source_id = \'{partition}\'
                 AND vt.{inflow_filter}
                 AND vt.{outflow_filter}
                 AND vt.time_step >= {start_filter}
@@ -1794,10 +1856,10 @@ class QueryStrings(Enum):
     """
 
     LEADERBOARD_CHART_AGG = """
+        REPLACE INTO leaderboard_chart_agg(submission_date,source_id,submitter_name,strategy,network,is_baseline,is_benchmark,tacoma_efficiency_miles_per_gallon,prius_efficiency_miles_per_gallon,midsize_sedan_efficiency_miles_per_gallon,midsize_suv_efficiency_miles_per_gallon,distribution_v0_efficiency_miles_per_gallon,rav4_efficiency_miles_per_gallon,efficiency,tacoma_efficiency_miles_per_gallon_local,prius_efficiency_miles_per_gallon_local,midsize_sedan_efficiency_miles_per_gallon_local,midsize_suv_efficiency_miles_per_gallon_local,distribution_v0_efficiency_miles_per_gallon_local,rav4_efficiency_miles_per_gallon_local,efficiency_local,percent_infeasible,inflow,speed,vmt,lane_changes,space_gap,av_space_gap,time_gap,av_time_gap,speed_stddev,accel_stddev,safety_rate,safety_value_max)
         WITH agg AS (
             SELECT
-                l.date AS submission_date,
-                m.submission_time,
+                m.submission_date,
                 l.source_id,
                 m.submitter_name,
                 m.strategy,
@@ -1805,9 +1867,9 @@ class QueryStrings(Enum):
                 m.is_baseline,
                 COALESCE (m.penetration_rate, 'x') AS penetration_rate,
                 COALESCE (m.version, '2.0') AS version,
-                COALESCE (m.road_grade, 'False') AS road_grade,
-                COALESCE (m.on_ramp, 'False') AS on_ramp,
-                COALESCE (m.is_benchmark, 'False') AS is_benchmark,
+                COALESCE (m.road_grade, 0) AS road_grade,
+                COALESCE (m.on_ramp, 0) AS on_ramp,
+                COALESCE (m.is_benchmark, 0) AS is_benchmark,
                 l.prius_percent_infeasible,
                 l.tacoma_percent_infeasible,
                 l.midsize_sedan_percent_infeasible,
@@ -1868,8 +1930,12 @@ class QueryStrings(Enum):
             WHERE 1 = 1
                 AND l.source_id = m.source_id
                 AND m.network = b.network
-                AND (m.is_baseline='False'
-                     OR (m.is_baseline='True'
+                AND m.version = b.version
+                AND m.on_ramp = b.on_ramp
+                AND m.road_grade = b.road_grade
+                AND m.penetration_rate = b.penetration_rate
+                AND (m.is_baseline=0
+                     OR (m.is_baseline=1
                          AND m.source_id = b.source_id))
         ), joined_cols AS (
             SELECT
@@ -1877,15 +1943,15 @@ class QueryStrings(Enum):
                 agg.source_id,
                 agg.submitter_name,
                 agg.strategy,
-                agg.network || ';' ||
-                    ' v' || agg.version || ';' ||
-                    ' PR: ' || agg.penetration_rate || '%;' ||
-                    CASE agg.on_ramp WHEN
-                        'True' THEN ' with ramps;'
-                        ELSE ' no ramps;' END ||
-                    CASE agg.road_grade WHEN
-                        'True' THEN ' with grade;'
-                        ELSE ' no grade;' END AS network,
+                CONCAT (agg.network , ';' ,
+                    ' v' , agg.version , ';' ,
+                    ' PR: ' , agg.penetration_rate , '%;' ,
+                    CASE WHEN agg.on_ramp = 1
+                        THEN ' with ramps;'
+                        ELSE ' no ramps;' END ,
+                    CASE WHEN agg.road_grade= 1
+                        THEN ' with grade;'
+                        ELSE ' no grade;' END) AS network,
                 agg.is_baseline,
                 agg.is_benchmark,
                 agg.prius_percent_infeasible,
@@ -1900,29 +1966,41 @@ class QueryStrings(Enum):
                 agg.midsize_suv_efficiency_miles_per_gallon,
                 agg.distribution_v0_efficiency_miles_per_gallon,
                 agg.rav4_efficiency_miles_per_gallon,
+                IF(agg.prius_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.prius_efficiency_miles_per_gallon /
-                    agg.prius_efficiency_miles_per_gallon)
+                    agg.prius_efficiency_miles_per_gallon))
                     AS prius_fuel_economy_improvement,
+                IF(agg.tacoma_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.tacoma_efficiency_miles_per_gallon /
-                    agg.tacoma_efficiency_miles_per_gallon)
+                    agg.tacoma_efficiency_miles_per_gallon))
                     AS tacoma_fuel_economy_improvement,
+                IF(agg.midsize_sedan_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.midsize_sedan_efficiency_miles_per_gallon /
-                    agg.midsize_sedan_efficiency_miles_per_gallon)
+                    agg.midsize_sedan_efficiency_miles_per_gallon))
                     AS midsize_sedan_fuel_economy_improvement,
+                IF(agg.midsize_suv_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.midsize_suv_efficiency_miles_per_gallon /
-                    agg.midsize_suv_efficiency_miles_per_gallon)
+                    agg.midsize_suv_efficiency_miles_per_gallon))
                     AS midsize_suv_fuel_economy_improvement,
+                IF(agg.distribution_v0_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.distribution_v0_efficiency_miles_per_gallon /
-                    agg.distribution_v0_efficiency_miles_per_gallon)
+                    agg.distribution_v0_efficiency_miles_per_gallon))
                     AS distribution_v0_fuel_economy_improvement,
+                IF(agg.rav4_efficiency_miles_per_gallon=0,
+                NULL,
                 100 * (1 -
                     baseline.rav4_efficiency_miles_per_gallon /
-                    agg.rav4_efficiency_miles_per_gallon)
+                    agg.rav4_efficiency_miles_per_gallon))
                     AS rav4_fuel_economy_improvement,
                 agg.prius_efficiency_miles_per_gallon_local,
                 agg.tacoma_efficiency_miles_per_gallon_local,
@@ -1930,87 +2008,119 @@ class QueryStrings(Enum):
                 agg.midsize_suv_efficiency_miles_per_gallon_local,
                 agg.distribution_v0_efficiency_miles_per_gallon_local,
                 agg.rav4_efficiency_miles_per_gallon_local,
+                IF(agg.prius_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.prius_efficiency_miles_per_gallon_local /
-                    agg.prius_efficiency_miles_per_gallon_local)
+                    agg.prius_efficiency_miles_per_gallon_local))
                     AS prius_fuel_economy_improvement_local,
+                IF(agg.tacoma_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.tacoma_efficiency_miles_per_gallon_local /
-                    agg.tacoma_efficiency_miles_per_gallon_local)
+                    agg.tacoma_efficiency_miles_per_gallon_local))
                     AS tacoma_fuel_economy_improvement_local,
+                IF(agg.midsize_sedan_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.midsize_sedan_efficiency_miles_per_gallon_local /
-                    agg.midsize_sedan_efficiency_miles_per_gallon_local)
+                    agg.midsize_sedan_efficiency_miles_per_gallon_local))
                     AS midsize_sedan_fuel_economy_improvement_local,
+                IF(agg.midsize_suv_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.midsize_suv_efficiency_miles_per_gallon_local /
-                    agg.midsize_suv_efficiency_miles_per_gallon_local)
+                    agg.midsize_suv_efficiency_miles_per_gallon_local))
                     AS midsize_suv_fuel_economy_improvement_local,
+                IF(agg.distribution_v0_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.distribution_v0_efficiency_miles_per_gallon_local /
-                    agg.distribution_v0_efficiency_miles_per_gallon_local)
+                    agg.distribution_v0_efficiency_miles_per_gallon_local))
                     AS distribution_v0_fuel_economy_improvement_local,
+                IF(agg.rav4_efficiency_miles_per_gallon_local=0,
+                NULL,
                 100 * (1 -
                     baseline.rav4_efficiency_miles_per_gallon_local /
-                    agg.rav4_efficiency_miles_per_gallon_local)
+                    agg.rav4_efficiency_miles_per_gallon_local))
                     AS rav4_fuel_economy_improvement_local,
                 agg.throughput_per_hour,
+                IF(baseline.throughput_per_hour=0,
+                NULL,
                 100 * (agg.throughput_per_hour - baseline.throughput_per_hour) /
-                    baseline.throughput_per_hour
+                    baseline.throughput_per_hour)
                     AS throughput_change,
                 agg.avg_network_speed,
+                IF(baseline.avg_network_speed=0,
+                NULL,
                 100 * (agg.avg_network_speed - baseline.avg_network_speed) /
-                    baseline.avg_network_speed
+                    baseline.avg_network_speed)
                     AS speed_change,
                 agg.total_vmt,
+                IF(baseline.total_vmt=0,
+                NULL,
                 100 * (agg.total_vmt - baseline.total_vmt) /
-                    baseline.total_vmt
+                    baseline.total_vmt)
                     AS vmt_change,
                 agg.lane_changes_per_vehicle,
+                IF(baseline.lane_changes_per_vehicle=0,
+                NULL,
                 100 * (agg.lane_changes_per_vehicle - baseline.lane_changes_per_vehicle) /
-                    baseline.lane_changes_per_vehicle
+                    baseline.lane_changes_per_vehicle)
                     AS lane_changes_change,
                 agg.space_gap_min,
                 agg.space_gap_max,
                 agg.space_gap_avg,
                 agg.space_gap_stddev,
+                IF(baseline.space_gap_stddev=0,
+                NULL,
                 100 * (agg.space_gap_stddev - baseline.space_gap_stddev) /
-                    baseline.space_gap_stddev
+                    baseline.space_gap_stddev)
                     AS space_gap_dev_change,
                 agg.av_space_gap_min,
                 agg.av_space_gap_max,
                 agg.av_space_gap_avg,
                 agg.av_space_gap_stddev,
+                IF(baseline.av_space_gap_stddev=0,
+                NULL,
                 100 * (agg.av_space_gap_stddev - baseline.av_space_gap_stddev) /
-                    baseline.av_space_gap_stddev
+                    baseline.av_space_gap_stddev)
                     AS av_space_gap_dev_change,
                 agg.time_gap_min,
                 agg.time_gap_max,
                 agg.time_gap_avg,
                 agg.time_gap_stddev,
+                IF(baseline.time_gap_stddev=0,
+                NULL,
                 100 * (agg.time_gap_stddev - baseline.time_gap_stddev) /
-                    baseline.time_gap_stddev
+                    baseline.time_gap_stddev)
                     AS time_gap_dev_change,
                 agg.av_time_gap_min,
                 agg.av_time_gap_max,
                 agg.av_time_gap_avg,
                 agg.av_time_gap_stddev,
+                IF(baseline.av_time_gap_stddev=0,
+                NULL,
                 100 * (agg.av_time_gap_stddev - baseline.av_time_gap_stddev) /
-                    baseline.av_time_gap_stddev
+                    baseline.av_time_gap_stddev)
                     AS av_time_gap_dev_change,
                 agg.speed_min,
                 agg.speed_max,
                 agg.speed_avg,
                 agg.speed_stddev,
+                IF(baseline.speed_stddev=0,
+                NULL,
                 100 * (agg.speed_stddev - baseline.speed_stddev) /
-                    baseline.speed_stddev
+                    baseline.speed_stddev)
                     AS speed_dev_change,
                 agg.accel_min,
                 agg.accel_max,
                 agg.accel_avg,
                 agg.accel_stddev,
+                IF(baseline.accel_stddev=0,
+                NULL,
                 100 * (agg.accel_stddev - baseline.accel_stddev) /
-                    baseline.accel_stddev
+                    baseline.accel_stddev)
                     AS accel_dev_change,
                 agg.safety_rate,
                 agg.safety_value_max
@@ -2020,7 +2130,7 @@ class QueryStrings(Enum):
                 AND agg.version = baseline.version
                 AND agg.on_ramp = baseline.on_ramp
                 AND agg.road_grade = baseline.road_grade
-                AND baseline.is_baseline = 'True'
+                AND baseline.is_baseline = 1
                 AND agg.baseline_source_id = baseline.source_id
         )
         SELECT DISTINCT
@@ -2037,15 +2147,16 @@ class QueryStrings(Enum):
             midsize_suv_efficiency_miles_per_gallon,
             distribution_v0_efficiency_miles_per_gallon,
             rav4_efficiency_miles_per_gallon,
+            CONCAT(
             CASE
                 WHEN network = 'straight-road'
-                THEN CAST (ROUND(rav4_efficiency_miles_per_gallon, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(rav4_fuel_economy_improvement) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(rav4_fuel_economy_improvement, 1) AS VARCHAR)
-                ELSE CAST (ROUND(distribution_v0_efficiency_miles_per_gallon, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(distribution_v0_fuel_economy_improvement) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(distribution_v0_fuel_economy_improvement, 1) AS VARCHAR)
-            END || '%)' AS efficiency,
+                THEN CONCAT(CAST(ROUND(rav4_efficiency_miles_per_gallon, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(rav4_fuel_economy_improvement) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(rav4_fuel_economy_improvement, 1) AS CHAR(10)))
+                ELSE CONCAT(CAST(ROUND(distribution_v0_efficiency_miles_per_gallon, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(distribution_v0_fuel_economy_improvement) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(distribution_v0_fuel_economy_improvement, 1) AS CHAR(10)))
+            END , '%)') AS efficiency,
             tacoma_efficiency_miles_per_gallon_local,
             prius_efficiency_miles_per_gallon_local,
             midsize_sedan_efficiency_miles_per_gallon_local,
@@ -2054,54 +2165,66 @@ class QueryStrings(Enum):
             rav4_efficiency_miles_per_gallon_local,
             CASE
                 WHEN network = 'straight-road'
-                THEN CAST (ROUND(rav4_efficiency_miles_per_gallon_local, 1) AS VARCHAR)
-                ELSE CAST (ROUND(distribution_v0_efficiency_miles_per_gallon_local, 1) AS VARCHAR)
+                THEN CAST(ROUND(rav4_efficiency_miles_per_gallon_local, 1) AS CHAR(10))
+                ELSE CAST(ROUND(distribution_v0_efficiency_miles_per_gallon_local, 1) AS CHAR(10))
             END AS efficiency_local,
+            CONCAT(
             CASE
                 WHEN network = 'straight-road'
-                THEN CAST (ROUND(rav4_percent_infeasible, 1) AS VARCHAR)
-                ELSE CAST (ROUND(distribution_v0_percent_infeasible, 1) AS VARCHAR)
-            END || '%' AS percent_infeasible,
-            CAST (ROUND(throughput_per_hour, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(throughput_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(throughput_change, 1) AS VARCHAR) || '%)' AS inflow,
-            CAST (ROUND(avg_network_speed, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(speed_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(speed_change, 1) AS VARCHAR) || '%)' AS speed,
-            CAST (ROUND(total_vmt, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(vmt_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(vmt_change, 1) AS VARCHAR) || '%)' AS vmt,
-            CAST (ROUND(lane_changes_per_vehicle, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(lane_changes_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(lane_changes_change, 1) AS VARCHAR) || '%)' AS lane_changes,
-            '[' || CAST (ROUND(space_gap_min, 1) AS VARCHAR) || '-' ||
-                CAST (ROUND(space_gap_max, 1) AS VARCHAR) || '] <' ||
-                CAST (ROUND(space_gap_avg, 1) AS VARCHAR) || '>' AS space_gap,
-            '[' || CAST (ROUND(av_space_gap_min, 1) AS VARCHAR) || '-' ||
-                CAST (ROUND(av_space_gap_max, 1) AS VARCHAR) || '] <' ||
-                CAST (ROUND(av_space_gap_avg, 1) AS VARCHAR) || '>' AS av_space_gap,
-            '[' || CAST (ROUND(time_gap_min, 1) AS VARCHAR) || '-' ||
-                CAST (ROUND(time_gap_max, 1) AS VARCHAR) || '] <' ||
-                CAST (ROUND(time_gap_avg, 1) AS VARCHAR) || '>' AS time_gap,
-            '[' || CAST (ROUND(av_time_gap_min, 1) AS VARCHAR) || '-' ||
-                CAST (ROUND(av_time_gap_max, 1) AS VARCHAR) || '] <' ||
-                CAST (ROUND(av_time_gap_avg, 1) AS VARCHAR) || '>' AS av_time_gap,
-            CAST (ROUND(speed_stddev, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(speed_dev_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(speed_dev_change, 1) AS VARCHAR) || '%)\n[' ||
-                CAST (ROUND(speed_min, 1) AS VARCHAR) || '-' || CAST (ROUND(speed_max, 1) AS VARCHAR) ||
-                '] <' || CAST (ROUND(speed_avg, 1) AS VARCHAR) || '>' AS speed_stddev,
-            CAST (ROUND(accel_stddev, 1) AS VARCHAR) ||
-                ' (' || (CASE WHEN SIGN(accel_dev_change) = 1 THEN '+' ELSE '' END) ||
-                CAST (ROUND(accel_dev_change, 1) AS VARCHAR) || '%)\n[' ||
-                CAST (ROUND(accel_min, 1) AS VARCHAR) || '-' || CAST (ROUND(accel_max, 1) AS VARCHAR) ||
-                '] <' || CAST (ROUND(accel_avg, 1) AS VARCHAR) || '>' AS accel_stddev,
+                THEN CAST(ROUND(rav4_percent_infeasible, 1) AS CHAR(10))
+                ELSE CAST(ROUND(distribution_v0_percent_infeasible, 1) AS CHAR(10))
+            END , '%') AS percent_infeasible,
+            CONCAT(
+            CAST(ROUND(throughput_per_hour, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(throughput_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(throughput_change, 1) AS CHAR(10)) , '%)') AS inflow,
+            CONCAT(
+            CAST(ROUND(avg_network_speed, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(speed_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(speed_change, 1) AS CHAR(10)) , '%)') AS speed,
+            CONCAT(
+            CAST(ROUND(total_vmt, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(vmt_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(vmt_change, 1) AS CHAR(10)) , '%)') AS vmt,
+            CONCAT(
+            CAST(ROUND(lane_changes_per_vehicle, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(lane_changes_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(lane_changes_change, 1) AS CHAR(10)) , '%)') AS lane_changes,
+            CONCAT(
+            '[' , CAST(ROUND(space_gap_min, 1) AS CHAR(10)) , '-' ,
+                CAST(ROUND(space_gap_max, 1) AS CHAR(10)) , '] <' ,
+                CAST(ROUND(space_gap_avg, 1) AS CHAR(10)) , '>') AS space_gap,
+            CONCAT(
+            '[' , CAST(ROUND(av_space_gap_min, 1) AS CHAR(10)) , '-' ,
+                CAST(ROUND(av_space_gap_max, 1) AS CHAR(10)) , '] <' ,
+                CAST(ROUND(av_space_gap_avg, 1) AS CHAR(10)) , '>') AS av_space_gap,
+            CONCAT(
+            '[' , CAST(ROUND(time_gap_min, 1) AS CHAR(10)) , '-' ,
+                CAST(ROUND(time_gap_max, 1) AS CHAR(10)) , '] <' ,
+                CAST(ROUND(time_gap_avg, 1) AS CHAR(10)) , '>') AS time_gap,
+            CONCAT(
+            '[' , CAST(ROUND(av_time_gap_min, 1) AS CHAR(10)) , '-' ,
+                CAST(ROUND(av_time_gap_max, 1) AS CHAR(10)) , '] <' ,
+                CAST(ROUND(av_time_gap_avg, 1) AS CHAR(10)) , '>') AS av_time_gap,
+            CONCAT(
+            CAST(ROUND(speed_stddev, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(speed_dev_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(speed_dev_change, 1) AS CHAR(10)) , '%)\n[' ,
+                CAST(ROUND(speed_min, 1) AS CHAR(10)) , '-' , CAST(ROUND(speed_max, 1) AS CHAR(10)) ,
+                '] <' , CAST(ROUND(speed_avg, 1) AS CHAR(10)) , '>') AS speed_stddev,
+            CONCAT(
+            CAST(ROUND(accel_stddev, 1) AS CHAR(10)) ,
+                ' (' , (CASE WHEN SIGN(accel_dev_change) = 1 THEN '+' ELSE '' END) ,
+                CAST(ROUND(accel_dev_change, 1) AS CHAR(10)) , '%)\n[' ,
+                CAST(ROUND(accel_min, 1) AS CHAR(10)) , '-' , CAST(ROUND(accel_max, 1) AS CHAR(10)) ,
+                '] <' , CAST(ROUND(accel_avg, 1) AS CHAR(10)) , '>') AS accel_stddev,
             ROUND(safety_rate, 1) AS safety_rate,
             ROUND(safety_value_max, 1) AS safety_value_max
         FROM joined_cols
         ;"""
 
     FACT_TOP_SCORES = """
+        REPLACE INTO fact_top_scores(network,submission_date,tacoma_max_score,prius_max_score,midsize_sedan_max_score,midsize_suv_max_score,distribution_v0_max_score,rav4_max_score)
         WITH curr_max AS (
             SELECT
                 network,
@@ -2126,7 +2249,7 @@ class QueryStrings(Enum):
                     ROWS BETWEEN UNBOUNDED PRECEDING and CURRENT ROW) AS rav4_max_score
             FROM leaderboard_chart_agg
             WHERE 1 = 1
-                AND is_baseline = 'False'
+                AND is_baseline = 0
         ), prev_max AS (
             SELECT
                 network,

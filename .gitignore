@@ -21,3 +21,4 @@ output/
 vandertest_*/
 *_analysis_*/
 *.mp4
+ssl-cert/

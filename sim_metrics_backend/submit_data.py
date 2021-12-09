@@ -72,7 +72,7 @@ def submitData(filePath, isMeta):
         print("filePath: '{}' does not exist".format(filePath))
     # there are two types of files
     submit(csvData, isMeta, cnx)
-    run_queries_on_new_data(cnx, csvData)
+    # run_queries_on_new_data(cnx, csvData)
     cnx.close()
 
 
