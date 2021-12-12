@@ -233,7 +233,7 @@ diesel_g_to_joules = 42470
 diesel_galperhr_to_grampersec = 1.119
 
 DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(
-    __file__)), "../energy_models/model_coefficients")
+    __file__)), "./energy_models/model_coefficients")
 
 
 def load_coeffs(filename, mass, conversion=33.43e3, v_max_fit=40):
