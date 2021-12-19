@@ -1,5 +1,5 @@
 
-from sim_metrics_backend.data_pipeline.luigiSqlTask import *
+from sim_metrics_backend.luigiSqlTask import *
 
 import luigi
 

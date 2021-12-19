@@ -120,7 +120,7 @@ while True:
         print('Generating emissions...')
         if args.data_pipeline is not None:
             metadata = {
-                'is_baseline': args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ya'],
+                'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ya']),
                 'author': args.data_pipeline[0],
                 'strategy': args.data_pipeline[1]
             }
@@ -131,7 +131,7 @@ while True:
                 metadata['penetration_rate'] = pr
             metadata['version'] = '4.0 w/o LC' if args.no_lc else '4.0 w/ LCv0'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
-            test_env.gen_emissions(emissions_path=emissions_path, 
+            test_env.gen_emissions(emissions_path=emissions_path,
                                    upload_to_leaderboard=True,
                                    additional_metadata=metadata)
         else:

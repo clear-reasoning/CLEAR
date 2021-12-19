@@ -363,7 +363,7 @@ class TrajectoryEnv(gym.Env):
 
             # create metadata file
             source_id = f'flow_{uuid.uuid4().hex}'
-            is_baseline = str(additional_metadata.get('is_baseline', False))
+            is_baseline = additional_metadata.get('is_baseline', 0)
             submitter_name = additional_metadata.get('author', 'blank')
             strategy = additional_metadata.get('strategy', 'blank')
             penetration_rate = additional_metadata.get('penetration_rate', 'x')
@@ -376,10 +376,10 @@ class TrajectoryEnv(gym.Env):
                 'submitter_name': [submitter_name],
                 'strategy': [strategy],
                 'version': [version],
-                'on_ramp': ['False'],
+                'on_ramp': [0],
                 'penetration_rate': [penetration_rate],
-                'road_grade': ['False'],
-                'is_benchmark': ['False'],
+                'road_grade': [0],
+                'is_benchmark': [0],
             })
             print('Metadata:', metadata)
 
