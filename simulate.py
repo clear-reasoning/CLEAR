@@ -129,7 +129,7 @@ while True:
                 if '.' not in pr:
                     pr += '.0'
                 metadata['penetration_rate'] = pr
-            metadata['version'] = '4.0 w/o LC' if args.no_lc else '4.0 w/ LCv0'
+            metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
             test_env.gen_emissions(emissions_path=emissions_path,
                                    upload_to_leaderboard=True,
