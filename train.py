@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 import itertools
 import multiprocessing
@@ -6,9 +7,230 @@ import platform
 import subprocess
 import sys
 
-from args import parse_args_train
+from stable_baselines3.common.callbacks import CallbackList
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.policies import register_policy
+from stable_baselines3.ppo import PPO
+from stable_baselines3.td3 import TD3
+
+from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
+from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
+from trajectory.algos import CustomTD3Policy
+from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
+from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
-from setup_exp import run_experiment
+
+register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
+
+
+def parse_args_train():
+    parser = argparse.ArgumentParser(description='Train on the trajectory env.')
+
+    # exp params
+    parser.add_argument('--expname', type=str, default='test',
+        help='Name for the experiment.')
+    parser.add_argument('--logdir', type=str, default='./log',
+        help='Experiment logs, checkpoints and tensorboard files will be saved under {logdir}/{expname}_[current_time]/.')
+    parser.add_argument('--n_processes', type=int, default=1,
+        help='Number of processes to run in parallel. Useful when running grid searches.'
+             'Can be more than the number of available CPUs.')
+    parser.add_argument('--s3', default=False, action='store_true',
+        help='If set, experiment data will be uploaded to s3://trajectory.env/. '
+             'AWS credentials must have been set in ~/.aws in order to use this.')
+
+    parser.add_argument('--iters', type=int, default=1, nargs='+',
+        help='Number of iterations (rollouts) to train for.'
+             'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
+    parser.add_argument('--n_steps', type=int, default=640, nargs='+',
+        help='Number of environment steps to sample in each rollout in each environment.'
+             'This can span over less or more than the environment horizon.'
+             'Ideally should be a multiple of {batch_size}.')
+    parser.add_argument('--n_envs', type=int, default=1, nargs='+',
+        help='Number of environments to run in parallel.')
+
+    parser.add_argument('--cp_frequency', type=int, default=10,
+        help='A checkpoint of the model will be saved every {cp_frequency} iterations.'
+             'Set to None to not save no checkpoints during training.'
+             'Either way, a checkpoint will automatically be saved at the end of training.')
+    parser.add_argument('--eval_frequency', type=int, default=10,
+        help='An evaluation of the model will be done and saved to tensorboard every {eval_frequency} iterations.'
+             'Set to None to run no evaluations during training.'
+             'Either way, an evaluation will automatically be done at the start and at the end of training.')
+    parser.add_argument('--no_eval', default=False, action='store_true',
+        help='If set, no evaluation (ie. tensorboard plots) will be done.')
+
+    # training params
+    parser.add_argument('--algorithm', type=str, default='PPO', nargs='+',
+        help='RL algorithm to train with. Available options: PPO, TD3.')
+
+    parser.add_argument('--hidden_layer_size', type=int, default=32, nargs='+',
+        help='Hidden layer size to use for the policy and value function networks.'
+             'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
+    parser.add_argument('--network_depth', type=int, default=2, nargs='+',
+        help='Number of hidden layers to use for the policy and value function networks.'
+             'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
+
+    parser.add_argument('--lr', type=float, default=3e-4, nargs='+',
+        help='Learning rate.')
+    parser.add_argument('--batch_size', type=int, default=64, nargs='+',
+        help='Minibatch size.')
+    parser.add_argument('--n_epochs', type=int, default=10, nargs='+',
+        help='Number of SGD iterations per training iteration.')
+    parser.add_argument('--gamma', type=float, default=0.99, nargs='+',
+        help='Discount factor.')
+    parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
+        help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
+
+    parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
+        help='If true, the value function will be augmented with some additional states.')
+
+    # env params
+    parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
+        help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
+             'This works only for the base states and not for the additional vf states.')
+    parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
+        help='If true, the environment has a discrete action space.')
+    parser.add_argument('--use_fs', type=int, default=0, nargs='+',
+        help='If true, use a FollowerStopper wrapper.')
+    parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
+        help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
+    parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
+        help='Sets the training horizon.')
+    parser.add_argument('--env_max_headway', type=int, default=120, nargs='+',
+        help='Sets the headway above which we get penalized.')
+    parser.add_argument('--env_minimal_time_headway', type=float, default=1.0, nargs='+',
+        help='Sets the time headway below which we get penalized.')
+    parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
+        help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
+    parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
+        help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
+
+    parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
+        help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
+    parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
+        help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
+
+    args = parser.parse_args()
+    return args
+
+def run_experiment(config):
+    # create exp logdir
+    gs_logdir = config['gs_logdir']
+    gs_logdir.mkdir(parents=True, exist_ok=True)
+
+    # create env config
+    env_config = dict(DEFAULT_ENV_CONFIG)
+    env_config.update({
+        'horizon': config['env_horizon'],
+        'max_headway': config['env_max_headway'],
+        'discrete': config['env_discrete'],
+        'num_actions': config['env_num_actions'],
+        'use_fs': config['use_fs'],
+        'augment_vf': config['augment_vf'],
+        'minimal_time_headway': config['env_minimal_time_headway'],
+        'include_idm_mpg': config['env_include_idm_mpg'],
+        'num_concat_states': config['env_num_concat_states'],
+        'num_steps_per_sim': config['env_num_steps_per_sim'],
+        'platoon': config['env_platoon'],
+        'human_kwargs': config['env_human_kwargs'],
+    })
+
+    # create env
+    multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
+
+    # create callbacks
+    callbacks = []        
+    if not config['no_eval']:
+        callbacks.append(TensorboardCallback(
+            eval_freq=config['eval_frequency'],
+            eval_at_end=True))
+    callbacks += [
+        LoggingCallback(
+            grid_search_config=config['gs_config'],
+            log_metrics=True),
+        CheckpointCallback(
+            save_path=gs_logdir / 'checkpoints',
+            save_freq=config['cp_frequency'],
+            save_at_end=True,
+            s3_bucket='trajectory.env' if config['s3'] else None,
+            exp_logdir=config['exp_logdir'],),
+    ]
+    callbacks = CallbackList(callbacks)
+
+    # create train config
+    if config['algorithm'].lower() == 'ppo':
+        algorithm = AugmentedPPO if config['augment_vf'] else PPO
+        policy = SplitActorCriticPolicy if config['augment_vf'] else PopArtActorCriticPolicy
+
+        train_config = {
+            'policy_kwargs': {
+                'net_arch': [{
+                    'pi': [config['hidden_layer_size']] * config['network_depth'],
+                    'vf': [config['hidden_layer_size']] * config['network_depth'],
+                }],
+            },
+            'learning_rate': config['lr'],
+            'n_steps': config['n_steps'],
+            'batch_size': config['batch_size'],
+            'n_epochs': config['n_epochs'],
+            'gamma': config['gamma'],
+            'gae_lambda': config['gae_lambda'],
+            'clip_range': 0.2,
+            'clip_range_vf': 50,
+            'ent_coef': 0.0,
+            'vf_coef': 0.5,
+            'max_grad_norm': 0.5,
+        }
+    elif config['algorithm'].lower() == 'td3':
+        algorithm = TD3
+        policy = CustomTD3Policy if config['augment_vf'] else 'MlpPolicy'
+
+        train_config = {
+            'gamma': 0.99,
+            'learning_rate': 0.0003,
+            'buffer_size': 1000000,
+            'learning_starts': 100,
+            'train_freq': 100,
+            'gradient_steps': 100,
+            'batch_size': 128,
+            'tau': 0.005,
+            'policy_delay': 2,
+            'action_noise': None,
+            'target_policy_noise': 0.2,
+            'target_noise_clip': 0.5,
+        }
+    else:
+        raise ValueError(f'Unknown algorithm: {config["algorithm"]}')
+
+    train_config.update({
+        'env': multi_env,
+        'tensorboard_log': gs_logdir,
+        'verbose': 0,  # 0 no output, 1 info, 2 debug
+        'seed': None,  # only concerns PPO and not the environment
+        'device': 'cpu',  # 'cpu', 'cuda', 'auto'
+        'policy': policy,
+    })
+
+    # create learn config
+    learn_config = {
+        'total_timesteps': config['iters'] * config['n_steps'] * config['n_envs'],
+        'callback': callbacks,
+    }
+
+    # save configs
+    configs = {
+        'algorithm': algorithm,
+        'env_config': env_config,
+        'train_config': train_config,
+        'learn_config': learn_config
+    }
+    dict_to_json(configs, gs_logdir / 'configs.json')
+
+    # create model and start training
+    model = algorithm(**train_config)
+    model.learn(**learn_config)
 
 
 if __name__ == '__main__':

@@ -59,7 +59,6 @@ class Simulation(object):
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
             'rl_fs': FSWrappedRLVehicle,
-            'fs': FSVehicle
         }[controller]
 
         # get ID of leading and following cars (or None if they do not exist)

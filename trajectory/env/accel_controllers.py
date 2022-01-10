@@ -63,7 +63,6 @@ class TimeHeadwayFollowerStopper(object):
                  v_des=15,
                  max_accel=1.5,
                  max_deaccel=3.0):
-
         # other parameters
         self.h_1 = 0.4
         self.h_2 = 0.6

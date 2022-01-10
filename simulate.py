@@ -1,3 +1,4 @@
+import argparse
 from collections import defaultdict
 from datetime import datetime
 import importlib
@@ -8,11 +9,58 @@ import os
 import re
 
 import trajectory.config as tc
-from args import parse_args_simulate
 from trajectory.callbacks import TensorboardCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
+
+
+def parse_args_simulate():
+    parser = argparse.ArgumentParser(description='Simulate a trained controller or baselines on the trajectory env.')
+
+    parser.add_argument('--cp_path', type=str, default=None,
+        help='Path to a saved model checkpoint. '
+             'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
+    parser.add_argument('--verbose', default=False, action='store_true',  # not needed
+        help='If set, print information about the loaded controller when {av_controller} is "rl".')
+    parser.add_argument('--gen_emissions', default=False, action='store_true',  # by default yes, otherwise --fast, save all in one folder
+        help='If set, a .csv emission file will be generated.')
+    parser.add_argument('--gen_metrics', default=False, action='store_true',
+        help='If set, some figures will be generated and some metrics printed.')
+    parser.add_argument('--data_pipeline', default=None, nargs=3,
+        help='If set, the emission file and metadata will be uploaded to leaderboard. '
+             'Arguments are [author] [strategy name] [is baseline]. '
+             'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
+             'Note that [is baseline] should by default be set to False (or 0).')
+
+    parser.add_argument('--horizon', type=int, default=None,
+        help='Number of environment steps to simulate. If None, use a whole trajectory.')
+    parser.add_argument('--traj_path', type=str, default='dataset/data_v2_preprocessed/2021-03-26-21-26-45_2T3MWRFVXLW056972_masterArray_1_6131.csv',
+        help='Use a specific trajectory by default. Set to None to use a random trajectory.')
+    parser.add_argument('--platoon', type=str, default='av human*5',
+        help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
+             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3". '
+             'Available presets: "scenario1".')
+    parser.add_argument('--av_controller', type=str, default='idm',
+        help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
+    parser.add_argument('--av_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+    parser.add_argument('--human_controller', type=str, default='idm',
+        help='Controller to control the humans(s) with. Can be either one of "idm" or "fs".')
+    parser.add_argument('--human_kwargs', type=str, default='{}',
+        help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
+             'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
+
+    parser.add_argument('--no_lc', default=False, action='store_true',
+        help='If set, disables the lane-changing model.')
+
+    parser.add_argument('--all_trajectories', default=False, action='store_true',
+        help='If set, the script will be ran for all the trajectories in the dataset.')
+
+    args = parser.parse_args()
+    return args
 
 
 # parse command line arguments

@@ -114,8 +114,10 @@ class TensorboardCallback(BaseCallback):
             config['use_fs'] = False
             config['discrete'] = False
         config['av_controller'] = av_controller
+        print('\n'*5, 'original', config)
         if av_controller == 'idm':
             config['av_kwargs'] = 'dict(v0=45,noise=0)'
+        print('\n'*5, 'AV', av_controller, config)
         test_env = TrajectoryEnv(config=config, _verbose=False)
 
         # execute controller on traj
