@@ -125,8 +125,10 @@ class CustomTD3Policy(BasePolicy):
     def _build(self, lr_schedule: Schedule) -> None:
         # Create actor and target
         # the features extractor should not be shared
-        self.actor = self.make_actor(features_extractor=FirstHalfFeatureExtractor(self.observation_space, self.observation_space.low.shape[0] // 2))
-        self.actor_target = self.make_actor(features_extractor=FirstHalfFeatureExtractor(self.observation_space, self.observation_space.low.shape[0] // 2))
+        self.actor = self.make_actor(features_extractor=FirstHalfFeatureExtractor(
+            self.observation_space, self.observation_space.low.shape[0] // 2))
+        self.actor_target = self.make_actor(features_extractor=FirstHalfFeatureExtractor(
+            self.observation_space, self.observation_space.low.shape[0] // 2))
         # Initialize the target to have the same weights as the actor
         self.actor_target.load_state_dict(self.actor.state_dict())
 
@@ -137,7 +139,8 @@ class CustomTD3Policy(BasePolicy):
         self.critic_target = self.make_critic(features_extractor=None)
 
         self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic.optimizer = self.optimizer_class(self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.critic.optimizer = self.optimizer_class(
+            self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
     def _get_constructor_parameters(self) -> Dict[str, Any]:
         data = super()._get_constructor_parameters()

@@ -60,7 +60,7 @@ def valid_brake_distance(speed, max_deaccel, sim_step):
     # how many steps to get the speed to zero
     steps_to_zero = int(speed / speedReduction)
     return sim_step * (steps_to_zero * speed - speedReduction * steps_to_zero * (steps_to_zero + 1) / 2) + \
-            speed * sim_step
+        speed * sim_step
 
 
 def maximum_safe_stop_speed(brake_distance, speed, sim_step, max_decel):
@@ -112,7 +112,7 @@ def maximum_safe_stop_speed_euler(brake_distance, sim_step, max_decel):
     # h = 0.5 * n * (n-1) * b * s + n * b * t (solve for n)
     # n = ((1.0/2.0) - ((t + (pow(((s*s) + (4.0*((s*((2.0*h/b) - t)) + (t*t)))), (1.0/2.0))*sign/2.0))/s))
     sqrt_quantity = math.sqrt(
-    ((s * s) + (4.0 * ((s * (2.0 * brake_distance / speed_reduction - t)) + (t * t))))) * -0.5
+        ((s * s) + (4.0 * ((s * (2.0 * brake_distance / speed_reduction - t)) + (t * t))))) * -0.5
     n = math.floor(.5 - ((t + sqrt_quantity) / s))
     h = 0.5 * n * (n - 1) * speed_reduction * s + n * speed_reduction * t
     assert (h <= brake_distance + 1e-6)

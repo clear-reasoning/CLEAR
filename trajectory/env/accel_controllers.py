@@ -92,22 +92,22 @@ class TimeHeadwayFollowerStopper(object):
         v = min(max(lead_vel, 0), self.v_des)
         # compute the desired velocity
         if dx <= dx_1:
-          v_cmd = 0
+            v_cmd = 0
         elif dx <= dx_2:
-          v_cmd = v * (dx - dx_1) / (dx_2 - dx_1)
+            v_cmd = v * (dx - dx_1) / (dx_2 - dx_1)
         elif dx <= dx_3:
-          v_cmd = v + (self.v_des - v) * (dx - dx_2) \
-                  / (dx_3 - dx_2)
+            v_cmd = v + (self.v_des - v) * (dx - dx_2) \
+                / (dx_3 - dx_2)
         else:
-          v_cmd = self.v_des
+            v_cmd = self.v_des
 
         v_safe = safe_velocity(this_vel, lead_vel, headway, self.max_deaccel, time_step)
         desired_accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
         v_next = desired_accel * time_step + this_vel
         if v_next > v_safe:
-          self.accel = np.clip((v_safe - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+            self.accel = np.clip((v_safe - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
         else:
-          self.accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
+            self.accel = np.clip((v_cmd - this_vel) / time_step, -np.abs(self.max_deaccel), self.max_accel)
 
         return self.accel
 

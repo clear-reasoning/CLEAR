@@ -80,20 +80,21 @@ class Simulation(object):
             kind=kind,
             tags=tags,
             pos=0 if idx_leader is None else self.vehicles[idx_leader].pos - gap - self.vlength,
-            speed=initial_speed if initial_speed is not None else (0 if idx_leader is None else self.vehicles[idx_leader].speed),
+            speed=initial_speed if initial_speed is not None else (
+                0 if idx_leader is None else self.vehicles[idx_leader].speed),
             accel=0,
             timestep=self.timestep,
             length=self.vlength,
             leader=None if idx_leader is None else self.vehicles[idx_leader],
             follower=None if idx_follower is None else self.vehicles[idx_follower],
             **controller_kwargs)
-        
+
         # update new neighbors in linked list accordingly
         if idx_follower is not None:
             self.vehicles[idx_follower].leader = veh
         if idx_leader is not None:
             self.vehicles[idx_leader].follower = veh
-        
+
         # add vehicle to simulation
         self.vids += 1
         if insert_at_index is None:
@@ -109,7 +110,7 @@ class Simulation(object):
             self.vehicles[idx - 1].follower = self.vehicles[idx + 1] if idx + 1 < len(self.vehicles) else None
         if idx + 1 < len(self.vehicles):
             self.vehicles[idx + 1].leader = self.vehicles[idx - 1] if idx > 0 else None
-        
+
         # delete vehicle
         self.vehicles.pop(idx)
 
@@ -124,13 +125,13 @@ class Simulation(object):
 
     def handle_lane_changes(self):
         # cut-in and cut-out probabilities (between 0 and 1) per 0.1s timestep
-        cutin_proba_fn = lambda space_gap, leader_speed: \
-             (1.9e-2 + -8.975e-4 * space_gap + 1.002e-4 * space_gap * space_gap) / 100.0 if leader_speed <= 25.0 \
-             else (-5.068e-3 + 1.347e-3 * space_gap + 8.912e-6 * space_gap * space_gap) / 100.0
-        cutout_proba_fn = lambda leader_speed: \
+        def cutin_proba_fn(space_gap, leader_speed): return \
+            (1.9e-2 + -8.975e-4 * space_gap + 1.002e-4 * space_gap * space_gap) / 100.0 if leader_speed <= 25.0 \
+            else (-5.068e-3 + 1.347e-3 * space_gap + 8.912e-6 * space_gap * space_gap) / 100.0
+        def cutout_proba_fn(leader_speed): return \
             (-8.98e-3 + 8.763e-3 * leader_speed - 2.1e-4 * leader_speed * leader_speed) / 100.0
         # gap ratio (gap of inserted vehicle / gap of ego vehicle) on cut-in
-        gap_ratio_fn = lambda: min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
+        def gap_ratio_fn(): return min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
 
         # compute ratio of gained and lost vehicles from the initial count, to balance out cut-ins and cut-outs
         n_vehicles = len(self.vehicles)
@@ -147,7 +148,7 @@ class Simulation(object):
         while i < len(self.vehicles):
             veh = self.vehicles[i]
 
-            # handle cut-ins: first make sure there's enough room to insert 
+            # handle cut-ins: first make sure there's enough room to insert
             # a vehicle (with a 1m safety margin on both sides)
             if (gap := veh.get_headway()) > veh.length + 2.0:
                 if random.random() <= cutin_proba_fn(gap, veh.leader.speed) * cutin_multipier:
@@ -160,10 +161,10 @@ class Simulation(object):
 
                     # add vehicle in front of veh
                     new_veh = self.add_vehicle(
-                        controller='idm', 
-                        kind='human', 
-                        gap=inserted_gap, 
-                        initial_speed=inserted_speed, 
+                        controller='idm',
+                        kind='human',
+                        gap=inserted_gap,
+                        initial_speed=inserted_speed,
                         insert_at_index=i)
                     self.n_cutins += 1
 
@@ -229,12 +230,16 @@ class Simulation(object):
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
-            self.add_data(veh, 'instant_energy_consumption', self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
-            self.add_data(veh, 'total_energy_consumption', get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
+            self.add_data(veh, 'instant_energy_consumption',
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
+            self.add_data(veh, 'total_energy_consumption', get_last_or(
+                self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
             self.add_data(veh, 'total_distance_traveled', veh.pos - self.data_by_vehicle[veh.name]['position'][0])
             self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
-            self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]['total_energy_consumption'][-1] / 3600.0 * self.timestep)
-            self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles'][-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
+            self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]
+                          ['total_energy_consumption'][-1] / 3600.0 * self.timestep)
+            self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles']
+                          [-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
             self.add_data(veh, 'realized_accel', (veh.prev_speed - veh.speed) / self.timestep)
             self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)

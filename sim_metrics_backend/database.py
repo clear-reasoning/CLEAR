@@ -70,6 +70,7 @@ def get_network(cnx, source_id):
         cursor.close()
     return network
 
+
 # Examples
 if __name__ == '__main__':
 

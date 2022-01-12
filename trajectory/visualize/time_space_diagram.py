@@ -30,7 +30,7 @@ def plot_time_space_diagram(emissions_path, save_path):
     cmap = colors.LinearSegmentedColormap('my_colormap', cdict, 1024)
 
     # plot line segments
-    lc = LineCollection(segs, cmap=cmap) #, norm=norm)
+    lc = LineCollection(segs, cmap=cmap)  # , norm=norm)
     lc.set_array(df['speed'].values)
     lc.set_linewidth(1)
     ax.add_collection(lc)
@@ -51,5 +51,5 @@ def plot_time_space_diagram(emissions_path, save_path):
 
 
 if __name__ == '__main__':
-	emissions_path, save_path = sys.argv[1], sys.argv[2]
-	plot_time_space_diagram(emissions_path, save_path)
+    emissions_path, save_path = sys.argv[1], sys.argv[2]
+    plot_time_space_diagram(emissions_path, save_path)

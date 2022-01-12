@@ -1,6 +1,7 @@
 import argparse
 import subprocess
-import os, os.path
+import os
+import os.path
 from datetime import datetime as dt
 
 
@@ -11,18 +12,18 @@ def parse_args_savio():
 
     parser.add_argument('command', type=str, help='Command to run the experiment.')
     parser.add_argument('--jobname', type=str, default='test',
-        help='Name for the job.')
+                        help='Name for the job.')
     parser.add_argument('--logdir', type=str, default='slurm_logs',
-        help='Logdir for experiment logs.')
+                        help='Logdir for experiment logs.')
     parser.add_argument('--mail', type=str, default=None,
-        help='Email address where to send experiment status (started, failed, finished).'
-             'Leave to None to receive no emails.')
+                        help='Email address where to send experiment status (started, failed, finished).'
+                        'Leave to None to receive no emails.')
     parser.add_argument('--partition', type=str, default='savio',
-        help='Partition to run the experiment on.')
+                        help='Partition to run the experiment on.')
     parser.add_argument('--account', type=str, default='ac_mixedav',
-        help='Account to use for running the experiment.')
+                        help='Account to use for running the experiment.')
     parser.add_argument('--time', type=str, default='24:00:00',
-        help='Maximum running time of the experiment in hh:mm:ss format, maximum 72:00:00.')
+                        help='Maximum running time of the experiment in hh:mm:ss format, maximum 72:00:00.')
 
     args = parser.parse_args()
     return args
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     log_path = os.path.join(args.logdir, args.jobname) + f'_{time}.out'
 
     savio_script = \
-f"""#!/bin/bash
+        f"""#!/bin/bash
 
 #SBATCH --job-name={args.jobname}
 #SBATCH --account={args.account}

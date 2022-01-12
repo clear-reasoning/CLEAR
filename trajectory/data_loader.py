@@ -11,7 +11,7 @@ from collections import defaultdict
 import trajectory.config as tc
 from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_bearing, get_driving_direction, get_valid_lat_long, \
-                      lat_long_distance, moving_sum, pairwise, counter
+    lat_long_distance, moving_sum, pairwise, counter
 from trajectory.visualize.plotter import Plotter
 
 
@@ -31,7 +31,7 @@ class DataLoader(object):
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
-                'positions': positions,  # np.array(data['DistanceGPS']),
+                'positions': positions,  #  np.array(data['DistanceGPS']),
                 'velocities': np.array(data['Velocity']) / 3.6,
                 'accelerations': np.array(data['Acceleration'])
             })
@@ -67,10 +67,11 @@ class DataLoader(object):
 
 ###################################################################################################
 
-def smooth_data(target, n, mu = 0.5):
+def smooth_data(target, n, mu=0.5):
     for i in range(n):
         target = mu/2*np.append(target[0], target[:-1]) + (1-mu)*target + mu/2*np.append(target[1:], target[-1])
     return target
+
 
 def _preprocess_data():
     """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
@@ -101,7 +102,7 @@ def _preprocess_data():
         # compute total ego distances traveled from GPS coordinates
         distances = itertools.accumulate(
             pairwise(zip(df['LatitudeGPS'], df['LongitudeGPS'])),
-            func=lambda dist, x: dist + lat_long_distance(*x), 
+            func=lambda dist, x: dist + lat_long_distance(*x),
             initial=0
         )
         df['DistanceGPS'] = list(distances)
@@ -115,7 +116,7 @@ def _preprocess_data():
             k = np.deg2rad(df['LongitudeGPS'][i+1])
             m = np.deg2rad(df['LatitudeGPS'][i])
             n = np.deg2rad(df['LatitudeGPS'][i+1])
-            bears.append(get_bearing(j,m,k,n))
+            bears.append(get_bearing(j, m, k, n))
         bears.append(0)
         df['Bearing'] = bears
 
@@ -123,32 +124,32 @@ def _preprocess_data():
         for i in range(len(df['Bearing'])):
             directions.append(get_driving_direction(df['Bearing'][i]))
         df['DrivingDir'] = directions
-        
+
         valid_points = []
         for i in range(len(df['LatitudeGPS'])):
             lat = df['LatitudeGPS'][i]
             long = df['LongitudeGPS'][i]
-            valid_points.append(get_valid_lat_long(lat,long))
+            valid_points.append(get_valid_lat_long(lat, long))
         df['ValidPt'] = valid_points
 
         switches = np.abs(np.diff(df['ValidPt']))
-        switching_points = np.argwhere(switches==1)
+        switching_points = np.argwhere(switches == 1)
         num_switches = len(switching_points)
-        
+
         i = 0
         k = 0
         while i < num_switches:
-            #Find points at which it switches out of valid space:
+            # Find points at which it switches out of valid space:
             start_point = switching_points[i][0]
             end_point = switching_points[i+1][0]
-            
-            #get the direction it's going in:
+
+            # get the direction it's going in:
             direction = df['DrivingDir'][start_point]
 
             if direction == 'West':
                 # extract sub-trajectory
                 sub_df = df.iloc[start_point:end_point]
-            
+
                 # save trajectory
                 file_path = str(fp).replace('data_v2', 'data_v2_preprocessed')
                 file_path = file_path.replace('.csv', f'_{k}_{end_point - start_point}.csv')
@@ -180,12 +181,12 @@ if __name__ == '__main__':
         print('Plotting processed trajectory data')
         plotter = Plotter(f'figs/dataset/processed/{curr_time}')
         for traj in data_loader.get_all_trajectories():
-            plotter.plot(traj['times'], traj['positions'], title='Ego positions', 
-                xlabel='time (s)', ylabel='position (m)', grid=True)
-            plotter.plot(traj['times'], traj['velocities'], title='Ego velocities', 
-                xlabel='time (s)', ylabel='speed (m/s)', grid=True)
-            plotter.plot(traj['times'], traj['accelerations'], title='Ego accelerations', 
-                xlabel='time (s)', ylabel='accel (m/$s^2$)', grid=True)
+            plotter.plot(traj['times'], traj['positions'], title='Ego positions',
+                         xlabel='time (s)', ylabel='position (m)', grid=True)
+            plotter.plot(traj['times'], traj['velocities'], title='Ego velocities',
+                         xlabel='time (s)', ylabel='speed (m/s)', grid=True)
+            plotter.plot(traj['times'], traj['accelerations'], title='Ego accelerations',
+                         xlabel='time (s)', ylabel='accel (m/$s^2$)', grid=True)
             plotter.save(traj['path'].stem, log='\t')
 
     if 'plot_sims' in sys.argv:  # plot mpg values for the trajectories, using different types of platoons
@@ -220,10 +221,11 @@ if __name__ == '__main__':
                 print(traj['path'])
                 sim = Simulation(timestep=traj['timestep'])
                 sim.add_vehicle(controller='trajectory',
-                    trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
+                                trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
                 sim.add_vehicle(controller=controller, gap=20, **av_params)
                 for _ in range(num_idms):
-                    sim.add_vehicle(controller='idm', gap=20, **dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3))
+                    sim.add_vehicle(controller='idm', gap=20, **dict(v0=35, T=1,
+                                    a=1.3, b=2.0, delta=4, s0=2, noise=0.3))
                 sim.run()
 
                 # plot
@@ -251,20 +253,21 @@ if __name__ == '__main__':
                 with plotter.subplot(title='MPGs (average doesn\'t account for trajectory vehicles)', xlabel='Time (s)', ylabel='Miles per gallon', grid=True, legend=True):
                     mpgs = []
                     for vid, vdata in sim.data_by_vehicle.items():
-                        mpg = (np.sum(vdata['speed']) / 1609.34) / (np.sum(vdata['instant_energy_consumption']) / 3600 + 1e-6)
+                        mpg = (np.sum(vdata['speed']) / 1609.34) / \
+                            (np.sum(vdata['instant_energy_consumption']) / 3600 + 1e-6)
                         plotter.plot([0, 1], [mpg] * 2, label=f'{vid} ({round(mpg, 2)})')
                         if 'trajectory' not in vid:
                             mpgs.append(mpg)
                     avg_mpg = np.mean(mpgs)
                     plotter.plot([0, 1], [avg_mpg] * 2, label=f'average ({round(avg_mpg, 2)})', linewidth=3.0)
-                
+
                 mpg_params[controller][str(av_params)] = avg_mpg
 
                 params_str = '_'.join([f'{k}={v}' for k, v in av_params.items()])
                 plotter.save(f'platoon_{num_idms}{controller}_{params_str}_{round(avg_mpg, 2)}mpg', log='\t')
-            
+
             if 'idm' in mpg_params:
-                heat = np.empty((0,len(b_sweep)), int)
+                heat = np.empty((0, len(b_sweep)), int)
                 for j in np.arange(len(a_sweep) * len(b_sweep), 0, -len(b_sweep)):
                     heat = np.append(heat, np.array([list(mpg_params['idm'].values())[j-len(b_sweep): j]]), axis=0)
 
@@ -272,9 +275,9 @@ if __name__ == '__main__':
                 x_ticks = range(0, len(b_sweep))
                 yticklabels = np.around(a_sweep, decimals=1)[::-1]
                 xticklabels = np.around(b_sweep, decimals=1)
-    
+
                 plotter.heatmap(heat, xlabel='', ylabel='', xticks=x_ticks, yticks=y_ticks,
-                                xticklabels= xticklabels, yticklabels=yticklabels,
+                                xticklabels=xticklabels, yticklabels=yticklabels,
                                 title="Heatmap of IDM a and b parameters", cbarlabel='MPG')
 
             all_mpg_params.append(mpg_params)
@@ -291,14 +294,14 @@ if __name__ == '__main__':
             for traj in all_mpg_params:
                 for controller, m_param in traj.items():
                     if controller == 'fs':
-                        fs_plotter.plot([elem['v_des'] for elem in [eval(x) for x in list(m_param.keys())]], list(m_param.values()))
+                        fs_plotter.plot([elem['v_des'] for elem in [eval(x)
+                                        for x in list(m_param.keys())]], list(m_param.values()))
 
             fs_plotter.save('v_des_sweep')
-        
 
     if 'small_chunks' in sys.argv:  # compute different metrics on a lot of small chunks of trajectories
         print('Running simulations with small chunks of trajectories')
-        
+
         low_speed_mpgs = []
         high_speed_mpgs = []
         for i, traj in enumerate(data_loader.get_trajectories(chunk_size=600, count=100)):
@@ -306,7 +309,7 @@ if __name__ == '__main__':
             idm_params = dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)
             sim = Simulation(timestep=traj['timestep'])
             sim.add_vehicle(controller='trajectory',
-                trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
+                            trajectory=zip(traj['positions'], traj['velocities'], traj['accelerations']))
             for _ in range(5):
                 sim.add_vehicle(controller='idm', gap=20, **idm_params)
             sim.run()

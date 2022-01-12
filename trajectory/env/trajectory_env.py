@@ -49,7 +49,7 @@ DEFAULT_ENV_CONFIG = {
 }
 
 # platoon presets that can be passed to the "platoon" env param
-PLATOON_PRESETS= {
+PLATOON_PRESETS = {
     'scenario1': 'human#sensor human*5 (human#sensor human*5 av human*5)*4 human#sensor human*5 human#sensor',
     '2avs_4%': 'av human*24 av human*24',
     '2avs_5%': 'av human*19 av human*19',
@@ -181,7 +181,7 @@ class TrajectoryEnv(gym.Env):
 
         # populate simulation with a trajectoy leader
         self.sim.add_vehicle(controller='trajectory', kind='leader',
-            trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
+                             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
 
         # parse platoons
         if self.platoon in PLATOON_PRESETS:
@@ -189,7 +189,7 @@ class TrajectoryEnv(gym.Env):
             self.platoon = PLATOON_PRESETS[self.platoon]
 
         # replace (subplatoon)*n into subplatoon ... subplatoon (n times)
-        replace1 = lambda match: ' '.join([match.group(1)] * int(match.group(2)))
+        def replace1(match): return ' '.join([match.group(1)] * int(match.group(2)))
         self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
         # parse veh#tag1...#tagk*n into (veh, [tag1, ..., tagk], n)
         self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
@@ -202,11 +202,13 @@ class TrajectoryEnv(gym.Env):
                 tags = vtags.split('#')[1:]
                 if vtype == 'av':
                     self.avs.append(
-                        self.sim.add_vehicle(controller=self.av_controller, kind='av', tags=tags, gap=-1, **eval(self.av_kwargs))
+                        self.sim.add_vehicle(controller=self.av_controller, kind='av',
+                                             tags=tags, gap=-1, **eval(self.av_kwargs))
                     )
                 elif vtype == 'human':
                     self.humans.append(
-                        self.sim.add_vehicle(controller=self.human_controller, kind='human', tags=tags, gap=-1, **eval(self.human_kwargs))
+                        self.sim.add_vehicle(controller=self.human_controller, kind='human',
+                                             tags=tags, gap=-1, **eval(self.human_kwargs))
                     )
                 else:
                     raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
@@ -286,7 +288,8 @@ class TrajectoryEnv(gym.Env):
         if any(headway_penalties.values()):
             reward -= 2.0
 
-        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0) for veh in self.mpg_cars]) / 10.0
+        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+                          for veh in self.mpg_cars]) / 10.0
         if self.av_controller == 'rl':
             reward -= 0.002 * accel ** 2
         reward += 1
@@ -307,7 +310,7 @@ class TrajectoryEnv(gym.Env):
         # get next state & done
         next_state = self.get_state(_store_state=True)
         done = (end_of_horizon or crash)
-        infos = { 'metrics': metrics }
+        infos = {'metrics': metrics}
 
         if self.collect_rollout:
             self.collected_rollout['actions'].append(get_first_element(actions))
@@ -388,12 +391,18 @@ class TrajectoryEnv(gym.Env):
 
             # custom emissions for leaderboard
             def change_id(vid):
-                if vid is None: return None
-                elif '#sensor' in vid: return f'sensor_{vid}'
-                elif 'human' in vid: return f'human_{vid}'
-                elif 'av' in vid: return f'av_{vid}'
-                elif 'trajectory' in vid: return f'human_{vid}'
-                else: raise ValueError(f'Unknown vehicle type: {vid}')
+                if vid is None:
+                    return None
+                elif '#sensor' in vid:
+                    return f'sensor_{vid}'
+                elif 'human' in vid:
+                    return f'human_{vid}'
+                elif 'av' in vid:
+                    return f'av_{vid}'
+                elif 'trajectory' in vid:
+                    return f'human_{vid}'
+                else:
+                    raise ValueError(f'Unknown vehicle type: {vid}')
 
             self.emissions['id'] = list(map(change_id, self.emissions['id']))
             self.emissions['leader_id'] = list(map(change_id, self.emissions['leader_id']))
@@ -417,10 +426,10 @@ class TrajectoryEnv(gym.Env):
 
             emissions_df = pd.DataFrame(self.emissions).sort_values(by=['time', 'id'])
             emissions_df = emissions_df[['time', 'id', 'x', 'y', 'speed', 'headway',
-                'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
-                'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
-                'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
-                'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id', 'submission_date']]
+                                         'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
+                                         'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
+                                         'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
+                                         'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id', 'submission_date']]
             leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
@@ -452,4 +461,3 @@ class TrajectoryEnv(gym.Env):
             upload_to_pipeline(
                 tsd_path, file_type='tsd', log=True
             )
-

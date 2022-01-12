@@ -16,8 +16,10 @@ class Vehicle(object):
         self.tags = tags
 
         self.name = f'{self.vid}_{self.controller}'
-        if self.kind is not None: self.name += f'_{self.kind}'
-        if self.tags is not None: self.name += ''.join([f'#{tag}' for tag in tags])
+        if self.kind is not None:
+            self.name += f'_{self.kind}'
+        if self.tags is not None:
+            self.name += ''.join([f'#{tag}' for tag in tags])
 
         self.pos = pos
         self.speed = speed
@@ -147,6 +149,7 @@ class RLVehicle(Vehicle):
     def set_accel(self, accel):
         self.accel = self.apply_failsafe(accel)
         return self.accel
+
 
 class FSWrappedRLVehicle(Vehicle):
     def __init__(self, **kwargs):

@@ -281,8 +281,8 @@ def rerun_query(s3, sqs, queue_url, table, bucket='circles.data.pipeline', sourc
                         start_filter, max_decel, leader_max_decel)
         message_body = json.dumps(message_body)
         sqs.send_message(
-                QueueUrl=queue_url,
-                MessageBody=message_body)
+            QueueUrl=queue_url,
+            MessageBody=message_body)
 
 
 def list_source_ids(s3, bucket='circles.data.pipeline'):
