@@ -7,13 +7,13 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - run: pip install pydocstyle
-            - run: pydocstyle --convention numpy
+            - run: pydocstyle
     formatting:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
             - run: pip install flake8
-            - run: flake8 --show-source
+            - run: flake8
     installation:
         runs-on: ubuntu-latest
         steps:
