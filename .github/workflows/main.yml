@@ -2,12 +2,16 @@ name: CI
 on: [push]
 
 jobs:
-    formatting:
+    documentation:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
             - run: pip install pydocstyle
             - run: pydocstyle --convention numpy
+    formatting:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
             - run: pip install flake8
             - run: flake8 --show-source
     install:
