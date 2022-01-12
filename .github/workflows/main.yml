@@ -21,9 +21,13 @@ jobs:
             - run: ls -a
             - uses: conda-incubator/setup-miniconda@v2
               with:
-                  environment-file: environment.yml
                   activate-environment: trajectory
-            - run: |
+                  environment-file: environment.yml
+            - shell: bash -l {0}
+              run: |
                   conda info
                   conda list
-            - run: python train.py --iters 1 --no_eval
+                  conda env list
+                  which python
+            - shell: bash -l {0}
+              run: python train.py --iters 1 --no_eval
