@@ -18,6 +18,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - run: conda env create -f environment.yml
-            - run: conda activate trajectory
+            - uses: conda-incubator/setup-miniconda@v2
+              with:
+                  environment-file: environment.yml
+            - run: |
+                  conda info
+                  conda list
             - run: python train.py --iters 1 --no_eval
