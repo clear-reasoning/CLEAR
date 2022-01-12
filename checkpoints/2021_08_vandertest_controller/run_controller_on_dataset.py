@@ -45,7 +45,7 @@ class DataLoader(object):
                 yield dict(traj)
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
-                k: traj[k][start_idx:start_idx+chunk_size]
+                k: traj[k][start_idx:start_idx + chunk_size]
                 for k in ['times', 'positions', 'velocities', 'accelerations']
             }
             traj_chunk.update({

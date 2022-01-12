@@ -11,8 +11,7 @@ def plot_platoon_mpg(emissions_path, save_path):
 
     circles_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id']
                     or 'sensor' in veh_dict['veh_id']]
-    leader_nums = [circles_num-1 for circles_num in circles_nums]
-    leader_nums.sort()
+    leader_nums = sorted([circles_num - 1 for circles_num in circles_nums])
     local_nums = circles_nums + leader_nums
     local_nums.sort()
     local_ids = {id_dict[local_num]['veh_id']: local_num for local_num in local_nums}
@@ -32,7 +31,7 @@ def plot_platoon_mpg(emissions_path, save_path):
 
     av_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id']]
     df['platoon_id'] = pd.cut(df['id_num'], [0] + av_nums + [100], right=False,
-                              include_lowest=True, labels=range(1, len(av_nums)+2))
+                              include_lowest=True, labels=range(1, len(av_nums) + 2))
 
     platoon_df = df[df['id'].isin(local_ids.keys())].groupby('platoon_id')[['total_miles', 'total_gallons']].sum()
     platoon_df['mpg'] = platoon_df['total_miles'] / platoon_df['total_gallons']
@@ -65,7 +64,7 @@ def plot_platoon_mpg(emissions_path, save_path):
                   av_nums[0], max_mpg * 1.1, edgecolor='g', fill=False, lw=2))
     plt.annotate('Platoon 1', (len(id_dict) - av_nums[0], max_mpg * 1.2), fontsize=16)
 
-    ax1.set_ylim(0, max_mpg*1.4)
+    ax1.set_ylim(0, max_mpg * 1.4)
     ax1.set_xlim(-1, len(id_dict))
     ax1.get_legend().remove()
 

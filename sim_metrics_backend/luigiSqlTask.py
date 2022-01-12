@@ -55,7 +55,8 @@ class TACOMA_FIT_DENOISED_ACCEL(luigi.Task):
     query = QueryStrings.TACOMA_FIT_DENOISED_ACCEL.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -89,7 +90,8 @@ class PRIUS_FIT_DENOISED_ACCEL(luigi.Task):
     query = QueryStrings.PRIUS_FIT_DENOISED_ACCEL.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -621,7 +623,8 @@ class FACT_NETWORK_FUEL_EFFICIENCY_AGG(luigi.Task):
                            update_id=str(self.runtime))
 
     def requires(self):
-        return [FACT_VEHICLE_FUEL_EFFICIENCY_AGG(partition_name=self.partition_name, start_filter=self.start_filter, inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter)]
+        return [FACT_VEHICLE_FUEL_EFFICIENCY_AGG(partition_name=self.partition_name, start_filter=self.start_filter,
+                                                 inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter)]
 
     def run(self):
         connection = self.output().connect()
@@ -751,7 +754,8 @@ class LEADERBOARD_CHART_AGG(luigi.Task):
                            update_id=str(self.runtime))
 
     def requires(self):
-        return [LEADERBOARD_CHART(partition_name=self.partition_name, start_filter=self.start_filter, max_decel=self.max_decel, leader_max_decel=self.leader_max_decel, inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter)]
+        return [LEADERBOARD_CHART(partition_name=self.partition_name, start_filter=self.start_filter, max_decel=self.max_decel,
+                                  leader_max_decel=self.leader_max_decel, inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter)]
 
     def run(self):
         connection = self.output().connect()
@@ -789,7 +793,8 @@ class FACT_AV_TRACE(luigi.Task):
     query = QueryStrings.FACT_AV_TRACE.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -829,7 +834,8 @@ class FACT_SAFETY_METRICS_2D(luigi.Task):
     query = QueryStrings.FACT_SAFETY_METRICS_2D.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -868,7 +874,8 @@ class FACT_NETWORK_INFLOWS_OUTFLOWS(luigi.Task):
     query = QueryStrings.FACT_NETWORK_INFLOWS_OUTFLOWS.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -904,7 +911,8 @@ class FACT_SPACE_GAPS_BINNED(luigi.Task):
     query = QueryStrings.FACT_SPACE_GAPS_BINNED.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -939,7 +947,8 @@ class FACT_TIME_GAPS_BINNED(luigi.Task):
     query = QueryStrings.FACT_TIME_GAPS_BINNED.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -976,7 +985,8 @@ class FACT_VEHICLE_COUNTS_BY_TIME(luigi.Task):
     query = QueryStrings.FACT_VEHICLE_COUNTS_BY_TIME.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]
@@ -1015,7 +1025,8 @@ class FACT_FOLLOWERSTOPPER_ENVELOPE(luigi.Task):
     query = QueryStrings.FACT_FOLLOWERSTOPPER_ENVELOPE.value
 
     def output(self):
-        return MySqlTarget(host=host, database=database, user=user, password=password, table=self.target_table, update_id=str(self.runtime))
+        return MySqlTarget(host=host, database=database, user=user, password=password,
+                           table=self.target_table, update_id=str(self.runtime))
 
     def requires(self):
         return [FACT_VEHICLE_TRACE()]

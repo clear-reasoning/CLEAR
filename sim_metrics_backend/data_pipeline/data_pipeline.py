@@ -200,7 +200,7 @@ def get_ready_queries(completed_queries, new_query):
 def list_object_keys(s3, bucket='circles.data.pipeline', prefixes='', suffix=''):
     """Return all keys in the given bucket that start with prefix and end with suffix. Not limited by 1000."""
     contents = []
-    if not isinstance(prefixes, collections.Iterable) or type(prefixes) is str:
+    if not isinstance(prefixes, collections.Iterable) or isinstance(prefixes, str):
         prefixes = [prefixes]
     for prefix in prefixes:
         response = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)

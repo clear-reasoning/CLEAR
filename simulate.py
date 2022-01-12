@@ -79,7 +79,7 @@ if 'rl' in args.av_controller.lower():
         env_config['av_controller'] = 'rl_fs'
 
     # retrieve algorithm
-    alg_module, alg_class = re.match("<class '(.+)\.([a-zA-Z\_]+)'>", configs['algorithm']).group(1, 2)
+    alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
     assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'])
     algorithm = getattr(importlib.import_module(alg_module), alg_class)
 

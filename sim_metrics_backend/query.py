@@ -240,7 +240,7 @@ def load_coeffs(filename, mass, conversion=33.43e3, v_max_fit=40):
     """Load in model coefficients from MATLAB files."""
     mat = loadmat(os.path.join(DIR_PATH, filename))
     mat = {key: val.item() for key, val in mat.items()
-           if type(val) == np.ndarray}
+           if isinstance(val, np.ndarray)}
     mat['mass'] = mass
     mat['conversion'] = conversion
     mat['v_max_fit'] = v_max_fit

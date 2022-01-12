@@ -104,20 +104,20 @@ class PolyFitModel(object):
                                     speed**2,
                                     speed**3,
                                     accel,
-                                    accel*speed,
-                                    accel*speed**2,
+                                    accel * speed,
+                                    accel * speed**2,
                                     max(accel, 0)**2,
-                                    max(accel, 0)**2*speed,
+                                    max(accel, 0)**2 * speed,
                                     grade,
-                                    grade*speed])
+                                    grade * speed])
         fc = np.dot(self.state_coeffs, state_variables)
-        lower_bound = (speed <= self.vc)*self.beta0
+        lower_bound = (speed <= self.vc) * self.beta0
         fc = max(fc, lower_bound)  # assign min fc when polynomial is below the min
         return fc * GRAMS_PER_SEC_TO_GALS_PER_HOUR[self.fuel_type]
 
     def flag_infeasible_accel(self, accel, speed, grade):
         """Return True if speed/accel pair outside of feasible range."""
-        max_accel = self.b1 * math.exp(-self.b2*speed) + self.b3
+        max_accel = self.b1 * math.exp(-self.b2 * speed) + self.b3
         return accel > max_accel.real
 
     def get_instantaneous_power(self, accel, speed, grade):

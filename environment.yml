@@ -11,7 +11,7 @@ dependencies:
         - numpy == 1.19.2
         - pandas == 1.2.4
         - pygame == 2.0.1
-        - stable-baselines3 == 1.0
+        - stable - baselines3 == 1.0
         - tensorboard == 2.5.0
         - torch == 1.8.1
         - tqdm == 4.60.0
@@ -20,5 +20,5 @@ dependencies:
         - tensorflow == 2.5.0
         - boto3
         - luigi == 3.0.3
-        - mysql-connector-python == 8.0.27
-        - mysql-connector-python-rf == 2.2.2
+        - mysql - connector - python == 8.0.27
+        - mysql - connector - python - rf == 2.2.2

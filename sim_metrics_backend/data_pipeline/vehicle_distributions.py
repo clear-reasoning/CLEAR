@@ -25,7 +25,7 @@ def generate_distribution(models, proportions=None, seed=None):
     -------
     list of models
     """
-    if type(models) != list:
+    if not isinstance(models, list):
         models = [models]
     random.seed(seed)
     return random.choices(

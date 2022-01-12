@@ -48,7 +48,7 @@ def submit(data, isMeta, cnx):
     start = 0
     while start < data.shape[0]:
         try:
-            batchData = data[start:start+BATCH_SIZE].fillna(NAN_VALUES)
+            batchData = data[start:start + BATCH_SIZE].fillna(NAN_VALUES)
             # convert to tuples in order to use executemany
             batchDataInTuples = [tuple(row) for row in batchData.values]
             sql = METADATA_SQL if isMeta == True else FLOW_DATA_SQL  # choose SQL
@@ -68,7 +68,7 @@ def submitData(filePath, isMeta):
 
     try:
         csvData = pd.read_csv(filePath)
-    except:
+    except BaseException:
         print("filePath: '{}' does not exist".format(filePath))
     # there are two types of files
     submit(csvData, isMeta, cnx)
@@ -86,4 +86,4 @@ if __name__ == '__main__':
     filePath = "/Users/dongwang/Desktop/capstone/pic.png"
     now = time.time()
     uploadPng(filePath)
-    print(time.time()-now)
+    print(time.time() - now)

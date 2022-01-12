@@ -20,7 +20,7 @@ def lat_long_distance(pos1, pos2):
 def get_bearing(lat1, lon1, lat2, lon2):
     dLon = lon2 - lon1
     y = np.sin(dLon) * np.cos(lat2)
-    x = np.cos(lat1)*np.sin(lat2) - np.sin(lat1)*np.cos(lat2)*np.cos(dLon)
+    x = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dLon)
     brng = np.rad2deg(np.arctan2(y, x))
     if brng < 0:
         brng += 360
@@ -117,7 +117,7 @@ def get_first_element(arr):
     try:
         while True:
             val = val[0]
-    except:
+    except BaseException:
         return val
 
 

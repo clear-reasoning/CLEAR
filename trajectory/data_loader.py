@@ -53,7 +53,7 @@ class DataLoader(object):
                 yield dict(traj)
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
-                k: traj[k][start_idx:start_idx+chunk_size]
+                k: traj[k][start_idx:start_idx + chunk_size]
                 for k in ['times', 'positions', 'velocities', 'accelerations']
             }
             traj_chunk.update({
@@ -69,7 +69,8 @@ class DataLoader(object):
 
 def smooth_data(target, n, mu=0.5):
     for i in range(n):
-        target = mu/2*np.append(target[0], target[:-1]) + (1-mu)*target + mu/2*np.append(target[1:], target[-1])
+        target = mu / 2 * np.append(target[0], target[:-1]) + (1 - mu) * target + \
+            mu / 2 * np.append(target[1:], target[-1])
     return target
 
 
@@ -86,7 +87,7 @@ def _preprocess_data():
         # fix that by doing linear interpolation on the missing timesteps
         dt = 0.1
         for i in range(1, len(df['Time'])):
-            timestep = df['Time'][i] - df['Time'][i-1]
+            timestep = df['Time'][i] - df['Time'][i - 1]
             if abs(timestep - dt) > 1e-3:
                 missing = int(round(timestep / dt, 3))
                 for k in range(1, missing):
@@ -111,11 +112,11 @@ def _preprocess_data():
         df['MileMarker'] = 74.3 - df['DistanceGPS']
 
         bears = []
-        for i in range(len(df['LatitudeGPS'])-1):
+        for i in range(len(df['LatitudeGPS']) - 1):
             j = np.deg2rad(df['LongitudeGPS'][i])
-            k = np.deg2rad(df['LongitudeGPS'][i+1])
+            k = np.deg2rad(df['LongitudeGPS'][i + 1])
             m = np.deg2rad(df['LatitudeGPS'][i])
-            n = np.deg2rad(df['LatitudeGPS'][i+1])
+            n = np.deg2rad(df['LatitudeGPS'][i + 1])
             bears.append(get_bearing(j, m, k, n))
         bears.append(0)
         df['Bearing'] = bears
@@ -141,7 +142,7 @@ def _preprocess_data():
         while i < num_switches:
             # Find points at which it switches out of valid space:
             start_point = switching_points[i][0]
-            end_point = switching_points[i+1][0]
+            end_point = switching_points[i + 1][0]
 
             # get the direction it's going in:
             direction = df['DrivingDir'][start_point]
@@ -269,7 +270,7 @@ if __name__ == '__main__':
             if 'idm' in mpg_params:
                 heat = np.empty((0, len(b_sweep)), int)
                 for j in np.arange(len(a_sweep) * len(b_sweep), 0, -len(b_sweep)):
-                    heat = np.append(heat, np.array([list(mpg_params['idm'].values())[j-len(b_sweep): j]]), axis=0)
+                    heat = np.append(heat, np.array([list(mpg_params['idm'].values())[j - len(b_sweep): j]]), axis=0)
 
                 y_ticks = range(0, len(a_sweep)) if len(a_sweep) % 2 == 0 else range(0, len(a_sweep))
                 x_ticks = range(0, len(b_sweep))

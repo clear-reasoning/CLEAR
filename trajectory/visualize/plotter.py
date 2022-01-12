@@ -35,7 +35,8 @@ class Plotter(object):
     def __exit__(self, exc_type, exc_value, tb):
         self.subplots = False
 
-    def plot(self, x, y=None, label=None, title=None, xlabel=None, ylabel=None, grid=False, legend=False, linewidth=1.0):
+    def plot(self, x, y=None, label=None, title=None, xlabel=None,
+             ylabel=None, grid=False, legend=False, linewidth=1.0):
         if y is None:
             x, y = list(range(len(x))), x
         if self.subplots:
@@ -154,7 +155,7 @@ class BarPlot(object):
         }
 
     def save(self, *save_path):
-        fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6*len(self.plot_data)))
+        fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6 * len(self.plot_data)))
         if not isinstance(axes, np.ndarray):
             axes = [axes]
 
