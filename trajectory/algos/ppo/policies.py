@@ -72,18 +72,12 @@ class PopArtActorCriticPolicy(ActorCriticPolicy):
 
         latent_dim_pi = self.mlp_extractor.latent_dim_pi
 
-        # Separate features extractor for gSDE
-        if self.sde_net_arch is not None:
-            self.sde_features_extractor, latent_sde_dim = create_sde_features_extractor(
-                self.features_dim, self.sde_net_arch, self.activation_fn
-            )
-
         if isinstance(self.action_dist, DiagGaussianDistribution):
             self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, log_std_init=self.log_std_init
             )
         elif isinstance(self.action_dist, StateDependentNoiseDistribution):
-            latent_sde_dim = latent_dim_pi if self.sde_net_arch is None else latent_sde_dim
+            latent_sde_dim = None  # latent_dim_pi if self.sde_net_arch is None else latent_sde_dim
             self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, latent_sde_dim=latent_sde_dim, log_std_init=self.log_std_init
             )
@@ -181,18 +175,12 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
 
         latent_dim_pi = self.policy_extractor.latent_dim_pi
 
-        # Separate features extractor for gSDE
-        if self.sde_net_arch is not None:
-            self.sde_features_extractor, latent_sde_dim = create_sde_features_extractor(
-                self.features_dim, self.sde_net_arch, self.activation_fn
-            )
-
         if isinstance(self.action_dist, DiagGaussianDistribution):
             self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, log_std_init=self.log_std_init
             )
         elif isinstance(self.action_dist, StateDependentNoiseDistribution):
-            latent_sde_dim = latent_dim_pi if self.sde_net_arch is None else latent_sde_dim
+            latent_sde_dim = None  # latent_dim_pi if self.sde_net_arch is None else latent_sde_dim
             self.action_net, self.log_std = self.action_dist.proba_distribution_net(
                 latent_dim=latent_dim_pi, latent_sde_dim=latent_sde_dim, log_std_init=self.log_std_init
             )
@@ -242,24 +230,24 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         log_prob = distribution.log_prob(actions)
         return actions, values, log_prob
 
-    def _get_latent(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-        """
-        Get the latent code (i.e., activations of the last layer of each network)
-        for the different networks.
+    # def _get_latent(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
+    #     """
+    #     Get the latent code (i.e., activations of the last layer of each network)
+    #     for the different networks.
 
-        :param obs: Observation
-        :return: Latent codes
-            for the actor, the value function and for gSDE function
-        """
-        # Preprocess the observation if needed
-        features = self.extract_features(obs)
-        latent_pi = self.policy_extractor(features)
+    #     :param obs: Observation
+    #     :return: Latent codes
+    #         for the actor, the value function and for gSDE function
+    #     """
+    #     # Preprocess the observation if needed
+    #     features = self.extract_features(obs)
+    #     latent_pi = self.policy_extractor(features)
 
-        # Features for sde
-        latent_sde = latent_pi
-        if self.sde_features_extractor is not None:
-            latent_sde = self.sde_features_extractor(features)
-        return latent_pi, latent_sde
+    #     # Features for sde
+    #     latent_sde = latent_pi
+    #     if self.sde_features_extractor is not None:
+    #         latent_sde = self.sde_features_extractor(features)
+    #     return latent_pi, latent_sde
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         """
@@ -350,7 +338,7 @@ class SingleMlpExtractor(nn.Module):
     ):
         super(SingleMlpExtractor, self).__init__()
         device = get_device(device)
-        policy_net, value_net = [], []
+        policy_net = []
         policy_only_layers = []  # Layer sizes of the network that only belongs to the policy network
         last_layer_dim_shared = feature_dim
 

@@ -5,17 +5,14 @@ import torch as th
 from torch import nn
 
 from stable_baselines3.common.policies import BasePolicy, ContinuousCritic, register_policy
-from stable_baselines3.common.preprocessing import get_action_dim
 from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
     FlattenExtractor,
     NatureCNN,
-    create_mlp,
     get_actor_critic_arch,
 )
 from stable_baselines3.common.type_aliases import Schedule
-from stable_baselines3.td3.policies import Actor, TD3Policy
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.td3.policies import Actor
 
 
 class FirstHalfFeatureExtractor(BaseFeaturesExtractor):

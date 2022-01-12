@@ -1,7 +1,6 @@
 from stable_baselines3.common.logger import Figure
 from pathlib import Path  # needed?
 import numpy as np
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import matplotlib

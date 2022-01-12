@@ -13,7 +13,6 @@ import uuid
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_first_element, upload_to_pipeline
-from trajectory.visualize.platoon_mpg import plot_platoon_mpg
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 

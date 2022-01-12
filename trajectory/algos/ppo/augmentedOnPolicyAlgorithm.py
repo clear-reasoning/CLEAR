@@ -215,7 +215,7 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
         tb_log_name: str = "OnPolicyAlgorithm",
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
-    ) -> "OnPolicyAlgorithm":
+    ):
         iteration = 0
 
         total_timesteps, callback = self._setup_learn(

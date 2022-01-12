@@ -5,7 +5,7 @@ Generate emissions for all trajectories with IDM
 
 Generate emissions for all trajectories with an RL controller
 
-    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip 
+    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip
     --av_controller rl --all_trajectories --gen_emissions
 
 Then use this script to generate metrics and plot stuff
@@ -41,8 +41,6 @@ for path in emissions_folders:
         split = csv_path.stem.replace('rl_fs', 'rl-fs').split('_')
         av_controller = split[1].replace('rl-fs', 'rl_fs')
         traj_name = '_'.join(split[2:])
-        # if traj_name not in ['2021-03-29-12-47-15_2T3MWRFVXLW056972_masterArray_0_4214', '2021-04-27-21-37-32_2T3MWRFVXLW056972_masterArray_0_4353', '2021-03-17-21-37-10_2T3MWRFVXLW056972_masterArray_1_4689']:
-        #     continue  # TMP
         data[traj_name][av_controller] = pd.read_csv(csv_path)
         # data[traj_name + '1'][av_controller] = data[traj_name][av_controller]
         # data[traj_name + '2'][av_controller] = data[traj_name][av_controller]

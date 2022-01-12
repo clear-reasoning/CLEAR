@@ -72,13 +72,15 @@ with plotter.subplot(title='AV metrics difference (IDM minus RL FS)', xlabel='Ti
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'], 100 * (idm_data[veh_ids['idm']['av']]
                  ['accel'] - rl_data[veh_ids['rl']['av']]['accel']), label='Acceleration')
 
-with plotter.subplot(title='AV instant energy consumption', xlabel='Time (s)', ylabel='Nrj (some interesting unit)', grid=True, legend=True):
+with plotter.subplot(title='AV instant energy consumption', xlabel='Time (s)', ylabel='Nrj (some interesting unit)',
+                     grid=True, legend=True):
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_data[veh_ids['rl']['av']]
                  ['instant_energy_consumption'], label='RL FS')
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'], idm_data[veh_ids['idm']['av']]
                  ['instant_energy_consumption'], label='IDM')
 
-with plotter.subplot(title='AV speed difference (leader speed - AV speed)', xlabel='Time (s)', ylabel='Speed (m/s)', grid=True, legend=True):
+with plotter.subplot(title='AV speed difference (leader speed - AV speed)', xlabel='Time (s)', ylabel='Speed (m/s)',
+                     grid=True, legend=True):
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_data[veh_ids['rl']['av']]['speed_difference'], label='RL FS')
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'],
                  idm_data[veh_ids['idm']['av']]['speed_difference'], label='IDM')
@@ -99,7 +101,8 @@ with plotter.subplot(title='Average MPG over the whole trajectory', xlabel='Time
     plotter.plot([0, 1], [avg_mpg_idm_av] * 2, label=f'IDM - AV mpg ({round(avg_mpg_idm_av, 3)})')
     plotter.plot([0, 1], [avg_mpg_idm_humans] * 2, label=f'IDM - humans mpg ({round(avg_mpg_idm_humans, 3)})')
 
-with plotter.subplot(title='AV running MPG over the last 100s', xlabel='Time (s)', ylabel='MPG', grid=True, legend=True):
+with plotter.subplot(title='AV running MPG over the last 100s', xlabel='Time (s)', ylabel='MPG',
+                     grid=True, legend=True):
     rl_data_running_sum = rl_data[veh_ids['rl']['av']].rolling(1000).sum()
     rl_mpgs = (rl_data_running_sum['total_miles'] / rl_data_running_sum['total_gallons'] + 1e-6)
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_mpgs, label='RL FS')
@@ -108,13 +111,15 @@ with plotter.subplot(title='AV running MPG over the last 100s', xlabel='Time (s)
     idm_mpgs = (idm_data_running_sum['total_miles'] / idm_data_running_sum['total_gallons'] + 1e-6)
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'], idm_mpgs, label='IDM')
 
-with plotter.subplot(title='AV running total miles traveled over the last 100s', xlabel='Time (s)', ylabel='Distance (miles)', grid=True, legend=True):
+with plotter.subplot(title='AV running total miles traveled over the last 100s', xlabel='Time (s)', ylabel='Distance (miles)',
+                     grid=True, legend=True):
     rl_data_running_sum = rl_data[veh_ids['rl']['av']].rolling(1000).sum()
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_data_running_sum['total_miles'], label='RL FS')
     idm_data_running_sum = idm_data[veh_ids['idm']['av']].rolling(1000).sum()
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'], idm_data_running_sum['total_miles'], label='IDM')
 
-with plotter.subplot(title='AV running total gallons consumed over the last 100s', xlabel='Time (s)', ylabel='Energy consumption (gallons)', grid=True, legend=True):
+with plotter.subplot(title='AV running total gallons consumed over the last 100s', xlabel='Time (s)', ylabel='Energy consumption (gallons)',
+                     grid=True, legend=True):
     rl_data_running_sum = rl_data[veh_ids['rl']['av']].rolling(1000).sum()
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_data_running_sum['total_gallons'], label='RL FS')
     idm_data_running_sum = idm_data[veh_ids['idm']['av']].rolling(1000).sum()

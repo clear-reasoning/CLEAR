@@ -1,10 +1,8 @@
 from collections import defaultdict
-from re import I
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
-import scipy.stats as stats
 import numpy as np
 
 
@@ -96,7 +94,7 @@ class Simulation(object):
         if idx_leader is not None:
             self.vehicles[idx_leader].follower = veh
 
-        # add vehicle to simulation
+        # add vehicle to simulation
         self.vids += 1
         if insert_at_index is None:
             self.vehicles.append(veh)
@@ -161,7 +159,7 @@ class Simulation(object):
                     inserted_gap = min(max(inserted_gap, veh.leader.pos - veh.pos - veh.length - 1.0), 1.0)
 
                     # add vehicle in front of veh
-                    new_veh = self.add_vehicle(
+                    self.add_vehicle(
                         controller='idm',
                         kind='human',
                         gap=inserted_gap,

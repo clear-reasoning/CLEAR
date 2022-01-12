@@ -4,7 +4,6 @@ import os
 
 import onnx
 from onnx_tf.backend import prepare
-import tensorflow as tf
 import torch
 from torch import nn
 

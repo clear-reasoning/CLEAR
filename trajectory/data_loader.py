@@ -239,19 +239,23 @@ if __name__ == '__main__':
                 with plotter.subplot(title='Accelerations', xlabel='Time (s)', ylabel='Accel (m/s$^2$)', grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
                         plotter.plot(vdata['time'], vdata['accel'], label=vid)
-                with plotter.subplot(title='Bumper-to-bumper gaps (to leader)', xlabel='Time (s)', ylabel='Gap (m)', grid=True, legend=True):
+                with plotter.subplot(title='Bumper-to-bumper gaps (to leader)', xlabel='Time (s)', ylabel='Gap (m)',
+                                     grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
                         plotter.plot(vdata['time'], vdata['headway'], label=vid)
-                with plotter.subplot(title='Velocity differences (to leader)', xlabel='Time (s)', ylabel='Speed diff (m/s)', grid=True, legend=True):
+                with plotter.subplot(title='Velocity differences (to leader)', xlabel='Time (s)', ylabel='Speed diff (m/s)',
+                                     grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
                         plotter.plot(vdata['time'], vdata['speed_difference'], label=vid)
-                with plotter.subplot(title='Running MPGs over the last 100s', xlabel='Time (s)', ylabel='MPG average', grid=True, legend=True):
+                with plotter.subplot(title='Running MPGs over the last 100s', xlabel='Time (s)', ylabel='MPG average',
+                                     grid=True, legend=True):
                     for vid, vdata in sim.data_by_vehicle.items():
                         speeds = moving_sum(vdata['speed'], chunk_size=1000)
                         energies = moving_sum(vdata['instant_energy_consumption'], chunk_size=1000)
                         mpgs = (speeds / 1609.34) / (energies / 3600 + 1e-6)
                         plotter.plot(vdata['time'][999:], mpgs, label=vid)
-                with plotter.subplot(title='MPGs (average doesn\'t account for trajectory vehicles)', xlabel='Time (s)', ylabel='Miles per gallon', grid=True, legend=True):
+                with plotter.subplot(title='MPGs (average doesn\'t account for trajectory vehicles)', xlabel='Time (s)',
+                                     ylabel='Miles per gallon', grid=True, legend=True):
                     mpgs = []
                     for vid, vdata in sim.data_by_vehicle.items():
                         mpg = (np.sum(vdata['speed']) / 1609.34) / \
