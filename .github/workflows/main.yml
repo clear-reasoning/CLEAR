@@ -14,4 +14,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - run: echo hi
+            - run: conda env create -f environment.yml
+            - run: conda activate trajectory
+            - run: python train.py --iters 1 --no_eval
