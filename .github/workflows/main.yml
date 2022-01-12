@@ -10,3 +10,8 @@ jobs:
             - run: pydocstyle --convention numpy
             - run: pip install flake8
             - run: flake8 --show-source
+    install:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - run: echo hi
