@@ -10,8 +10,13 @@ if __name__ == '__main__':
 
     for query_name in prerequisites.keys():
         cursor = cnx.cursor(buffered=True)
-        query_statement = QueryStrings[query_name].value.format(partition='flow_ffc9edc5f72b428a986cea83fe90fd0b', inflow_filter='source_id IS NOT NULL', outflow_filter='source_id IS NOT NULL',
-                                    start_filter=0, max_decel=-1.0, leader_max_decel=-2.0)
+        query_statement = QueryStrings[query_name].value.format(
+            partition='flow_ffc9edc5f72b428a986cea83fe90fd0b',
+            inflow_filter='source_id IS NOT NULL',
+            outflow_filter='source_id IS NOT NULL',
+            start_filter=0,
+            max_decel=-1.0,
+            leader_max_decel=-2.0)
         try:
             cursor.execute(query_statement)
         except mysql.connector.Error as err:

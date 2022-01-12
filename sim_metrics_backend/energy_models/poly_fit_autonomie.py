@@ -14,7 +14,7 @@ DIR_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "model_coef
 def load_coeffs(filename, mass, conversion=33.43e3, v_max_fit=40):
     """Load in model coefficients from MATLAB files."""
     mat = loadmat(os.path.join(DIR_PATH, filename))
-    mat = {key: val.item() for key, val in mat.items() if type(val) == np.ndarray}
+    mat = {key: val.item() for key, val in mat.items() if isinstance(val, np.ndarray)}
     mat['mass'] = mass
     mat['conversion'] = conversion
     mat['v_max_fit'] = v_max_fit
@@ -112,10 +112,10 @@ class PolyFitModel(BaseEnergyModel, metaclass=ABCMeta):
                                     speed**2,
                                     speed**3,
                                     accel,
-                                    accel*speed,
-                                    accel*speed**2,
+                                    accel * speed,
+                                    accel * speed**2,
                                     max(accel, 0)**2,
-                                    max(accel, 0)**2*speed])
+                                    max(accel, 0)**2 * speed])
         fc = np.dot(self.state_coeffs, state_variables)
         fc = max(fc, self.beta0)  # assign min fc when polynomial is below the min
         return fc * GRAMS_PER_SEC_TO_GALS_PER_HOUR

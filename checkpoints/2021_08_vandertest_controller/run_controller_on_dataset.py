@@ -6,9 +6,11 @@ import random
 import onnx  # pip install onnx
 import onnxruntime as ort  # pip install onnxruntime
 import matplotlib.pyplot as plt
+from trajectory.utils import counter
 
 DATA_PATH = '../dataset/data_v2_preprocessed'
 CONTROLLER_PATH = "./vandertest_controller.onnx"
+
 
 class DataLoader(object):
     def __init__(self):
@@ -23,7 +25,7 @@ class DataLoader(object):
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
-                'positions': positions,  # np.array(data['DistanceGPS']),
+                'positions': positions,  #  np.array(data['DistanceGPS']),
                 'velocities': np.array(data['Velocity']) / 3.6,
                 'accelerations': np.array(data['Acceleration'])
             })
@@ -44,7 +46,7 @@ class DataLoader(object):
                 yield dict(traj)
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
-                k: traj[k][start_idx:start_idx+chunk_size]
+                k: traj[k][start_idx:start_idx + chunk_size]
                 for k in ['times', 'positions', 'velocities', 'accelerations']
             }
             traj_chunk.update({
@@ -54,6 +56,7 @@ class DataLoader(object):
                 'size': len(traj_chunk['times']),
             })
             yield traj_chunk
+
 
 # load i24 trajectory data
 data = DataLoader()
@@ -66,12 +69,14 @@ print(traj.keys())
 model = onnx.load_model(CONTROLLER_PATH)
 ort_session = ort.InferenceSession(CONTROLLER_PATH)
 
+
 def get_accel(state):
     # state is [av speed, leader speed, headway] (no normalization needed)
     # output is instant acceleration to apply to the AV
     data = np.array([state]).astype(np.float32)
     outputs = ort_session.run(None, {ort_session.get_inputs()[0].name: data})
     return outputs[0][0][0]
+
 
 # initialize AV
 av_positions = [traj['positions'][0] - 50.0]  # set initial headway
@@ -87,7 +92,7 @@ for time, leader_pos, leader_speed in zip(traj['times'], traj['positions'], traj
     av_space_gap = leader_pos - av_pos
     av_accel = get_accel([av_speed, leader_speed, av_space_gap])
 
-    # update AV
+    # update AV
     new_av_speed = av_speed + dt * av_accel
     new_av_pos = av_pos + dt * new_av_speed
     av_speeds.append(new_av_speed)

@@ -1,5 +1,6 @@
 import torch
 
+
 def forward(self, in_vector):  # in_vector (non-normalized) : [av_speed, leader_speed, headway]
     # normalize input
     x = torch.div(in_vector, self.normalization_tensor)
@@ -13,7 +14,6 @@ def forward(self, in_vector):  # in_vector (non-normalized) : [av_speed, leader_
     leader_speed, _ = torch.div(in_vector, self.leader_speed_filter_tensor).max(dim=1)
     headway, _ = torch.div(in_vector, self.headway_filter_tensor).max(dim=1)
 
-    time_headway = headway / av_speed
     speed_diff = av_speed - leader_speed
     # we don't ever want to divide by zero and we don't care about negative values so we just max
     # with 0.1

@@ -9,12 +9,14 @@ CONTROLLER_PATH = "./vandertest_controller.onnx"
 model = onnx.load_model(CONTROLLER_PATH)
 ort_session = ort.InferenceSession(CONTROLLER_PATH)
 
+
 def get_accel(state):
     # state is [av speed, leader speed, headway] (no normalization needed)
     # output is instant acceleration to apply to the AV
     data = np.array([state]).astype(np.float32)
     outputs = ort_session.run(None, {ort_session.get_inputs()[0].name: data})
     return outputs[0][0][0]
+
 
 # initialize AV
 av_positions = [0]
@@ -38,13 +40,13 @@ for _ in range(1000):
     av_space_gap = leader_pos - av_pos
     av_accel = get_accel([av_speed, leader_speed, av_space_gap])
 
-    # update AV
+    # update AV
     new_av_speed = av_speed + dt * av_accel
     new_av_pos = av_pos + dt * new_av_speed
     av_speeds.append(new_av_speed)
     av_positions.append(new_av_pos)
 
-    # update leader
+    # update leader
     new_leader_pos = leader_pos + dt * leader_speed
     leader_speeds.append(leader_speed)  # constant leader speed
     leader_positions.append(new_leader_pos)

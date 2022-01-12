@@ -13,6 +13,7 @@ from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
 from trajectory.algos.ppo.augmentedOnPolicyAlgorithm import AugmentedOnPolicyAlgorithm
 
+
 class PPO(AugmentedOnPolicyAlgorithm):
     """
     Proximal Policy Optimization algorithm (PPO) (clip version)

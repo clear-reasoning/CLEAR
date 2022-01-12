@@ -1,7 +1,7 @@
 """runner script for invoking query manually."""
 import argparse
 from flow.data_pipeline.data_pipeline import delete_table, upload_to_s3, rerun_query, \
-                                             get_completed_queries, put_completed_queries
+    get_completed_queries, put_completed_queries
 import boto3
 
 import pandas as pd
@@ -33,10 +33,10 @@ if __name__ == "__main__":
         cur_datetime = datetime.now(timezone.utc)
         cur_date = cur_datetime.date().isoformat()
         upload_to_s3(
-                'circles.data.pipeline',
-                'metadata_table/date={0}/partition_name={1}_METADATA/'
-                '{1}_METADATA.csv'.format(cur_date, source_id),
-                metadata_table_path
+            'circles.data.pipeline',
+            'metadata_table/date={0}/partition_name={1}_METADATA/'
+            '{1}_METADATA.csv'.format(cur_date, source_id),
+            metadata_table_path
         )
         upload_to_s3(
             'circles.data.pipeline',

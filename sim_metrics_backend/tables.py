@@ -411,6 +411,7 @@ TABLES["fact_vehicle_distributions"] = (
     "PRIMARY KEY (`rank`)"
     ") ENGINE=InnoDB")
 
+
 def create_tables(cursor):
 
     # Check that the database exist and it is in use.

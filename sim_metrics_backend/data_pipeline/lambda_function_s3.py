@@ -77,7 +77,8 @@ def lambda_handler(event, context):
         # Handle transfer test queries
         if 'transfer_test_name' in response["Metadata"]:
             if query_name == "LEADERBOARD_CHART":
-                completed_transfer_queries = get_completed_queries(s3, response["Metadata"]['controller'], prefix='transfer_temp')
+                completed_transfer_queries = get_completed_queries(
+                    s3, response["Metadata"]['controller'], prefix='transfer_temp')
                 transfer_simulation_name = "{}_{}_{}".format(
                     response["Metadata"]['controller'], response["Metadata"]['transfer_test_name'],
                     response['Metadata']['transfer_test_parameter'])
@@ -86,7 +87,8 @@ def lambda_handler(event, context):
                     # There are 17 total simulations for a cimplete transfer test
                     if len(completed_transfer_queries) == 16:
                         readied_queries.append('TRANSFER_TEST_MASTER')
-                    put_completed_queries(s3, response["Metadata"]['controller'], completed_transfer_queries, prefix='transfer_temp')
+                    put_completed_queries(s3, response["Metadata"]['controller'],
+                                          completed_transfer_queries, prefix='transfer_temp')
         # stores the updated list of completed queries back to S3
         put_completed_queries(s3, source_id, completed[source_id])
         # initialize queries and store them at appropriate locations
@@ -101,4 +103,3 @@ def lambda_handler(event, context):
             sqs.send_message(
                 QueueUrl="https://sqs.us-west-2.amazonaws.com/409746595792/RunQueryRequests",
                 MessageBody=message_body)
-

@@ -1,11 +1,10 @@
+from stable_baselines3.common.logger import Figure
+from pathlib import Path  # needed?
+import numpy as np
+import matplotlib.pyplot as plt
 from collections import defaultdict
 import matplotlib
 matplotlib.use('agg')
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import numpy as np
-from pathlib import Path # needed?
-from stable_baselines3.common.logger import Figure
 
 
 class Plotter(object):
@@ -35,7 +34,8 @@ class Plotter(object):
     def __exit__(self, exc_type, exc_value, tb):
         self.subplots = False
 
-    def plot(self, x, y=None, label=None, title=None, xlabel=None, ylabel=None, grid=False, legend=False, linewidth=1.0):
+    def plot(self, x, y=None, label=None, title=None, xlabel=None,
+             ylabel=None, grid=False, legend=False, linewidth=1.0):
         if y is None:
             x, y = list(range(len(x))), x
         if self.subplots:
@@ -59,9 +59,9 @@ class Plotter(object):
                     'linewidth': linewidth,
                 }],
             })
-    
-    def heatmap (self, array, xlabel='', ylabel='', xticks=None, yticks=None, xticklabels=None, yticklabels=None,
-                 title=None, file_name='heatmap', cbarlabel=None, cbar_kw={}):
+
+    def heatmap(self, array, xlabel='', ylabel='', xticks=None, yticks=None, xticklabels=None, yticklabels=None,
+                title=None, file_name='heatmap', cbarlabel=None, cbar_kw={}):
         # Integrate it in with plot_data
         fig, ax = plt.subplots()
         im = ax.imshow(array)
@@ -80,10 +80,10 @@ class Plotter(object):
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-                rotation_mode="anchor")
+                 rotation_mode="anchor")
 
         cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom") 
+        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
         ax.set_title(title)
         fig.tight_layout()
@@ -92,8 +92,8 @@ class Plotter(object):
 
     def makefig(self, dpi=100):
         # figsize in inches, dpi = dots (pixels) per inches
-        fig, axes = plt.subplots(len(self.plot_data), 
-            figsize=(15, 2 * len(self.plot_data)), dpi=dpi)
+        fig, axes = plt.subplots(len(self.plot_data),
+                                 figsize=(15, 2 * len(self.plot_data)), dpi=dpi)
         if len(self.plot_data) == 1:
             axes = [axes]
         for ax, data in zip(axes, self.plot_data):
@@ -102,10 +102,12 @@ class Plotter(object):
             ax.set_title(data['title'])
             ax.set_xlabel(data['xlabel'])
             ax.set_ylabel(data['ylabel'])
-            ax.set_xlim(np.min([plot['x'] for plot in data['plots']]), 
+            ax.set_xlim(np.min([plot['x'] for plot in data['plots']]),
                         np.max([plot['x'] for plot in data['plots']]))
-            if data['grid']: ax.grid()
-            if data['legend']: ax.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+            if data['grid']:
+                ax.grid()
+            if data['legend']:
+                ax.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
         fig.tight_layout()
         return fig
 
@@ -150,9 +152,9 @@ class BarPlot(object):
             'title': title,
             'ylabel': ylabel,
         }
-        
+
     def save(self, *save_path):
-        fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6*len(self.plot_data)))
+        fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6 * len(self.plot_data)))
         if not isinstance(axes, np.ndarray):
             axes = [axes]
 
@@ -184,4 +186,3 @@ class BarPlot(object):
         fig.savefig(save_path)
         plt.close(fig)
         print(f'Wrote {save_path}')
-

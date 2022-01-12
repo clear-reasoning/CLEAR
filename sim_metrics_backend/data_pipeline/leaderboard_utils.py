@@ -27,7 +27,7 @@ def key_to_name(key):
     query_name = ""
     if index != -1:
         source_id = name[0:index]
-        query_name = "_" + name[index+1:].replace("_", "-")
+        query_name = "_" + name[index + 1:].replace("_", "-")
     return "{}_{}{}.csv".format(date, source_id.replace("_", "-"), query_name)
 
 

@@ -18,6 +18,7 @@ CLIENT_LOAD_STATEMENT_NO_ENCLOSING = \
     "LINES TERMINATED BY \'\\n\' " \
     "IGNORE 1 ROWS;"
 
+
 def load_data(cnx, table, data_path, enclosing=True):
     try:
         cursor = cnx.cursor()
@@ -34,6 +35,7 @@ def load_data(cnx, table, data_path, enclosing=True):
         print("load data into {} successfully.".format(table))
     finally:
         cursor.close()
+
 
 if __name__ == '__main__':
 
@@ -129,7 +131,5 @@ if __name__ == '__main__':
     load_data(cnx, 'fact_safety_matrix',
                    '/home/circles/Downloads/fact_safety_matrix.csv',
                    enclosing=False)
-
-
 
     cnx.close()

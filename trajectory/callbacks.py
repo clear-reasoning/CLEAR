@@ -1,23 +1,22 @@
+from trajectory.visualize.plotter import TensorboardPlotter
+from trajectory.env.utils import duration_to_str, get_first_element
+from trajectory.env.trajectory_env import TrajectoryEnv
+import time
+from stable_baselines3.common.callbacks import BaseCallback
+import random
+from pathlib import Path
+import os
+import numpy as np
+import math
+from collections import defaultdict, deque
+import boto3
 import matplotlib
 matplotlib.use('agg')
-
-import boto3
-from collections import defaultdict, deque
-import math
-import numpy as np
-import os
-from pathlib import Path
-import random
-from stable_baselines3.common.callbacks import BaseCallback
-import time
-
-from trajectory.env.trajectory_env import TrajectoryEnv
-from trajectory.env.utils import duration_to_str, get_first_element
-from trajectory.visualize.plotter import TensorboardPlotter
 
 
 class TensorboardCallback(BaseCallback):
     """Callback for plotting additional metrics in tensorboard."""
+
     def __init__(self, eval_freq, eval_at_end):
         super().__init__()
 
@@ -47,9 +46,9 @@ class TensorboardCallback(BaseCallback):
             self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
             self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'))
-        
+
         self.rollout += 1
-    
+
     def log_rollout_dict(self, base_name, rollout_dict):
         plotter = TensorboardPlotter(self.logger)
         for group, metrics in rollout_dict.items():
@@ -87,13 +86,13 @@ class TensorboardCallback(BaseCallback):
             for info in collected_rollout['infos']:
                 for k, v in info['metrics'].items():
                     rollout_dict['custom_metrics'][k].append(v)
-        
+
         for base_state in collected_rollout['base_states']:
             for k, v in base_state.items():
-                    rollout_dict['base_state'][k].append(v[0])
+                rollout_dict['base_state'][k].append(v[0])
         for base_state_vf in collected_rollout['base_states_vf']:
             for k, v in base_state_vf.items():
-                    rollout_dict['base_state'][f'vf_{k}'].append(v[0])
+                rollout_dict['base_state'][f'vf_{k}'].append(v[0])
 
         for veh in env.sim.vehicles:
             if veh.kind == 'av':
@@ -114,10 +113,10 @@ class TensorboardCallback(BaseCallback):
             config['use_fs'] = False
             config['discrete'] = False
         config['av_controller'] = av_controller
-        print('\n'*5, 'original', config)
+        print('\n' * 5, 'original', config)
         if av_controller == 'idm':
             config['av_kwargs'] = 'dict(v0=45,noise=0)'
-        print('\n'*5, 'AV', av_controller, config)
+        print('\n' * 5, 'AV', av_controller, config)
         test_env = TrajectoryEnv(config=config, _verbose=False)
 
         # execute controller on traj
@@ -140,6 +139,7 @@ class TensorboardCallback(BaseCallback):
 
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
+
     def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False, s3_bucket=None, exp_logdir=None):
         super(CheckpointCallback, self).__init__()
 
@@ -176,7 +176,8 @@ class CheckpointCallback(BaseCallback):
                     file_path = Path(root, file_name)
                     file_path_s3 = file_path.relative_to(self.exp_logdir.parent.parent)
                     s3.upload_file(str(file_path), str(file_path_s3))
-            print(f'Uploaded exp logdir to s3://{self.s3_bucket}/{self.exp_logdir.relative_to(self.exp_logdir.parent.parent)}')
+            print(
+                f'Uploaded exp logdir to s3://{self.s3_bucket}/{self.exp_logdir.relative_to(self.exp_logdir.parent.parent)}')
 
     def _on_step(self):
         return True
@@ -184,6 +185,7 @@ class CheckpointCallback(BaseCallback):
 
 class LoggingCallback(BaseCallback):
     """Callback for logging additional information."""
+
     def __init__(self, log_metrics=False, grid_search_config={}):
         super(LoggingCallback, self).__init__()
 
@@ -218,7 +220,7 @@ class LoggingCallback(BaseCallback):
         if self.log_metrics:
             self.logger.record('time/timesteps', self.num_timesteps)
             self.logger.record('time/iters', self.num_timesteps // timesteps_per_iter)
-                
+
         self.logger.record('time/goal_timesteps', total_timesteps_rounded)
         self.logger.record('time/goal_iters', total_iters)
         self.logger.record('time/training_progress', f'{round(100 * progress_fraction, 1)}%')
@@ -233,7 +235,7 @@ class LoggingCallback(BaseCallback):
         if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
             self.logger.record("rollout/ep_rew_mean", np.mean([ep_info["r"] for ep_info in self.ep_info_buffer]))
             self.logger.record("rollout/ep_len_mean", np.mean([ep_info["l"] for ep_info in self.ep_info_buffer]))
-        
+
         if self.log_metrics:
             self.print_metrics()
 
@@ -260,11 +262,11 @@ class LoggingCallback(BaseCallback):
             else:
                 continue  # plt figure
 
-            if key.find('/') > 0: 
+            if key.find('/') > 0:
                 tag = key[: key.find('/') + 1]
                 key2str[tag] = ''
             if tag is not None and tag in key:
-                key = str("   " + key[len(tag) :])
+                key = str("   " + key[len(tag):])
 
             key2str[key] = value_str
 
