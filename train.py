@@ -53,7 +53,7 @@ def parse_args_train():
                         help='A checkpoint of the model will be saved every {cp_frequency} iterations.'
                         'Set to None to not save no checkpoints during training.'
                         'Either way, a checkpoint will automatically be saved at the end of training.')
-    parser.add_argument('--eval_frequency', type=int, default=10, 
+    parser.add_argument('--eval_frequency', type=int, default=10,
                         help='An evaluation of the model will be done and saved to tensorboard every {eval_frequency}'
                              ' iterations. Set to None to run no evaluations during training. Either way, an'
                              ' evaluation will automatically be done at the start and at the end of training.')

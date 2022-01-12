@@ -6,6 +6,7 @@ import random
 import onnx  # pip install onnx
 import onnxruntime as ort  # pip install onnxruntime
 import matplotlib.pyplot as plt
+from trajectory.utils import counter
 
 DATA_PATH = '../dataset/data_v2_preprocessed'
 CONTROLLER_PATH = "./vandertest_controller.onnx"
@@ -91,7 +92,7 @@ for time, leader_pos, leader_speed in zip(traj['times'], traj['positions'], traj
     av_space_gap = leader_pos - av_pos
     av_accel = get_accel([av_speed, leader_speed, av_space_gap])
 
-    # update AV
+    # update AV
     new_av_speed = av_speed + dt * av_accel
     new_av_pos = av_pos + dt * new_av_speed
     av_speeds.append(new_av_speed)

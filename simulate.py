@@ -168,9 +168,7 @@ while True:
         print('Generating emissions...')
         if args.data_pipeline is not None:
             metadata = {
-                'is_baseline': int(
-                    args.data_pipeline[2].lower() in 
-                        ['true', '1', 't', 'y', 'yes']),
+                'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
                 'author': args.data_pipeline[0],
                 'strategy': args.data_pipeline[1]}
             if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:

@@ -5,7 +5,8 @@ Generate emissions for all trajectories with IDM
 
 Generate emissions for all trajectories with an RL controller
 
-    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip --av_controller rl --all_trajectories --gen_emissions
+    python simulate.py --cp_path checkpoints/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000/checkpoints/800.zip 
+    --av_controller rl --all_trajectories --gen_emissions
 
 Then use this script to generate metrics and plot stuff
 

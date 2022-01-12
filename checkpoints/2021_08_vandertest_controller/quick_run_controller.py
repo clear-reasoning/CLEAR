@@ -40,13 +40,13 @@ for _ in range(1000):
     av_space_gap = leader_pos - av_pos
     av_accel = get_accel([av_speed, leader_speed, av_space_gap])
 
-    # update AV
+    # update AV
     new_av_speed = av_speed + dt * av_accel
     new_av_pos = av_pos + dt * new_av_speed
     av_speeds.append(new_av_speed)
     av_positions.append(new_av_pos)
 
-    # update leader
+    # update leader
     new_leader_pos = leader_pos + dt * leader_speed
     leader_speeds.append(leader_speed)  # constant leader speed
     leader_positions.append(new_leader_pos)

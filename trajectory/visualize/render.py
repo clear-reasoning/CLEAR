@@ -1,7 +1,6 @@
 import pygame
 import pandas as pd
 import time
-import math
 import sys
 
 
