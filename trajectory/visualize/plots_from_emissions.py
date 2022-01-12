@@ -119,8 +119,12 @@ for traj_name, dfs in data.items():
                 mpgs_by_speed[max_speed][av_controller].append(np.mean(mpg_humans + mpg_avs))
                 steps_by_speed[max_speed][av_controller].append(len(speed_idx[max_speed]))
 
-                plot.add(top=np.mean(mpg_humans + mpg_avs),
-                         group=traj2idx[traj_name], label=av_controller, subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}')
+                plot.add(
+                    top=np.mean(
+                        mpg_humans + mpg_avs),
+                    group=traj2idx[traj_name],
+                    label=av_controller,
+                    subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}')
             else:
                 plot.add(top=0, group=traj2idx[traj_name], label=av_controller,
                          subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}')
@@ -138,8 +142,10 @@ plot.configure_subplot(subplot='mpg_humans', title='Humans MPG', ylabel='Average
 plot.configure_subplot(subplot='mpg_avs_humans', title='AVs + Humans MPG', ylabel='Average MPG')
 
 for max_speed in [10, 20, 30, 40]:
-    plot.configure_subplot(subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}',
-                           title=f'AVs + Humans MPG by speed ({max_speed-10}m/s to {max_speed}m/s)', ylabel='Average MPG')
+    plot.configure_subplot(
+        subplot=f'mpg_avs_humans_speed_{max_speed-10}_{max_speed}',
+        title=f'AVs + Humans MPG by speed ({max_speed-10}m/s to {max_speed}m/s)',
+        ylabel='Average MPG')
 
 # plot.save('tmp.png')
 # plot.save('figs/controller_analysis', now, 'global_metrics.png')

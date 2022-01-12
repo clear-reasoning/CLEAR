@@ -51,7 +51,7 @@ def submit(data, isMeta, cnx):
             batchData = data[start:start + BATCH_SIZE].fillna(NAN_VALUES)
             # convert to tuples in order to use executemany
             batchDataInTuples = [tuple(row) for row in batchData.values]
-            sql = METADATA_SQL if isMeta == True else FLOW_DATA_SQL  # choose SQL
+            sql = METADATA_SQL if isMeta else FLOW_DATA_SQL  # choose SQL
             cursor.executemany(sql, batchDataInTuples)
             start += BATCH_SIZE
         except mysql.connector.Error as err:

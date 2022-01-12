@@ -233,8 +233,10 @@ class Simulation(object):
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
             self.add_data(veh, 'instant_energy_consumption',
                           self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
-            self.add_data(veh, 'total_energy_consumption', get_last_or(
-                self.data_by_vehicle[veh.name]['total_energy_consumption'], 0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
+            self.add_data(veh,
+                          'total_energy_consumption',
+                          get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'],
+                                      0) + self.data_by_vehicle[veh.name]['instant_energy_consumption'][-1])
             self.add_data(veh, 'total_distance_traveled', veh.pos - self.data_by_vehicle[veh.name]['position'][0])
             self.add_data(veh, 'total_miles', self.data_by_vehicle[veh.name]['total_distance_traveled'][-1] / 1609.34)
             self.add_data(veh, 'total_gallons', self.data_by_vehicle[veh.name]

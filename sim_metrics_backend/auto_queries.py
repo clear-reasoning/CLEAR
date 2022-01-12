@@ -78,8 +78,14 @@ def run_luigi(cnt, source_ids):
                          start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
     luigiTaskList.append(FACT_VEHICLE_FUEL_EFFICIENCY_BINNED(partition_name=source_ids,
                          start_filter=start_filter, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
-    luigiTaskList.append(FACT_SAFETY_METRICS_BINNED(partition_name=source_ids, start_filter=start_filter, max_decel=max_decel,
-                         leader_max_decel=leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
+    luigiTaskList.append(
+        FACT_SAFETY_METRICS_BINNED(
+            partition_name=source_ids,
+            start_filter=start_filter,
+            max_decel=max_decel,
+            leader_max_decel=leader_max_decel,
+            inflow_filter=inflow_filter,
+            outflow_filter=outflow_filter))
     luigiTaskList.append(FACT_TOP_SCORES(partition_name=source_ids, start_filter=start_filter, max_decel=max_decel,
                          leader_max_decel=leader_max_decel, inflow_filter=inflow_filter, outflow_filter=outflow_filter))
 

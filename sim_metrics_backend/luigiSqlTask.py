@@ -704,18 +704,39 @@ class LEADERBOARD_CHART(luigi.Task):
                            update_id=str(self.runtime))
 
     def requires(self):
-        return [FACT_NETWORK_THROUGHPUT_AGG(partition_name=self.partition_name, start_filter=self.start_filter, inflow_filter=self.inflow_filter),
-                FACT_NETWORK_SPEED(partition_name=self.partition_name, start_filter=self.start_filter,
-                                   inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter),
-                FACT_VEHICLE_METRICS(partition_name=self.partition_name, start_filter=self.start_filter,
-                                     inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter),
-                FACT_NETWORK_FUEL_EFFICIENCY_AGG(partition_name=self.partition_name, start_filter=self.start_filter,
-                                                 inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter),
-                FACT_SAFETY_METRICS_AGG(partition_name=self.partition_name, start_filter=self.start_filter, max_decel=self.max_decel,
-                                        leader_max_decel=self.leader_max_decel, inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter),
-                FACT_INFEASIBLE_FLAGS(partition_name=self.partition_name, start_filter=self.start_filter,
-                                      inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter),
-                ]
+        return [
+            FACT_NETWORK_THROUGHPUT_AGG(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                inflow_filter=self.inflow_filter),
+            FACT_NETWORK_SPEED(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter),
+            FACT_VEHICLE_METRICS(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter),
+            FACT_NETWORK_FUEL_EFFICIENCY_AGG(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter),
+            FACT_SAFETY_METRICS_AGG(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                max_decel=self.max_decel,
+                leader_max_decel=self.leader_max_decel,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter),
+            FACT_INFEASIBLE_FLAGS(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter),
+        ]
 
     def run(self):
         connection = self.output().connect()
@@ -754,8 +775,14 @@ class LEADERBOARD_CHART_AGG(luigi.Task):
                            update_id=str(self.runtime))
 
     def requires(self):
-        return [LEADERBOARD_CHART(partition_name=self.partition_name, start_filter=self.start_filter, max_decel=self.max_decel,
-                                  leader_max_decel=self.leader_max_decel, inflow_filter=self.inflow_filter, outflow_filter=self.outflow_filter)]
+        return [
+            LEADERBOARD_CHART(
+                partition_name=self.partition_name,
+                start_filter=self.start_filter,
+                max_decel=self.max_decel,
+                leader_max_decel=self.leader_max_decel,
+                inflow_filter=self.inflow_filter,
+                outflow_filter=self.outflow_filter)]
 
     def run(self):
         connection = self.output().connect()

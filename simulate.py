@@ -35,7 +35,8 @@ def parse_args_simulate():
 
     parser.add_argument('--horizon', type=int, default=None,
                         help='Number of environment steps to simulate. If None, use a whole trajectory.')
-    parser.add_argument('--traj_path', type=str, default='dataset/data_v2_preprocessed/2021-03-26-21-26-45_2T3MWRFVXLW056972_masterArray_1_6131.csv',
+    parser.add_argument('--traj_path', type=str,
+                        default='dataset/data_v2_preprocessed/2021-03-26-21-26-45_2T3MWRFVXLW056972_masterArray_1_6131.csv',
                         help='Use a specific trajectory by default. Set to None to use a random trajectory.')
     parser.add_argument('--platoon', type=str, default='av human*5',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
@@ -167,10 +168,11 @@ while True:
         print('Generating emissions...')
         if args.data_pipeline is not None:
             metadata = {
-                'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ya']),
+                'is_baseline': int(
+                    args.data_pipeline[2].lower() in 
+                        ['true', '1', 't', 'y', 'yes']),
                 'author': args.data_pipeline[0],
-                'strategy': args.data_pipeline[1]
-            }
+                'strategy': args.data_pipeline[1]}
             if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
                 pr = match[0]
                 if '.' not in pr:

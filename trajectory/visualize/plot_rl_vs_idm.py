@@ -69,8 +69,8 @@ with plotter.subplot(title='AV accel', xlabel='Time (s)', ylabel='Acceleration (
 with plotter.subplot(title='AV metrics difference (IDM minus RL FS)', xlabel='Time (s)', ylabel='Difference x100', grid=True, legend=True):
     plotter.plot(idm_data[veh_ids['idm']['av']]['time'],
                  100 * (idm_data[veh_ids['idm']['av']]['speed'] - rl_data[veh_ids['rl']['av']]['speed']), label='Speed')
-    plotter.plot(idm_data[veh_ids['idm']['av']]['time'],
-                 100 * (idm_data[veh_ids['idm']['av']]['accel'] - rl_data[veh_ids['rl']['av']]['accel']), label='Acceleration')
+    plotter.plot(idm_data[veh_ids['idm']['av']]['time'], 100 * (idm_data[veh_ids['idm']['av']]
+                 ['accel'] - rl_data[veh_ids['rl']['av']]['accel']), label='Acceleration')
 
 with plotter.subplot(title='AV instant energy consumption', xlabel='Time (s)', ylabel='Nrj (some interesting unit)', grid=True, legend=True):
     plotter.plot(rl_data[veh_ids['rl']['av']]['time'], rl_data[veh_ids['rl']['av']]

@@ -12,8 +12,7 @@ def plot_platoon_mpg(emissions_path, save_path):
     circles_nums = [id_num for id_num, veh_dict in id_dict.items() if 'av' in veh_dict['veh_id']
                     or 'sensor' in veh_dict['veh_id']]
     leader_nums = sorted([circles_num - 1 for circles_num in circles_nums])
-    local_nums = circles_nums + leader_nums
-    local_nums.sort()
+    local_nums = sorted(circles_nums + leader_nums)
     local_ids = {id_dict[local_num]['veh_id']: local_num for local_num in local_nums}
 
     # df = df[df['id'].isin(local_ids.keys())]

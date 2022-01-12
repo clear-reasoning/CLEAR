@@ -146,7 +146,7 @@ class TrajectoryEnv(gym.Env):
         return vf_state
 
     def get_state(self, _store_state=False, av_idx=None):
-        if av_idx is not None and _store_state == True:
+        if av_idx is not None and _store_state:
             raise ValueError('Training with several AVs is not supported.')
 
         if _store_state or av_idx is not None:
@@ -180,8 +180,13 @@ class TrajectoryEnv(gym.Env):
         self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing)
 
         # populate simulation with a trajectoy leader
-        self.sim.add_vehicle(controller='trajectory', kind='leader',
-                             trajectory=zip(self.traj['positions'], self.traj['velocities'], self.traj['accelerations']))
+        self.sim.add_vehicle(
+            controller='trajectory',
+            kind='leader',
+            trajectory=zip(
+                self.traj['positions'],
+                self.traj['velocities'],
+                self.traj['accelerations']))
 
         # parse platoons
         if self.platoon in PLATOON_PRESETS:
@@ -425,11 +430,28 @@ class TrajectoryEnv(gym.Env):
             self.emissions['submission_date'] = [date_now] * len(self.emissions['x'])
 
             emissions_df = pd.DataFrame(self.emissions).sort_values(by=['time', 'id'])
-            emissions_df = emissions_df[['time', 'id', 'x', 'y', 'speed', 'headway',
-                                         'leader_id', 'follower_id', 'leader_rel_speed', 'target_accel_with_noise_with_failsafe',
-                                         'target_accel_no_noise_no_failsafe', 'target_accel_with_noise_no_failsafe',
-                                         'target_accel_no_noise_with_failsafe', 'realized_accel', 'road_grade',
-                                         'edge_id', 'lane_id', 'distance', 'relative_position', 'source_id', 'run_id', 'submission_date']]
+            emissions_df = emissions_df[['time',
+                                         'id',
+                                         'x',
+                                         'y',
+                                         'speed',
+                                         'headway',
+                                         'leader_id',
+                                         'follower_id',
+                                         'leader_rel_speed',
+                                         'target_accel_with_noise_with_failsafe',
+                                         'target_accel_no_noise_no_failsafe',
+                                         'target_accel_with_noise_no_failsafe',
+                                         'target_accel_no_noise_with_failsafe',
+                                         'realized_accel',
+                                         'road_grade',
+                                         'edge_id',
+                                         'lane_id',
+                                         'distance',
+                                         'relative_position',
+                                         'source_id',
+                                         'run_id',
+                                         'submission_date']]
             leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 

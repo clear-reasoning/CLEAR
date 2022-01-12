@@ -30,7 +30,8 @@ def parse_args_train():
     parser.add_argument('--expname', type=str, default='test',
                         help='Name for the experiment.')
     parser.add_argument('--logdir', type=str, default='./log',
-                        help='Experiment logs, checkpoints and tensorboard files will be saved under {logdir}/{expname}_[current_time]/.')
+                        help='Experiment logs, checkpoints and tensorboard files '
+                             'will be saved under {logdir}/{expname}_[current_time]/.')
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to run in parallel. Useful when running grid searches.'
                         'Can be more than the number of available CPUs.')
@@ -52,10 +53,10 @@ def parse_args_train():
                         help='A checkpoint of the model will be saved every {cp_frequency} iterations.'
                         'Set to None to not save no checkpoints during training.'
                         'Either way, a checkpoint will automatically be saved at the end of training.')
-    parser.add_argument('--eval_frequency', type=int, default=10,
-                        help='An evaluation of the model will be done and saved to tensorboard every {eval_frequency} iterations.'
-                        'Set to None to run no evaluations during training.'
-                        'Either way, an evaluation will automatically be done at the start and at the end of training.')
+    parser.add_argument('--eval_frequency', type=int, default=10, 
+                        help='An evaluation of the model will be done and saved to tensorboard every {eval_frequency}'
+                             ' iterations. Set to None to run no evaluations during training. Either way, an'
+                             ' evaluation will automatically be done at the start and at the end of training.')
     parser.add_argument('--no_eval', default=False, action='store_true',
                         help='If set, no evaluation (ie. tensorboard plots) will be done.')
 
@@ -103,7 +104,8 @@ def parse_args_train():
     parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
                         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
     parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
-                        help='We take this many sim-steps per environment step i.e. this lets us taking steps bigger than 0.1')
+                        help='We take this many sim-steps per environment step i.e. this lets us taking steps '
+                             'bigger than 0.1')
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
