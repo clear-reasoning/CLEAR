@@ -15,7 +15,7 @@ from stable_baselines3.td3 import TD3
 
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
-from trajectory.algos import CustomTD3Policy
+from trajectory.algos.td3.policies import CustomTD3Policy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition

@@ -63,7 +63,7 @@ class TrajectoryEnv(gym.Env):
         super().__init__()
 
         # extract params from config
-        self.config = DEFAULT_ENV_CONFIG
+        self.config = dict(DEFAULT_ENV_CONFIG)
         self.config.update(config)
         for k, v in self.config.items():
             setattr(self, k, v)
