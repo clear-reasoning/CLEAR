@@ -1,0 +1,51 @@
+{
+    "algorithm": "<class 'algos.ppo.ppo.PPO'>",
+    "env_config": {
+        "horizon": 1000,
+        "min_headway": 7.0,
+        "max_headway": 120,
+        "whole_trajectory": false,
+        "discrete": 0,
+        "num_actions": 7,
+        "use_fs": 0,
+        "augment_vf": 1,
+        "minimal_time_headway": 1.0,
+        "include_idm_mpg": 0,
+        "num_idm_cars": 5,
+        "num_concat_states": 1,
+        "num_steps_per_sim": 1,
+        "av_controller": "rl",
+        "av_kwargs": "{}"
+    },
+    "train_config": {
+        "policy_kwargs": {
+            "net_arch": [
+                {
+                    "pi": [64, 64, 64, 64],
+                    "vf": [64, 64, 64, 64]
+                }
+            ]
+        },
+        "learning_rate": 0.0003,
+        "n_steps": 25600,
+        "batch_size": 5120,
+        "n_epochs": 10,
+        "gamma": 0.99,
+        "gae_lambda": 0.9,
+        "clip_range": 0.2,
+        "clip_range_vf": 50,
+        "ent_coef": 0.0,
+        "vf_coef": 0.5,
+        "max_grad_norm": 0.5,
+        "env": "<stable_baselines3.common.vec_env.dummy_vec_env.DummyVecEnv object at 0x2ae2c5a196d0>",
+        "tensorboard_log": "/global/scratch/nathanlichtle/16Jun21/cra_14h50m32s/gamma=0.99_gae_lambda=0.9_env_num_concat_states=1_env_horizon=1000",
+        "verbose": 0,
+        "seed": null,
+        "device": "cpu",
+        "policy": "<class 'algos.ppo.policies.SplitActorCriticPolicy'>"
+    },
+    "learn_config": {
+        "total_timesteps": 81920000,
+        "callback": "<stable_baselines3.common.callbacks.CallbackList object at 0x2ae2c5a195e0>"
+    }
+}
