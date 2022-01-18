@@ -5,6 +5,9 @@ from trajectory.env.utils import get_last_or
 import random
 import numpy as np
 
+import os
+from scipy.interpolate import interp1d, UnivariateSpline
+
 
 class Simulation(object):
     def __init__(self, timestep, enable_lane_changing=True):
@@ -33,6 +36,34 @@ class Simulation(object):
 
         self.n_cutins = 0
         self.n_cutouts = 0
+
+        self.setup_altitude_map()
+
+        
+    def setup_altitude_map(self):
+        altitude_path = os.path.abspath(
+            os.path.join(__file__, '../../../dataset/i24_altitude.csv'))
+        alt_msg = pd.read_csv(altitude_path)
+        self.lon_pos = alt_msg['longitudinal'].to_numpy()
+        self.alt_pos = alt_msg['altitude_lidar'].to_numpy()
+
+        self.altitude_map =  UnivariateSpline(self.lon_pos, self.alt_pos, k=1, ext=0)
+        self.road_grade_map = self.altitude_map.derivative(1)
+
+    
+    def get_altitude(self, veh):
+        pos = self.get_data(veh, 'position')[-1]
+        if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
+            return None
+        return self.altitude_map(pos)
+
+
+    def get_road_grade(self, veh):
+        pos = self.get_data(veh, 'position')[-1]
+        if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
+            return None
+        return self.road_grade_map(pos)
+        
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -184,6 +215,7 @@ class Simulation(object):
             # move to next vehicle in platoon
             i += 1
 
+
     def step(self):
         self.step_counter += 1
         self.time_counter += self.timestep
@@ -229,6 +261,7 @@ class Simulation(object):
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
+            self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
             self.add_data(veh, 'instant_energy_consumption',
                           self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
             self.add_data(veh,

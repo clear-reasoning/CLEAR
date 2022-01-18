@@ -323,6 +323,12 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
+        if done:
+            import pickle
+            output_dict = {'pos': self.sim.get_data(self.mpg_cars[0], 'position'),
+                           'road_grade': self.sim.get_data(self.mpg_cars[0], 'road_grade')}
+            with open('/Users/kathyjang/Desktop/testing/temp_data.pkl', 'wb') as fp:
+                pickle.dump(output_dict, fp)
 
         return next_state, reward, done, infos
 
