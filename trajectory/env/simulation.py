@@ -4,6 +4,7 @@ from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
 import numpy as np
+import pandas as pd
 
 import os
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -41,17 +42,19 @@ class Simulation(object):
 
         
     def setup_altitude_map(self):
+        # Set up altitude and road grade maps in meters
         altitude_path = os.path.abspath(
             os.path.join(__file__, '../../../dataset/i24_altitude.csv'))
         alt_msg = pd.read_csv(altitude_path)
         self.lon_pos = alt_msg['longitudinal'].to_numpy()
-        self.alt_pos = alt_msg['altitude_lidar'].to_numpy()
-
-        self.altitude_map =  UnivariateSpline(self.lon_pos, self.alt_pos, k=1, ext=0)
+        # Altitude file is in westbound, while trajectories are eastbound
+        self.alt_pos = alt_msg['altitude_lidar'][::-1].to_numpy() / 3.2808 # Convert to meters
+        self.altitude_map =  UnivariateSpline(self.lon_pos, self.alt_pos, k=3, s=2000, ext=0)
         self.road_grade_map = self.altitude_map.derivative(1)
 
     
     def get_altitude(self, veh):
+        # Return altitude in meters
         pos = self.get_data(veh, 'position')[-1]
         if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
             return None
@@ -59,10 +62,12 @@ class Simulation(object):
 
 
     def get_road_grade(self, veh):
+        # Return road grade in degrees
         pos = self.get_data(veh, 'position')[-1]
         if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
             return None
-        return self.road_grade_map(pos)
+        gr = np.arctan(self.road_grade_map(pos)) * 180 / np.pi
+        return gr
         
 
     def get_vehicles(self, controller=None):
@@ -262,6 +267,7 @@ class Simulation(object):
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
+            self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
                           self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
             self.add_data(veh,
