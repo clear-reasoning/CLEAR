@@ -80,7 +80,7 @@ def parse_args_train():
     parser.add_argument('--gamma', type=float, default=0.99, nargs='+',
                         help='Discount factor.')
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
-                        help=' Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
+                        help='Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
 
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
                         help='If true, the value function will be augmented with some additional states.')
