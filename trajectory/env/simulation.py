@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 import os
-from scipy.interpolate import interp1d, UnivariateSpline
+from scipy.interpolate import UnivariateSpline
 
 
 class Simulation(object):
@@ -40,7 +40,6 @@ class Simulation(object):
 
         self.setup_altitude_map()
 
-        
     def setup_altitude_map(self):
         # Set up altitude and road grade maps in meters
         altitude_path = os.path.abspath(
@@ -48,18 +47,16 @@ class Simulation(object):
         alt_msg = pd.read_csv(altitude_path)
         self.lon_pos = alt_msg['longitudinal'].to_numpy()
         # Altitude file is in westbound, while trajectories are eastbound
-        self.alt_pos = alt_msg['altitude_lidar'][::-1].to_numpy() / 3.2808 # Convert to meters
-        self.altitude_map =  UnivariateSpline(self.lon_pos, self.alt_pos, k=3, s=2000, ext=0)
+        self.alt_pos = alt_msg['altitude_lidar'][::-1].to_numpy() / 3.2808  # Convert to meters
+        self.altitude_map = UnivariateSpline(self.lon_pos, self.alt_pos, k=3, s=2000, ext=0)
         self.road_grade_map = self.altitude_map.derivative(1)
 
-    
     def get_altitude(self, veh):
         # Return altitude in meters
         pos = self.get_data(veh, 'position')[-1]
         if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
             return None
         return self.altitude_map(pos)
-
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
@@ -68,7 +65,6 @@ class Simulation(object):
             return None
         gr = np.arctan(self.road_grade_map(pos)) * 180 / np.pi
         return gr
-        
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -219,7 +215,6 @@ class Simulation(object):
 
             # move to next vehicle in platoon
             i += 1
-
 
     def step(self):
         self.step_counter += 1
