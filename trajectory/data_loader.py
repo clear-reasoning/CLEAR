@@ -79,7 +79,7 @@ def _preprocess_data():
     file_paths = list(Path(os.path.abspath('../dataset/data_v2')).glob('**/*.csv'))
     for fp in file_paths:
         print(f'Reading {fp}')
-        
+
         # load
         df = pd.read_csv(fp, index_col=0)
         df = df.reset_index(drop=True)
@@ -120,7 +120,6 @@ def _preprocess_data():
             bears.append(get_bearing(m, j, n, k))
         bears.append(0)
         df['Bearing'] = bears
-
 
         directions = []
         for i in range(len(df['Bearing'])):
