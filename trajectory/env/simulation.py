@@ -53,7 +53,8 @@ class Simulation(object):
         self.road_grade_map = self.altitude_map.derivative(1)
 
     def setup_roadgrade_map(self):
-        fit_path = '../../../dataset/Eastbound_grade_fit.csv'
+        fit_path = os.path.abspath(
+            os.path.join(__file__, '../../../dataset/Eastbound_grade_fit.csv'))
         fit_msg = pd.read_csv(fit_path)
 
         num_points = 5000
