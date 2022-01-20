@@ -29,7 +29,7 @@ def parse_args_simulate():
                         help='If set, some figures will be generated and some metrics printed.')
     parser.add_argument('--data_pipeline', default=None, nargs=3,
                         help='If set, the emission file and metadata will be uploaded to leaderboard. '
-                        'Arguments are [author] [strategy name] [is baseline]. '
+                        'Arguments are [author] [strategy name] [is baseline]. '
                         'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
                         'Note that [is baseline] should by default be set to False (or 0).')
 
@@ -81,7 +81,9 @@ if 'rl' in args.av_controller.lower():
 
     # retrieve algorithm
     alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
-    assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'])
+    
+    #assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'])
+    assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1]=='algos')
     algorithm = getattr(importlib.import_module(alg_module), alg_class)
 
     # load checkpoint into model
