@@ -39,6 +39,7 @@ class Simulation(object):
         self.n_cutouts = 0
 
         self.setup_altitude_map()
+        self.setup_roadgrade_map()
 
     def setup_altitude_map(self):
         # Set up altitude and road grade maps in meters
@@ -50,6 +51,26 @@ class Simulation(object):
         self.alt_pos = alt_msg['altitude_lidar'][::-1].to_numpy() / 3.2808  # Convert to meters
         self.altitude_map = UnivariateSpline(self.lon_pos, self.alt_pos, k=3, s=2000, ext=0)
         self.road_grade_map = self.altitude_map.derivative(1)
+
+    def setup_roadgrade_map(self):
+        fit_path = '../../../dataset/Eastbound_grade_fit.csv'
+        fit_msg = pd.read_csv(fit_path)
+        
+        num_points = 5000
+        x = np.linspace(0, fit_msg['interval_end'][fit_msg.shape[0]-1] * 1609.344 , num_points)
+        y = np.ones(num_points)
+        d = {'x': x, 'y': y}
+        df = pd.DataFrame(data=d)
+
+        idx = 0
+        for _, row in df.iterrows():
+            if np.around(row['x'] / 1609.344, 8) > fit_msg['interval_end'][idx]:
+                idx += 1
+            coeffs = np.array([fit_msg['slope'][idx], fit_msg['intercept'][idx]])
+            x_vec = np.array([row['x'] / 1609.344, 1])
+            row['y'] = np.dot(coeffs, x_vec)
+        
+        self.roadgrade_map = UnivariateSpline(df['x'], df['y'], k=1, s=0, ext=0)
 
     def get_altitude(self, veh):
         # Return altitude in meters
@@ -63,7 +84,7 @@ class Simulation(object):
         pos = self.get_data(veh, 'position')[-1]
         if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
             return None
-        gr = np.arctan(self.road_grade_map(pos)) * 180 / np.pi
+        gr = self.roadgrade_map(pos)
         return gr
 
     def get_vehicles(self, controller=None):
