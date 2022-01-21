@@ -41,7 +41,8 @@ class Simulation(object):
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
     def add_vehicle(self, controller='idm', kind=None, tags=None, gap=20,
-                    initial_speed=None, insert_at_index=None, **controller_kwargs):
+                    initial_speed=None, insert_at_index=None, 
+                    default_time_headway=1.1, **controller_kwargs):
         """Add a vehicle behind the platoon.
 
         controller: 'idm' or 'rl' or 'trajectory' (do not use trajectory)
@@ -70,7 +71,7 @@ class Simulation(object):
         # if inputting a gap < 0, defaults to an initial constant time headway of 1.1s
         if gap < 0 and idx_leader is not None:
             leader_speed = self.vehicles[idx_leader].speed
-            gap = leader_speed * 1.1
+            gap = leader_speed * default_time_headway
 
         # create vehicle object
         veh = vehicle_class(
