@@ -39,40 +39,36 @@ class Simulation(object):
         self.n_cutins = 0
         self.n_cutouts = 0
 
-        self.setup_altitude_map()
-        self.setup_roadgrade_map()
+        self.setup_grade_and_altitude_map()
 
-    def setup_altitude_map(self):
-        # Set up altitude and road grade maps in meters
-        altitude_path = os.path.abspath(
-            os.path.join(__file__, '../../../dataset/i24_altitude.csv'))
-        alt_msg = pd.read_csv(altitude_path)
-        self.lon_pos = alt_msg['longitudinal'].to_numpy()
-        # Altitude file is in westbound, while trajectories are eastbound
-        self.alt_pos = alt_msg['altitude_lidar'][::-1].to_numpy() / 3.2808  # Convert to meters
-        self.altitude_map = UnivariateSpline(self.lon_pos, self.alt_pos, k=3, s=2000, ext=0)
-        self.road_grade_map = self.altitude_map.derivative(1)
-
-    def setup_roadgrade_map(self):
-        fit_path = os.path.abspath(
+    def setup_grade_and_altitude_map(self):
+        grade_path = os.path.abspath(
             os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
-        with open(fit_path, 'rb') as fp:
-            self.roadgrade_map = pickle.load(fp)
+        with open(grade_path, 'rb') as fp:
+            road_grade = pickle.load(fp)
+            self.road_grade_map = road_grade['road_grade_map']
+            self.grade_bounds = road_grade['bounds']
 
-    def get_altitude(self, veh):
-        # Return altitude in meters
-        pos = self.get_data(veh, 'position')[-1]
-        if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
-            return None
-        return self.altitude_map(pos)
+        altitude_path = os.path.abspath(
+            os.path.join(__file__, '../../../dataset/altitude_interp.pkl'))
+        with open(altitude_path, 'rb') as fp:
+            altitude = pickle.load(fp)
+            self.altitude_map = altitude['altitude_map']
+            self.altitude_bounds = altitude['bounds']
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
         pos = self.get_data(veh, 'position')[-1]
-        if pos < np.min(self.lon_pos) or pos > np.max(self.lon_pos):
+        if pos < self.grade_bounds[0] or pos > self.grade_bounds[1]:
             return None
-        gr = self.roadgrade_map(pos)
-        return gr
+        return self.road_grade_map(pos)
+
+    def get_altitude(self, veh):
+        # Return altitude in m
+        pos = self.get_data(veh, 'position')[-1]
+        if pos < self.altitude_bounds[0] or pos > self.altitude_bounds[1]:
+            return None
+        return self.altitude_map(pos) / 3.2808
 
     def get_vehicles(self, controller=None):
         if controller is None:
