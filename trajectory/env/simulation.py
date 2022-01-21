@@ -5,7 +5,6 @@ from trajectory.env.utils import get_last_or
 import random
 import pickle
 import numpy as np
-import pandas as pd
 
 import os
 from scipy.interpolate import UnivariateSpline
