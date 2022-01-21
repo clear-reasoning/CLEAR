@@ -3,6 +3,7 @@ from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, R
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -54,24 +55,9 @@ class Simulation(object):
 
     def setup_roadgrade_map(self):
         fit_path = os.path.abspath(
-            os.path.join(__file__, '../../../dataset/Eastbound_grade_fit.csv'))
-        fit_msg = pd.read_csv(fit_path)
-
-        num_points = 5000
-        x = np.linspace(0, fit_msg['interval_end'][fit_msg.shape[0]-1] * 1609.344, num_points)
-        y = np.ones(num_points)
-        d = {'x': x, 'y': y}
-        df = pd.DataFrame(data=d)
-
-        idx = 0
-        for _, row in df.iterrows():
-            if np.around(row['x'] / 1609.344, 8) > fit_msg['interval_end'][idx]:
-                idx += 1
-            coeffs = np.array([fit_msg['slope'][idx], fit_msg['intercept'][idx]])
-            x_vec = np.array([row['x'] / 1609.344, 1])
-            row['y'] = np.dot(coeffs, x_vec)
-
-        self.roadgrade_map = UnivariateSpline(df['x'], df['y'], k=1, s=0, ext=0)
+            os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
+        with open(fit_path, 'rb') as fp:
+            self.roadgrade_map = pickle.load(fp)
 
     def get_altitude(self, veh):
         # Return altitude in meters
