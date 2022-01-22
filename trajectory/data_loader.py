@@ -76,7 +76,7 @@ def smooth_data(target, n, mu=0.5):
 
 def _preprocess_data():
     """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
-    file_paths = list(Path('../dataset/data_v2').glob('**/*.csv'))
+    file_paths = list(Path(os.path.abspath('../dataset/data_v2')).glob('**/*.csv'))
     for fp in file_paths:
         print(f'Reading {fp}')
 
@@ -117,7 +117,7 @@ def _preprocess_data():
             k = np.deg2rad(df['LongitudeGPS'][i + 1])
             m = np.deg2rad(df['LatitudeGPS'][i])
             n = np.deg2rad(df['LatitudeGPS'][i + 1])
-            bears.append(get_bearing(j, m, k, n))
+            bears.append(get_bearing(m, j, n, k))
         bears.append(0)
         df['Bearing'] = bears
 
@@ -154,7 +154,7 @@ def _preprocess_data():
                 # save trajectory
                 file_path = str(fp).replace('data_v2', 'data_v2_preprocessed')
                 file_path = file_path.replace('.csv', f'_{k}_{end_point - start_point}.csv')
-                sub_df.to_csv(file_path, encoding='utf-8', index=True, index_label='index')
+                sub_df.to_csv(file_path, encoding='utf-8', index=True, index_label='index', mode='w+')
                 print(f'Wrote {file_path}')
 
                 k += 1

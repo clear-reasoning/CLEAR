@@ -19,18 +19,18 @@ def lat_long_distance(pos1, pos2):
 
 def get_bearing(lat1, lon1, lat2, lon2):
     dLon = lon2 - lon1
-    y = np.sin(dLon) * np.cos(lat2)
-    x = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dLon)
-    brng = np.rad2deg(np.arctan2(y, x))
+    x = np.cos(lat2) * np.sin(dLon)
+    y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dLon)
+    brng = np.rad2deg(np.arctan2(x, y))
     if brng < 0:
         brng += 360
     return brng
 
 
 def get_driving_direction(bearing):
-    if(bearing > 340 and bearing < 360):
+    if(bearing > 270 and bearing < 360):
         return 'West'
-    elif(bearing > 150 and bearing < 190):
+    elif(bearing > 90 and bearing < 190):
         return 'East'
     else:
         return None

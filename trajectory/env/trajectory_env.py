@@ -207,7 +207,8 @@ class TrajectoryEnv(gym.Env):
                 if vtype == 'av':
                     self.avs.append(
                         self.sim.add_vehicle(controller=self.av_controller, kind='av',
-                                             tags=tags, gap=-1, **eval(self.av_kwargs))
+                                             tags=tags, gap=-1, **eval(self.av_kwargs),
+                                             default_time_headway=3.0)
                     )
                 elif vtype == 'human':
                     self.humans.append(
