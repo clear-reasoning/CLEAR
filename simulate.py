@@ -81,7 +81,7 @@ if 'rl' in args.av_controller.lower():
 
     # retrieve algorithm
     alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
-    
+
     # assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'])
     assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
     algorithm = getattr(importlib.import_module(alg_module), alg_class)
