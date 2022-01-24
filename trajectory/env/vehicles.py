@@ -74,6 +74,12 @@ class Vehicle(object):
             return None
         return self.leader.speed
 
+    def get_time_to_collision(self):
+        if self.leader is None:
+            return None
+        speed_diff = self.speed - self.leader.speed
+        return np.inf if speed_diff <= 0 else self.get_headway() / speed_diff
+
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)

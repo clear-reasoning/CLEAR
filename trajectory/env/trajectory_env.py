@@ -29,6 +29,7 @@ DEFAULT_ENV_CONFIG = {
     'augment_vf': True,
     # if we get closer then this time headway we are forced to break with maximum decel
     'minimal_time_headway': 1.0,
+    'minimal_time_to_collision': 6.0,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
@@ -288,6 +289,7 @@ class TrajectoryEnv(gym.Env):
         # compute reward & done
         h = self.avs[0].get_headway()
         th = self.avs[0].get_time_headway()
+        ttc = self.avs[0].get_time_to_collision()
 
         reward = 0
 
@@ -300,7 +302,8 @@ class TrajectoryEnv(gym.Env):
         headway_penalties = {
             'low_headway_penalty': h < self.min_headway,
             'large_headway_penalty': h > self.max_headway,
-            'low_time_headway_penalty': th < self.minimal_time_headway}
+            'low_time_headway_penalty': th < self.minimal_time_headway,
+            'low_ttc_penalty': ttc < self.minimal_time_to_collision}
         if any(headway_penalties.values()):
             reward -= 2.0
 
