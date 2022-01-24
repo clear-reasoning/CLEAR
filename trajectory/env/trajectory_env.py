@@ -19,7 +19,7 @@ from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 # env params that will be used except for params explicitely set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
-    'min_headway': 7.0,
+    'min_headway': 10.0,
     'max_headway': 120.0,
     'whole_trajectory': False,
     'discrete': False,
