@@ -16,7 +16,7 @@ from trajectory.env.utils import get_first_element, upload_to_pipeline
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
-# env params that will be used except for params explicitely set in the command-line arguments
+# env params that will be used except for params explicitly set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
     'min_headway': 10.0,
