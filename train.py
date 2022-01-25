@@ -113,6 +113,9 @@ def parse_args_train():
                         'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
+    parser.add_argument('--road_grade', default=False, action='store_true',
+                        help='If set, road grade will be included in the energy function.')
+    
 
     args = parser.parse_args()
     return args
@@ -138,6 +141,7 @@ def run_experiment(config):
         'num_steps_per_sim': config['env_num_steps_per_sim'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
+        'road_grade': config['road_grade']
     })
 
     # create env

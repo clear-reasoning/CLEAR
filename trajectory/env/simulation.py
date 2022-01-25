@@ -10,7 +10,7 @@ import os
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True):
+    def __init__(self, timestep, enable_lane_changing=True, enable_road_grade=False):
         """Simulation object
 
         timestep: dt in seconds
@@ -37,10 +37,10 @@ class Simulation(object):
         self.n_cutins = 0
         self.n_cutouts = 0
 
-        self.setup_grade_and_altitude_map()
+        self.setup_grade_and_altitude_map(enable_road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
-        if network == 'i24':
+        if network == 'i24' or network == True:
             grade_path = os.path.abspath(
                 os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
             with open(grade_path, 'rb') as fp:
@@ -56,7 +56,10 @@ class Simulation(object):
                 self.altitude_bounds = altitude['bounds']
         else:
             print(f"Network {network} does not exist. Setting all road grades to 0.")
-            return lambda x: 0
+            self.road_grade_map =  lambda x: 0
+            self.altitude_map = lambda x: 0
+            self.altitude_bounds = [0, 0]
+            self.grade_bounds = [0, 0]
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
@@ -270,7 +273,8 @@ class Simulation(object):
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
             self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
-                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
+                          self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',
                           get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'],
