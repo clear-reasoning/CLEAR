@@ -7,7 +7,6 @@ import pickle
 import numpy as np
 
 import os
-from scipy.interpolate import UnivariateSpline
 
 
 class Simulation(object):
@@ -40,20 +39,24 @@ class Simulation(object):
 
         self.setup_grade_and_altitude_map()
 
-    def setup_grade_and_altitude_map(self):
-        grade_path = os.path.abspath(
-            os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
-        with open(grade_path, 'rb') as fp:
-            road_grade = pickle.load(fp)
-            self.road_grade_map = road_grade['road_grade_map']
-            self.grade_bounds = road_grade['bounds']
+    def setup_grade_and_altitude_map(self, network='i24'):
+        if network == 'i24':
+            grade_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
+            with open(grade_path, 'rb') as fp:
+                road_grade = pickle.load(fp)
+                self.road_grade_map = road_grade['road_grade_map']
+                self.grade_bounds = road_grade['bounds']
 
-        altitude_path = os.path.abspath(
-            os.path.join(__file__, '../../../dataset/altitude_interp.pkl'))
-        with open(altitude_path, 'rb') as fp:
-            altitude = pickle.load(fp)
-            self.altitude_map = altitude['altitude_map']
-            self.altitude_bounds = altitude['bounds']
+            altitude_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/altitude_interp.pkl'))
+            with open(altitude_path, 'rb') as fp:
+                altitude = pickle.load(fp)
+                self.altitude_map = altitude['altitude_map']
+                self.altitude_bounds = altitude['bounds']
+        else:
+            print(f"Network {network} does not exist. Setting all road grades to 0.")
+            return lambda x: 0
 
     def get_road_grade(self, veh):
         # Return road grade in degrees

@@ -9,6 +9,8 @@ altitude_path = os.path.abspath(os.path.join(__file__, '../../dataset/Eastbound_
 grade_msg = pd.read_csv(grade_path)
 altitude_msg = pd.read_csv(altitude_path)
 
+mi_to_m = 1609.344
+
 ################################################################################################
 # Make the spline for road grade
 
@@ -16,7 +18,7 @@ altitude_msg = pd.read_csv(altitude_path)
 num_points = 5000
 # end in miles
 end_mi = grade_msg['interval_end'][grade_msg.shape[0]-1]
-end_m = end_mi * 1609.344
+end_m = end_mi * mi_to_m
 x = np.linspace(0, end_m, num_points)
 y = np.ones(num_points)
 d = {'x': x, 'y': y}
@@ -25,10 +27,10 @@ df_grade = pd.DataFrame(data=d)
 # Calculate xs and ys for grade
 idx = len(grade_msg) - 1
 for _, row in df_grade.iterrows():
-    if (end_mi - np.around(row['x'] / 1609.344, 8) < grade_msg['interval_start'][idx]):
+    if (end_mi - np.around(row['x'] / mi_to_m, 8) < grade_msg['interval_start'][idx]):
         idx -= 1
     coeffs = np.array([grade_msg['slope'][idx], grade_msg['intercept'][idx]])
-    x_vec = np.array([end_mi - (row['x'] / 1609.344), 1])
+    x_vec = np.array([end_mi - (row['x'] / mi_to_m), 1])
     row['y'] = np.dot(coeffs, x_vec)
 
 roadgrade_map = UnivariateSpline(df_grade['x'], df_grade['y'], k=1, s=0, ext=0)
@@ -45,7 +47,7 @@ with open(os.path.abspath(os.path.join(__file__, '../../dataset/road_grade_inter
 num_points = 5000
 # end in miles
 end_mi = altitude_msg['interval_end'][altitude_msg.shape[0]-1]
-end_m = end_mi * 1609.344
+end_m = end_mi * mi_to_m
 x = np.linspace(0, end_m, num_points)
 y = np.ones(num_points)
 d = {'x': x, 'y': y}
@@ -54,13 +56,11 @@ df_altitude = pd.DataFrame(data=d)
 # Calculate xs and ys for altitude
 idx = len(altitude_msg) - 1
 for _, row in df_altitude.iterrows():
-    if (end_mi - np.around(row['x'] / 1609.344, 8) < grade_msg['interval_start'][idx]):
+    if (end_mi - np.around(row['x'] / mi_to_m, 8) < grade_msg['interval_start'][idx]):
         idx -= 1
-    # if np.around(row['x'] / 1609.344, 8) > grade_msg['interval_end'][idx]:
-    #     idx += 1
     coeffs = np.array([altitude_msg['quadratic_term'][idx], altitude_msg['linear_term'][idx], altitude_msg['intercept'][idx]])
     # Since the fit is reflected, we are actually querying from the other side and in terms of miles
-    x_val = end_mi - (row['x'] / 1609.344)
+    x_val = end_mi - (row['x'] / mi_to_m)
     x_vec = np.array([x_val**2, x_val, 1])
     row['y'] = np.dot(coeffs, x_vec)
 
