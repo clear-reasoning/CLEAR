@@ -41,7 +41,7 @@ class Simulation(object):
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
     def add_vehicle(self, controller='idm', kind=None, tags=None, gap=20,
-                    initial_speed=None, insert_at_index=None, 
+                    initial_speed=None, insert_at_index=None,
                     default_time_headway=1.1, **controller_kwargs):
         """Add a vehicle behind the platoon.
 
