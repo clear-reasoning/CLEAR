@@ -46,7 +46,7 @@ DEFAULT_ENV_CONFIG = {
     # enable lane changing
     'lane_changing': True,
     # enable road grade in energy function
-    'road_grade': False,
+    'road_grade': '',
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -179,7 +179,7 @@ class TrajectoryEnv(gym.Env):
         # create a simulation object
         self.time_step = self.traj['timestep']
         self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing,
-                              enable_road_grade=self.road_grade)
+                              road_grade=self.road_grade)
 
         # populate simulation with a trajectoy leader
         self.sim.add_vehicle(

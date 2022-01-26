@@ -10,7 +10,7 @@ import os
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True, enable_road_grade=False):
+    def __init__(self, timestep, enable_lane_changing=True, road_grade=''):
         """Simulation object
 
         timestep: dt in seconds
@@ -37,23 +37,38 @@ class Simulation(object):
         self.n_cutins = 0
         self.n_cutouts = 0
 
-        self.setup_grade_and_altitude_map(enable_road_grade)
+        self.setup_grade_and_altitude_map(network=road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
-        if network == 'i24' or network == True:
+        if network == 'i24':
             grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/road_grade_interp.pkl'))
+                os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
                 self.road_grade_map = road_grade['road_grade_map']
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/altitude_interp.pkl'))
+                os.path.join(__file__, '../../../dataset/i24_altitude_interp.pkl'))
             with open(altitude_path, 'rb') as fp:
                 altitude = pickle.load(fp)
                 self.altitude_map = altitude['altitude_map']
                 self.altitude_bounds = altitude['bounds']
+        elif network == 'i680':
+            grade_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
+            with open(grade_path, 'rb') as fp:
+                road_grade = pickle.load(fp)
+                self.road_grade_map = road_grade['road_grade_map']
+                self.grade_bounds = road_grade['bounds']
+
+            altitude_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i680_altitude_interp.pkl'))
+            with open(altitude_path, 'rb') as fp:
+                altitude = pickle.load(fp)
+                self.altitude_map = altitude['altitude_map']
+                self.altitude_bounds = altitude['bounds']
+
         else:
             print(f"Network {network} does not exist. Setting all road grades to 0.")
             self.road_grade_map =  lambda x: 0

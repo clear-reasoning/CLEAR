@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
+import dill
 import os
 from scipy.interpolate import UnivariateSpline
 
@@ -12,7 +13,7 @@ altitude_msg = pd.read_csv(altitude_path)
 mi_to_m = 1609.344
 
 ################################################################################################
-# Make the spline for road grade
+# I-24: Make the spline for road grade
 
 # Arbitrary number of points
 num_points = 5000
@@ -37,11 +38,11 @@ roadgrade_map = UnivariateSpline(df_grade['x'], df_grade['y'], k=1, s=0, ext=0)
 road_grade = {'road_grade_map': roadgrade_map,
               'bounds': (0, end_m)}
 
-with open(os.path.abspath(os.path.join(__file__, '../../dataset/road_grade_interp.pkl')), 'wb') as fp:
+with open(os.path.abspath(os.path.join(__file__, '../../dataset/i24_road_grade_interp.pkl')), 'wb') as fp:
     pickle.dump(road_grade, fp)
 
 ################################################################################################
-# Make the spline for altitude
+# I-24: Make the spline for altitude
 
 # Arbitrary number of points
 num_points = 5000
@@ -68,5 +69,27 @@ altitude_map = UnivariateSpline(df_altitude['x'], df_altitude['y'], k=2, s=0, ex
 altitude = {'altitude_map': altitude_map,
             'bounds': (0, end_m)}
 
-with open(os.path.abspath(os.path.join(__file__, '../../dataset/altitude_interp.pkl')), 'wb') as fp:
+with open(os.path.abspath(os.path.join(__file__, '../../dataset/i24_altitude_interp.pkl')), 'wb') as fp:
     pickle.dump(altitude, fp)
+
+################################################################################################
+# I-680 Make the spline for both
+altitude_path = '/Users/kathyjang/research/trajectory_training/dataset/I_680_altitude_map.csv'
+
+alt_msg = pd.read_csv(altitude_path)
+lon_pos = alt_msg['travel_distance'].to_numpy()
+alt_pos = alt_msg['alt'].to_numpy()
+
+altitude_map =  UnivariateSpline(lon_pos, alt_pos, k=3, s=100, ext=0)
+altitude = {'altitude_map': altitude_map,
+            'bounds': (0, np.max(lon_pos))}
+
+with open(os.path.abspath(os.path.join(__file__, '../../dataset/i680_altitude_interp.pkl')), 'wb') as fp:
+    pickle.dump(altitude, fp)
+
+road_grade_map_deg = altitude_map.derivative(1)
+road_grade_map = lambda pos: np.arctan(road_grade_map_deg(pos)) * 180 / np.pi
+road_grade = {'road_grade_map': road_grade_map,
+              'bounds': (0, np.max(lon_pos))}
+with open(os.path.abspath(os.path.join(__file__, '../../dataset/i680_road_grade_interp.pkl')), 'wb') as fp:
+    dill.dump(road_grade, fp) 
