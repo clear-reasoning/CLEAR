@@ -59,7 +59,8 @@ class Simulation(object):
                 os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
-                self.road_grade_map = road_grade['road_grade_map']
+                # Need to convert to degrees
+                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
@@ -71,7 +72,7 @@ class Simulation(object):
 
         else:
             print(f"Network {network} does not exist. Setting all road grades to 0.")
-            self.road_grade_map =  lambda x: 0
+            self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]
             self.grade_bounds = [0, 0]
@@ -289,7 +290,7 @@ class Simulation(object):
             self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
                           self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
-                          self.get_data(veh, 'road_grade')[-1]))
+                                                                               self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',
                           get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'],

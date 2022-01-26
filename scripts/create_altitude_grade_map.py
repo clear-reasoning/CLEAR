@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import pickle
-import dill
 import os
 from scipy.interpolate import UnivariateSpline
 
@@ -80,16 +79,15 @@ alt_msg = pd.read_csv(altitude_path)
 lon_pos = alt_msg['travel_distance'].to_numpy()
 alt_pos = alt_msg['alt'].to_numpy()
 
-altitude_map =  UnivariateSpline(lon_pos, alt_pos, k=3, s=100, ext=0)
+altitude_map = UnivariateSpline(lon_pos, alt_pos, k=3, s=100, ext=0)
 altitude = {'altitude_map': altitude_map,
             'bounds': (0, np.max(lon_pos))}
 
 with open(os.path.abspath(os.path.join(__file__, '../../dataset/i680_altitude_interp.pkl')), 'wb') as fp:
     pickle.dump(altitude, fp)
 
-road_grade_map_deg = altitude_map.derivative(1)
-road_grade_map = lambda pos: np.arctan(road_grade_map_deg(pos)) * 180 / np.pi
+road_grade_map = altitude_map.derivative(1)
 road_grade = {'road_grade_map': road_grade_map,
               'bounds': (0, np.max(lon_pos))}
 with open(os.path.abspath(os.path.join(__file__, '../../dataset/i680_road_grade_interp.pkl')), 'wb') as fp:
-    dill.dump(road_grade, fp) 
+    pickle.dump(road_grade, fp)
