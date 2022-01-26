@@ -38,7 +38,7 @@ class DataLoader(object):
 
     def get_raw_data(self):
         file_paths = list(Path(os.path.join(
-            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed')).glob('**/*.csv'))
+            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('**/*.csv'))
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
 
@@ -75,7 +75,7 @@ def smooth_data(target, n, mu=0.5):
 
 
 def _preprocess_data():
-    """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed."""
+    """Preprocess the data in dataset/data_v2 into dataset/data_v2_preprocessed_east."""
     file_paths = list(Path(os.path.abspath('../dataset/data_v2')).glob('**/*.csv'))
     for fp in file_paths:
         print(f'Reading {fp}')
@@ -152,7 +152,7 @@ def _preprocess_data():
                 sub_df = df.iloc[start_point:end_point]
 
                 # save trajectory
-                file_path = str(fp).replace('data_v2', 'data_v2_preprocessed')
+                file_path = str(fp).replace('data_v2', 'data_v2_preprocessed_east')
                 file_path = file_path.replace('.csv', f'_{k}_{end_point - start_point}.csv')
                 sub_df.to_csv(file_path, encoding='utf-8', index=True, index_label='index', mode='w+')
                 print(f'Wrote {file_path}')
