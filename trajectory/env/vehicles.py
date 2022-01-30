@@ -91,22 +91,22 @@ class Vehicle(object):
     @property
     def segments(self):
         """Return the starting position of every segment whose macroscopic state is approximated."""
-        return sorted(list(self._tse.keys()))
+        return self._tse["segments"]
 
     @property
     def avg_speed(self):
         """Return the average speed of every segment (in m/s)."""
-        return [self._tse[x]["avg_speed"] for x in self.segments]
+        return self._tse["avg_speed"]
 
     @property
     def long_flow(self):
         """Return the longitudinal flow of every segment (in veh/hr/lane)."""
-        return [self._tse[x]["long_flow"] for x in self.segments]
+        return self._tse["long_flow"]
 
     @property
     def density(self):
         """Return the density of every segment (in veh/m/lane)."""
-        return [self._tse[x]["density"] for x in self.segments]
+        return self._tse["density"]
 
 
 class IDMVehicle(Vehicle):

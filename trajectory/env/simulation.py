@@ -1,9 +1,13 @@
+import json
+import os
+import bisect
 from collections import defaultdict
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
 import numpy as np
+import pandas as pd
 
 
 class Simulation(object):
@@ -16,9 +20,8 @@ class Simulation(object):
         timestep: dt in seconds
         trajectory: ITERATOR yielding triples (position, speed, accel)
             that will be used for the first vehicle in the platoon (not spawned if this is None)
-        downstream_path: the path to the
-        whether to include access to macroscopic traffic state
-            estimates from each segment in the network
+        downstream_path: the directory containing relevant downstream information.
+            If set to None, no downstream data is available for this trajectory.
         """
         self.timestep = timestep
         # vehicles in order, from first in the platoon to last
@@ -42,7 +45,8 @@ class Simulation(object):
         self.n_cutouts = 0
 
         # Store downstream information data.
-        self.downstream_obs = self._init_tse(self.downstream_path)
+        self._prev_tse = None
+        self._tse_obs, self._tse_times = self._init_tse(self.downstream_path)
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -195,37 +199,95 @@ class Simulation(object):
             # move to next vehicle in platoon
             i += 1
 
-    def _init_tse(self, downstream_path):
-        """TODO.
+    @staticmethod
+    def _init_tse(downstream_path):
+        """Store traffic state estimation data.
 
         Parameters
         ----------
         downstream_path : str or None
-            TODO
+            the path to the directory containing the relevant traffic state
+            estimates. If set to None, no estimates are available.
 
         Returns
         -------
-        dict
-            TODO
+        dict or None
+            A dictionary of the traffic state estimates for the current
+            trajectory. This consists of the following terms:
+
+            * segments: the list of the starting positions of different
+              estimated segments
+            * long_flow: longitudinal flow of every segment at different time
+              intervals
+            * density: vehicle density of every segment at different time
+              intervals
+            * avg_speed: average speed of every segment at different time
+              intervals
+
+            This is set to None if no downstream information is available.
+        list of float
+            the times when traffic state estimates get updated
         """
-        pass  # TODO
+        # If no downstream path was specific, no data will be available.
+        if downstream_path is None:
+            return None, None
+
+        tse = {}
+
+        # Load segment positions.
+        with open(os.path.join(downstream_path, "segments.json"), "r") as f:
+            tse["segments"] = json.load(f)
+
+        # Load available traffic-state estimation data.
+        tse["long_flow"] = np.genfromtxt(
+            os.path.join(downstream_path, "flow.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["avg_speed"] = np.genfromtxt(
+            os.path.join(downstream_path, "speed.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["density"] = np.genfromtxt(
+            os.path.join(downstream_path, "density.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+
+        # Import times when the traffic state estimate is updated.
+        tse_times = sorted(list(pd.read_csv(
+            os.path.join(downstream_path, "speed.csv"))["Time"]))
+        tse_times = [x - tse_times[0] for x in tse_times]
+
+        return tse, tse_times
 
     def _get_tse(self):
-        """TODO.
+        """Return the traffic state estimates for this time step.
 
         Returns
         -------
         dict
-            TODO
+            A dictionary of the traffic state estimates for the current time
+            step. This consists of the following terms:
+
+            * segments: the list of the starting positions of different
+              estimated segments
+            * long_flow: longitudinal flow of every segment
+            * density: vehicle density of every segment
+            * avg_speed: average speed of every segment
         """
-        pass  # TODO
+        # Find the index of the current observation.
+        index = max(bisect.bisect(self._tse_times, self.time_counter) - 1, 0)
+
+        # Return the traffic state estimates corresponding to this time.
+        return {
+            "segments": self._tse_obs["segments"],
+            "long_flow": self._tse_obs["long_flow"][index, :],
+            "density": self._tse_obs["density"][index, :],
+            "avg_speed": self._tse_obs["avg_speed"][index, :],
+        }
 
     def step(self):
         self.step_counter += 1
         self.time_counter += self.timestep
 
         # Collect macroscopic traffic state estimates.
-        tse = self._get_tse() if self.downstream_obs else None
+        tse = self._get_tse() if self.downstream_path is not None else None
 
         if self.enable_lane_changing:
             self.handle_lane_changes()
