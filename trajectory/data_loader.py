@@ -38,7 +38,9 @@ class DataLoader(object):
 
     def get_raw_data(self):
         file_paths = list(Path(os.path.join(
-            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('**/*.csv'))
+            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
+            list(Path(os.path.join(
+                tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
 

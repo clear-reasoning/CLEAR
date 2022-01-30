@@ -36,7 +36,7 @@ def parse_args_simulate():
     parser.add_argument('--horizon', type=int, default=None,
                         help='Number of environment steps to simulate. If None, use a whole trajectory.')
     parser.add_argument('--traj_path', type=str,
-                        default='dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050.csv',
+                        default='dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
                         help='Use a specific trajectory by default. Set to None to use a random trajectory.')
     parser.add_argument('--platoon', type=str, default='av human*5',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '

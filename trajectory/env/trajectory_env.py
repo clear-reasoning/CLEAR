@@ -168,8 +168,8 @@ class TrajectoryEnv(gym.Env):
         if self.fixed_traj_path is not None and self.traj is None:
             self.traj = next(
                 t for t in self.data_loader.trajectories
-                if str(t['path']).split("/")[-1]
-                == self.fixed_traj_path.split("/")[-1])
+                if str(t['path']).split("/")[-2]
+                == self.fixed_traj_path.split("/")[-2])
 
         if not self.fixed_traj_path:
             self.traj = next(self.trajectories)
