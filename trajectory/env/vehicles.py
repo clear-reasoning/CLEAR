@@ -14,6 +14,7 @@ class Vehicle(object):
         self.controller = controller
         self.kind = kind
         self.tags = tags
+        self._tse = None
 
         self.name = f'{self.vid}_{self.controller}'
         if self.kind is not None:
@@ -40,7 +41,7 @@ class Vehicle(object):
 
         assert (timestep is not None)
 
-    def step(self, accel=None, ballistic=False):
+    def step(self, accel=None, ballistic=False, tse=None):
         if accel is not None:
             self.accel = accel
 
@@ -56,6 +57,9 @@ class Vehicle(object):
         else:
             self.speed = max(self.speed + self.dt * self.accel, 0)
             self.pos += self.dt * self.speed
+
+        # Update stored traffic state estimates.
+        self._tse = tse
 
         return True
 
@@ -84,6 +88,26 @@ class Vehicle(object):
             safe_accel = accel
         return safe_accel
 
+    @property
+    def segments(self):
+        """Return the starting position of every segment whose macroscopic state is approximated."""
+        return sorted(list(self._tse.keys()))
+
+    @property
+    def avg_speed(self):
+        """Return the average speed of every segment (in m/s)."""
+        return [self._tse[x]["avg_speed"] for x in self.segments]
+
+    @property
+    def long_flow(self):
+        """Return the longitudinal flow of every segment (in veh/hr/lane)."""
+        return [self._tse[x]["long_flow"] for x in self.segments]
+
+    @property
+    def density(self):
+        """Return the density of every segment (in veh/m/lane)."""
+        return [self._tse[x]["density"] for x in self.segments]
+
 
 class IDMVehicle(Vehicle):
     def __init__(self, **kwargs):
@@ -91,14 +115,14 @@ class IDMVehicle(Vehicle):
 
         self.idm = IDMController(**self.controller_args)
 
-    def step(self):
+    def step(self, accel=None, ballistic=False, tse=None):
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
         self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
-        return super().step(accel=accel, ballistic=True)
+        return super().step(accel=accel, ballistic=True, tse=tse)
 
 
 class FSVehicle(Vehicle):
@@ -107,7 +131,7 @@ class FSVehicle(Vehicle):
 
         self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
 
-    def step(self):
+    def step(self, accel=None, ballistic=False, tse=None):
         self.fs.v_des = self.get_leader_speed()
 
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
@@ -116,7 +140,7 @@ class FSVehicle(Vehicle):
         self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
-        return super().step(accel=accel, ballistic=True)
+        return super().step(accel=accel, ballistic=True, tse=tse)
 
 
 class TrajectoryVehicle(Vehicle):
@@ -126,7 +150,7 @@ class TrajectoryVehicle(Vehicle):
         self.trajectory = self.controller_args['trajectory']
         self.step()
 
-    def step(self):
+    def step(self, accel=None, ballistic=False, tse=None):
         traj_data = next(self.trajectory, None)
         if traj_data is None:
             return False
@@ -140,11 +164,11 @@ class RLVehicle(Vehicle):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def step(self):
+    def step(self, accel=None, ballistic=False, tse=None):
         self.accel_no_noise_with_failsafe = self.accel
         self.accel_with_noise_no_failsafe = self.accel
         self.accel_no_noise_no_failsafe = self.accel
-        return super().step(ballistic=True)
+        return super().step(ballistic=True, tse=tse)
 
     def set_accel(self, accel):
         self.accel = self.apply_failsafe(accel)
@@ -158,14 +182,14 @@ class FSWrappedRLVehicle(Vehicle):
         self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
         self.fs.v_des = self.speed
 
-    def step(self):
+    def step(self, accel=None, ballistic=False, tse=None):
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
         self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         accel = self.apply_failsafe(accel)
 
-        return super().step(accel=accel, ballistic=True)
+        return super().step(accel=accel, ballistic=True, tse=tse)
 
     def set_vdes(self, vdes):
         self.fs.v_des = vdes

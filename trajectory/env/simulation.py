@@ -7,12 +7,18 @@ import numpy as np
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True):
+    def __init__(self,
+                 timestep,
+                 enable_lane_changing=True,
+                 downstream_path=None):
         """Simulation object
 
         timestep: dt in seconds
         trajectory: ITERATOR yielding triples (position, speed, accel)
             that will be used for the first vehicle in the platoon (not spawned if this is None)
+        downstream_path: the path to the
+        whether to include access to macroscopic traffic state
+            estimates from each segment in the network
         """
         self.timestep = timestep
         # vehicles in order, from first in the platoon to last
@@ -30,9 +36,13 @@ class Simulation(object):
         self.vids = 0
 
         self.enable_lane_changing = enable_lane_changing
+        self.downstream_path = downstream_path
 
         self.n_cutins = 0
         self.n_cutouts = 0
+
+        # Store downstream information data.
+        self.downstream_obs = self._init_tse(self.downstream_path)
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -185,9 +195,37 @@ class Simulation(object):
             # move to next vehicle in platoon
             i += 1
 
+    def _init_tse(self, downstream_path):
+        """TODO.
+
+        Parameters
+        ----------
+        downstream_path : str or None
+            TODO
+
+        Returns
+        -------
+        dict
+            TODO
+        """
+        pass  # TODO
+
+    def _get_tse(self):
+        """TODO.
+
+        Returns
+        -------
+        dict
+            TODO
+        """
+        pass  # TODO
+
     def step(self):
         self.step_counter += 1
         self.time_counter += self.timestep
+
+        # Collect macroscopic traffic state estimates.
+        tse = self._get_tse() if self.downstream_obs else None
 
         if self.enable_lane_changing:
             self.handle_lane_changes()
@@ -197,10 +235,10 @@ class Simulation(object):
 
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
-            # independant of the vehicle behind you. if at some point it is,
+            # independent of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            status = veh.step()
+            status = veh.step(tse=tse)
             if status is False:
                 return False
 
