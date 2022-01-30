@@ -8,7 +8,7 @@ import onnxruntime as ort  # pip install onnxruntime
 import matplotlib.pyplot as plt
 from trajectory.utils import counter
 
-DATA_PATH = '../dataset/data_v2_preprocessed'
+DATA_PATH = '../dataset/data_v2_preprocessed_west'
 CONTROLLER_PATH = "./vandertest_controller.onnx"
 
 
