@@ -73,7 +73,7 @@ with open(os.path.abspath(os.path.join(__file__, '../../dataset/i24_altitude_int
 
 ################################################################################################
 # I-680 Make the spline for both
-altitude_path = '/Users/kathyjang/research/trajectory_training/dataset/I_680_altitude_map.csv'
+altitude_path = os.path.abspath(os.path.join(__file__, '../../dataset/I_680_altitude_map.csv'))
 
 alt_msg = pd.read_csv(altitude_path)
 lon_pos = alt_msg['travel_distance'].to_numpy()
