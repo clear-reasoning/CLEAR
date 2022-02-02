@@ -6,6 +6,7 @@ from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, R
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -14,6 +15,7 @@ class Simulation(object):
     def __init__(self,
                  timestep,
                  enable_lane_changing=True,
+                 road_grade='',
                  downstream_path=None):
         """Simulation object
 
@@ -47,6 +49,60 @@ class Simulation(object):
         # Store downstream information data.
         self._prev_tse = None
         self._tse_obs, self._tse_times = self._init_tse(self.downstream_path)
+
+        self.setup_grade_and_altitude_map(network=road_grade)
+
+    def setup_grade_and_altitude_map(self, network='i24'):
+        if network == 'i24':
+            grade_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
+            with open(grade_path, 'rb') as fp:
+                road_grade = pickle.load(fp)
+                self.road_grade_map = road_grade['road_grade_map']
+                self.grade_bounds = road_grade['bounds']
+
+            altitude_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i24_altitude_interp.pkl'))
+            with open(altitude_path, 'rb') as fp:
+                altitude = pickle.load(fp)
+                self.altitude_map = altitude['altitude_map']
+                self.altitude_bounds = altitude['bounds']
+        elif network == 'i680':
+            grade_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
+            with open(grade_path, 'rb') as fp:
+                road_grade = pickle.load(fp)
+                # Need to convert to degrees
+                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
+                self.grade_bounds = road_grade['bounds']
+
+            altitude_path = os.path.abspath(
+                os.path.join(__file__, '../../../dataset/i680_altitude_interp.pkl'))
+            with open(altitude_path, 'rb') as fp:
+                altitude = pickle.load(fp)
+                self.altitude_map = altitude['altitude_map']
+                self.altitude_bounds = altitude['bounds']
+
+        else:
+            print(f"Network {network} does not exist. Setting all road grades to 0.")
+            self.road_grade_map = lambda x: 0
+            self.altitude_map = lambda x: 0
+            self.altitude_bounds = [0, 0]
+            self.grade_bounds = [0, 0]
+
+    def get_road_grade(self, veh):
+        # Return road grade in degrees
+        pos = self.get_data(veh, 'position')[-1]
+        if pos < self.grade_bounds[0] or pos > self.grade_bounds[1]:
+            return None
+        return self.road_grade_map(pos)
+
+    def get_altitude(self, veh):
+        # Return altitude in m
+        pos = self.get_data(veh, 'position')[-1]
+        if pos < self.altitude_bounds[0] or pos > self.altitude_bounds[1]:
+            return None
+        return self.altitude_map(pos) / 3.2808
 
     def get_vehicles(self, controller=None):
         if controller is None:
@@ -330,8 +386,11 @@ class Simulation(object):
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
+            self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
+            self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
-                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed, 0))
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
+                                                                               self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',
                           get_last_or(self.data_by_vehicle[veh.name]['total_energy_consumption'],
