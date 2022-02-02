@@ -273,10 +273,6 @@ class Simulation(object):
 
             * segments: the list of the starting positions of different
               estimated segments
-            * long_flow: longitudinal flow of every segment at different time
-              intervals
-            * density: vehicle density of every segment at different time
-              intervals
             * avg_speed: average speed of every segment at different time
               intervals
 
@@ -295,14 +291,8 @@ class Simulation(object):
             tse["segments"] = json.load(f)
 
         # Load available traffic-state estimation data.
-        tse["long_flow"] = np.genfromtxt(
-            os.path.join(downstream_path, "flow.csv"),
-            delimiter=",", skip_header=1)[:, 1:]
         tse["avg_speed"] = np.genfromtxt(
             os.path.join(downstream_path, "speed.csv"),
-            delimiter=",", skip_header=1)[:, 1:]
-        tse["density"] = np.genfromtxt(
-            os.path.join(downstream_path, "density.csv"),
             delimiter=",", skip_header=1)[:, 1:]
 
         # Import times when the traffic state estimate is updated.
@@ -323,8 +313,6 @@ class Simulation(object):
 
             * segments: the list of the starting positions of different
               estimated segments
-            * long_flow: longitudinal flow of every segment
-            * density: vehicle density of every segment
             * avg_speed: average speed of every segment
         """
         # Find the index of the current observation.
@@ -333,8 +321,6 @@ class Simulation(object):
         # Return the traffic state estimates corresponding to this time.
         return {
             "segments": self._tse_obs["segments"],
-            "long_flow": self._tse_obs["long_flow"][index, :],
-            "density": self._tse_obs["density"][index, :],
             "avg_speed": self._tse_obs["avg_speed"][index, :],
         }
 

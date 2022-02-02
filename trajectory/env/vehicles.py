@@ -98,16 +98,6 @@ class Vehicle(object):
         """Return the average speed of every segment (in m/s)."""
         return self._tse["avg_speed"]
 
-    @property
-    def long_flow(self):
-        """Return the longitudinal flow of every segment (in veh/hr/lane)."""
-        return self._tse["long_flow"]
-
-    @property
-    def density(self):
-        """Return the density of every segment (in veh/m/lane)."""
-        return self._tse["density"]
-
 
 class IDMVehicle(Vehicle):
     def __init__(self, **kwargs):
