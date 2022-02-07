@@ -69,9 +69,13 @@ class TensorboardCallback(BaseCallback):
             ('headway', rollout_dict['sim_data_av']['headway']),
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
+            ('speed', rollout_dict['base_state']['speed']),
+            ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
+            ('platoon_mpg', rollout_dict['platoon']['platoon_mpg']),
         ]:
             self.logger.record(f'{base_name}/{base_name}_min_{name}', np.min(array))
             self.logger.record(f'{base_name}/{base_name}_max_{name}', np.max(array))
+            self.logger.record(f'{base_name}/{base_name}_mean_{name}', np.mean(array))
 
     def get_rollout_dict(self, env):
         collected_rollout = env.get_collected_rollout()
@@ -98,6 +102,10 @@ class TensorboardCallback(BaseCallback):
             if veh.kind == 'av':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     rollout_dict['sim_data_av'][k] = v
+
+        for platoon_state in collected_rollout['platoon']:
+            for k, v in platoon_state.items():
+                rollout_dict['platoon'][k] = v
 
         return rollout_dict
 

@@ -146,6 +146,13 @@ class TrajectoryEnv(gym.Env):
 
         return vf_state
 
+    def get_platoon_state(self):
+        state = {
+            'platoon_speed': np.mean([self.sim.get_data(veh, 'speed') for veh in self.sim.vehicles]),
+            'platoon_mpg': np.mean([self.sim.get_data(veh, 'instant_energy_consumption') for veh in self.sim.vehicles]),
+        }
+        return state
+
     def get_state(self, _store_state=False, av_idx=None):
         if av_idx is not None and _store_state:
             raise ValueError('Training with several AVs is not supported.')
@@ -327,6 +334,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
+            self.collected_rollout['platoon'].append(self.get_platoon_state())
 
         return next_state, reward, done, infos
 
