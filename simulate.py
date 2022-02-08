@@ -216,9 +216,13 @@ while True:
             ('headway', rollout_dict['sim_data_av']['headway']),
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
+            ('speed', rollout_dict['base_state']['speed']),
+            ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
+            ('platoon_mpg', rollout_dict['platoon']['platoon_mpg']),
         ]:
             print(f'\tmin_{name}', np.min(array))
             print(f'\tmax_{name}', np.max(array))
+            print(f'\tmean_{name}', np.mean(array))
 
     if not args.all_trajectories:
         break
