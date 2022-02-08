@@ -71,7 +71,8 @@ class Simulation(object):
                 self.altitude_bounds = altitude['bounds']
 
         else:
-            print(f"Network {network} does not exist. Setting all road grades to 0.")
+            if network != '':
+                print(f"Network '{network}' does not exist. Setting all road grades to 0.")
             self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]

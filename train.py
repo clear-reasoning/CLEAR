@@ -114,7 +114,7 @@ def parse_args_train():
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
     parser.add_argument('--road_grade', type=str, default="",
-                        help='If set, road grade will be included in the energy function.')
+                        help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
 
     args = parser.parse_args()
     return args
