@@ -53,10 +53,10 @@ def parse_args_simulate():
     parser.add_argument('--human_kwargs', type=str, default='{}',
                         help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
                         'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
-
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
-
+    parser.add_argument('--road_grade', type=str, default="",
+                        help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
     parser.add_argument('--all_trajectories', default=False, action='store_true',
                         help='If set, the script will be ran for all the trajectories in the dataset.')
 
@@ -116,7 +116,8 @@ env_config.update({
     'av_controller': args.av_controller,
     'av_kwargs': args.av_kwargs,
     'human_kwargs': args.human_kwargs,
-    'lane_changing': not args.no_lc
+    'lane_changing': not args.no_lc,
+    'road_grade': args.road_grade
 })
 
 if args.horizon is not None:
