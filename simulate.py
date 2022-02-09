@@ -13,6 +13,7 @@ from trajectory.callbacks import TensorboardCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
+from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
 def parse_args_simulate():
@@ -126,6 +127,9 @@ if args.horizon is not None:
         'horizon': args.horizon,
     })
 
+if args.gen_metrics:
+    args.gen_emissions = True  # for time-space diagram
+
 # create env
 test_env = TrajectoryEnv(config=env_config, _simulate=True)
 
@@ -181,12 +185,12 @@ while True:
                 metadata['penetration_rate'] = pr
             metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
-            test_env.gen_emissions(emissions_path=emissions_path,
-                                   upload_to_leaderboard=True,
-                                   additional_metadata=metadata)
+            emissions_path = test_env.gen_emissions(emissions_path=emissions_path,
+                                                    upload_to_leaderboard=True,
+                                                    additional_metadata=metadata)
         else:
-            test_env.gen_emissions(emissions_path=emissions_path,
-                                   upload_to_leaderboard=False)
+            emissions_path = test_env.gen_emissions(emissions_path=emissions_path,
+                                                    upload_to_leaderboard=False)
 
     if args.gen_metrics:
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
@@ -224,6 +228,10 @@ while True:
             print(f'\tmin_{name}', np.min(array))
             print(f'\tmax_{name}', np.max(array))
             print(f'\tmean_{name}', np.mean(array))
+
+        output_tsd_path = f'figs/simulate/{now}/time_space_diagram.png'
+        plot_time_space_diagram(emissions_path, output_tsd_path)
+        print(f'\nGenerated time-space diagram at {output_tsd_path}')
 
     if not args.all_trajectories:
         break

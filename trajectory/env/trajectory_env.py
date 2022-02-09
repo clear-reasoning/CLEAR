@@ -494,3 +494,5 @@ class TrajectoryEnv(gym.Env):
             upload_to_pipeline(
                 tsd_path, file_type='tsd', log=True
             )
+
+        return emissions_path
