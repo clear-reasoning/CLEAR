@@ -105,7 +105,7 @@ class TensorboardCallback(BaseCallback):
 
         for platoon_state in collected_rollout['platoon']:
             for k, v in platoon_state.items():
-                rollout_dict['platoon'][k] = v
+                rollout_dict['platoon'][k].append(v)
 
         return rollout_dict
 

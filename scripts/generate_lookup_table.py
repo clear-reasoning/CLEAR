@@ -2,7 +2,7 @@
 Instructions:
 
 Setup the 9 parameters below (bounds and discretization steps)
-Default parameters are generally fine but finer discretization 
+Default parameters are generally fine but finer discretization
 might be needed if your controller's outputted acceleration
 varies strongly wrt. some of the input variables.
 
@@ -30,8 +30,10 @@ interval_space_gap = 1
 
 controller_file_name = 'controller_data.csv'
 
+
 def get_accel(ego_speed, leader_speed, space_gap):
     pass   # return the acceleration of your controller
+
 
 with open(controller_file_name, 'w', newline='') as csvfile:
     fieldnames = ['ego_speed', 'leader_speed', 'space_gap', 'accel']
