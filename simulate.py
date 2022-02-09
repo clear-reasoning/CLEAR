@@ -210,8 +210,10 @@ while True:
         print('\nMetrics:')
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        platoon_mpg = rollout_dict['platoon']['platoon_mpg'][-1]
         print('\tepisode_reward', episode_reward)
         print('\tav_mpg', av_mpg)
+        print('\tplatoon_mpg', platoon_mpg)
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
             has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
             print(f'\thas_{penalty}', has_penalty)
@@ -223,7 +225,6 @@ while True:
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
             ('speed', rollout_dict['base_state']['speed']),
             ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
-            ('platoon_mpg', rollout_dict['platoon']['platoon_mpg']),
         ]:
             print(f'\tmin_{name}', np.min(array))
             print(f'\tmax_{name}', np.max(array))

@@ -58,8 +58,10 @@ class TensorboardCallback(BaseCallback):
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        platoon_mpg = rollout_dict['platoon']['platoon_mpg'][-1]
         self.logger.record(f'{base_name}/{base_name}_episode_reward', episode_reward)
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
+        self.logger.record(f'{base_name}/{base_name}_platoon_mpg', platoon_mpg)
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
             has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
             self.logger.record(f'{base_name}/{base_name}_has_{penalty}', has_penalty)

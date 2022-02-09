@@ -45,7 +45,7 @@ class Simulation(object):
                 os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
-                self.road_grade_map = road_grade['road_grade_map']
+                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
@@ -60,7 +60,7 @@ class Simulation(object):
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
                 # Need to convert to degrees
-                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
+                self.road_grade_map = lambda pos: np.arctan(road_grade['road_grade_map'](pos))
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
