@@ -6,16 +6,32 @@ Default parameters are generally fine but finer discretization
 might be needed if your controller's outputted acceleration
 varies strongly wrt. some of the input variables.
 
-Run python scripts/generate_lookup_table.py, tis generate controller_data.csv
+Modify the get_accel function so that it returns the acceleration output
+of your controller as a function of the AV speed, leader speed and space gap
+(everything is in standard SI units)
 
-Benni's transform_controller_into_3d_array.m allows to transform
-this file into controller_data.mat, which can be fed into the
-MATLAB scripts.-
+Run python scripts/generate_lookup_table.py, this generate controller_data.csv
+
+Run Benni's transform_controller_into_3d_array.m (you might need to uncomment
+or modify the first line so that it links to the .csv file) to convert the
+.csv file into a controller_data.mat file 
+
+Run Benni's controller_properties.m so that it generates plots from the data
+contained in controller_data.mat
 """
 
 import numpy as np
 import csv
+from pathlib import Path
+import numpy as np
+import json
+import re
+import sys
+import importlib
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = ""  # disable GPU
 
+# bounds and discretization parameters
 min_ego_speed = 0
 max_ego_speed = 30
 interval_ego_speed = 0.5
@@ -30,10 +46,29 @@ interval_space_gap = 1
 
 controller_file_name = 'controller_data.csv'
 
+# code to load an RL controller
+if True:
+    # load config file
+    cp_path = Path('checkpoints/2021_08_vandertest_controller/vandertest_controller/checkpoints/800.zip')
+    with open(cp_path.parent.parent / 'configs.json', 'r') as fp:
+        configs = json.load(fp)
+    env_config = configs['env_config']
+
+    # retrieve algorithm
+    alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
+    assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
+    sys.path.append(os.path.join(sys.path[0], '..'))
+    sys.path.append(os.path.join(sys.path[0], '..', 'trajectory'))
+    algorithm = getattr(importlib.import_module(alg_module), alg_class)
+
+    # load checkpoint into model
+    model = algorithm.load(cp_path)
 
 def get_accel(ego_speed, leader_speed, space_gap):
-    pass   # return the acceleration of your controller
-
+    # return the acceleration output of your controller
+    # the following code is for the RL controller
+    state = np.array([ego_speed / 40.0, leader_speed / 40.0, space_gap / 100.0, 0, 0, 0])
+    return model.predict(state, deterministic=True)[0][0]
 
 with open(controller_file_name, 'w', newline='') as csvfile:
     fieldnames = ['ego_speed', 'leader_speed', 'space_gap', 'accel']
