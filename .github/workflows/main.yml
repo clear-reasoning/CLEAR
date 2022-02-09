@@ -31,3 +31,5 @@ jobs:
                   which python
             - shell: bash -l {0}
               run: python train.py --iters 1 --no_eval
+            - shell: bash -l {0}
+              run: python simulate.py
