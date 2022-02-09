@@ -148,8 +148,8 @@ class TrajectoryEnv(gym.Env):
 
     def get_platoon_state(self):
         state = {
-            'platoon_speed': np.mean([self.sim.get_data(veh, 'speed') for veh in self.sim.vehicles]),
-            'platoon_mpg': np.mean([self.sim.get_data(veh, 'avg_mpg') for veh in self.sim.vehicles]),
+            'platoon_speed': np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in self.sim.vehicles]),
+            'platoon_mpg': np.mean([self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.sim.vehicles]),
         }
         return state
 
