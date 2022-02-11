@@ -115,6 +115,8 @@ def parse_args_train():
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
     parser.add_argument('--road_grade', type=str, default="",
                         help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
+    parser.add_argument('--platoon_size', type=int, default=5,
+                        help='Sets the size of the platoon to observe during training.')
 
     args = parser.parse_args()
     return args
@@ -140,7 +142,8 @@ def run_experiment(config):
         'num_steps_per_sim': config['env_num_steps_per_sim'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
-        'road_grade': config['road_grade']
+        'road_grade': config['road_grade'],
+        'platoon_size': config['platoon_size'],
     })
 
     # create env
