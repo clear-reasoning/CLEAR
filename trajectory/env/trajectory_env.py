@@ -175,7 +175,7 @@ class TrajectoryEnv(gym.Env):
 
     def create_simulation(self):
         # collect the next trajectory
-            self.traj = next(self.trajectories)
+        self.traj = next(self.trajectories)
         self.horizon = len(self.traj['positions'])
 
         # create a simulation object
