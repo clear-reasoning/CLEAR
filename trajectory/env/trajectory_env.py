@@ -93,8 +93,8 @@ class TrajectoryEnv(gym.Env):
         self._verbose = _verbose
         if self._verbose:
             print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
-            print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-            print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
+            print(f'\twith av controller {self.av_controller} (kwargs = {self.av_kwargs})')
+            print(f'\twith human controller {self.human_controller} (kwargs = {self.human_kwargs})\n')
             if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
