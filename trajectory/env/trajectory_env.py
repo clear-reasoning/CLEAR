@@ -32,7 +32,6 @@ DEFAULT_ENV_CONFIG = {
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
-    'num_steps_per_sim': 1,
     # platoon (combination of avs and humans following the leader car)
     'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
