@@ -210,10 +210,12 @@ while True:
         print('\nMetrics:')
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
-        platoon_mpg = rollout_dict['platoon']['platoon_mpg'][-1]
         print('\tepisode_reward', episode_reward)
         print('\tav_mpg', av_mpg)
-        print('\tplatoon_mpg', platoon_mpg)
+        for i in range(len(test_env.avs)):
+            platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
+            print(f'\tplatoon_{i}_mpg', platoon_mpg)
+
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
             has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
             print(f'\thas_{penalty}', has_penalty)
@@ -223,9 +225,8 @@ while True:
             ('headway', rollout_dict['sim_data_av']['headway']),
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
-            ('speed', rollout_dict['base_state']['speed']),
-            ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
-        ]:
+            ('speed', rollout_dict['base_state']['speed'])] + \
+                [(f'platoon_{i}_speed', rollout_dict[f'platoon_{i}']['platoon_speed']) for i in range(len(test_env.avs))]:
             print(f'\tmin_{name}', np.min(array))
             print(f'\tmax_{name}', np.max(array))
             print(f'\tmean_{name}', np.mean(array))

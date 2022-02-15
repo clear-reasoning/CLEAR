@@ -98,6 +98,17 @@ class Simulation(object):
         else:
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
+    def get_platoon(self, veh, k=5):
+        # Return the k vehicles behind veh or max num vehicles behind veh
+        platoon = []
+        for _ in range(k):
+            if (follower := veh.follower) is not None and follower.kind != 'av':
+                platoon.append(follower)
+                veh = follower
+            else:
+                break
+        return platoon
+
     def add_vehicle(self, controller='idm', kind=None, tags=None, gap=20,
                     initial_speed=None, insert_at_index=None,
                     default_time_headway=1.1, **controller_kwargs):

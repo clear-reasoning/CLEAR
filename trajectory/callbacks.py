@@ -58,10 +58,11 @@ class TensorboardCallback(BaseCallback):
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
-        platoon_mpg = rollout_dict['platoon']['platoon_mpg'][-1]
         self.logger.record(f'{base_name}/{base_name}_episode_reward', episode_reward)
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
-        self.logger.record(f'{base_name}/{base_name}_platoon_mpg', platoon_mpg)
+        for i in range(len(self.env.avs)):
+            platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
+            self.logger.record(f'{base_name}/{base_name}_platoon_{i}_mpg', platoon_mpg)
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
             has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
             self.logger.record(f'{base_name}/{base_name}_has_{penalty}', has_penalty)
@@ -71,10 +72,8 @@ class TensorboardCallback(BaseCallback):
             ('headway', rollout_dict['sim_data_av']['headway']),
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
-            ('speed', rollout_dict['base_state']['speed']),
-            ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
-            ('platoon_mpg', rollout_dict['platoon']['platoon_mpg']),
-        ]:
+            ('speed', rollout_dict['base_state']['speed'])] + \
+                [(f'platoon_{i}_speed', rollout_dict[f'platoon_{i}']['platoon_speed']) for i in range(len(self.env.avs))]:
             self.logger.record(f'{base_name}/{base_name}_min_{name}', np.min(array))
             self.logger.record(f'{base_name}/{base_name}_max_{name}', np.max(array))
             self.logger.record(f'{base_name}/{base_name}_mean_{name}', np.mean(array))
@@ -105,9 +104,10 @@ class TensorboardCallback(BaseCallback):
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     rollout_dict['sim_data_av'][k] = v
 
-        for platoon_state in collected_rollout['platoon']:
-            for k, v in platoon_state.items():
-                rollout_dict['platoon'][k].append(v)
+        for i in range(len(env.avs)):
+            for platoon_state in collected_rollout[f'platoon_{i}']:
+                for k, v in platoon_state.items():
+                    rollout_dict[f'platoon_{i}'][k].append(v)
 
         return rollout_dict
 
