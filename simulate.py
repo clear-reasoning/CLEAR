@@ -157,7 +157,7 @@ for i in range(args.n_runs):
     test_env.stop_collecting_rollout()
 
     # generate emissions file and optionally upload to leaderboard
-    emissions_path = exp_dir / f'emissions/emissions_{i}.csv'
+    emissions_path = exp_dir / f'emissions/emissions_{i+1}.csv'
     if args.data_pipeline is not None:
         metadata = {
             'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
@@ -183,21 +183,17 @@ for i in range(args.n_runs):
     for group, metrics in rollout_dict.items():
         for k, v in metrics.items():
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        plotter.save(f'{group}_{i}', log=True)
+        plotter.save(f'{group}_{i+1}', log=True)
 
     output_tsd_path = exp_dir / f'time_space_diagram_{i}.png'
     plot_time_space_diagram(emissions_path, output_tsd_path)
     print(f'Wrote {output_tsd_path}')
     print()
 
-    # print metrics
-    av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
-    platoon_mpg = rollout_dict['platoon']['platoon_mpg'][-1]
-    episode_reward = np.sum(rollout_dict['training']['rewards'])
-
-    exp_metrics['av_mpg'].append(av_mpg)
-    exp_metrics['platoon_mpg'].append(av_mpg)
-    exp_metrics['rl_episode_reward'].append(episode_reward)
+    # accumulate metrics
+    exp_metrics['av_mpg'].append(rollout_dict['sim_data_av']['avg_mpg'][-1])
+    for j in range(len(test_env.avs)):
+        exp_metrics[f'platoon_{j}_mpg'].append(rollout_dict[f'platoon_{i}']['platoon_mpg'][-1])
 
     for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
         count_penalty = sum(rollout_dict['custom_metrics'][penalty])
@@ -205,16 +201,18 @@ for i in range(args.n_runs):
 
     for (name, array) in [
         ('av_headway', rollout_dict['sim_data_av']['headway']),
-        ('av_speed', rollout_dict['base_state']['speed']),
-        ('platoon_speed', rollout_dict['platoon']['platoon_speed']),
-        ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
+        ('av_speed', rollout_dict['base_state']['speed'])] \
+        + [(f'platoon_{j}_speed', rollout_dict[f'platoon_{j}']['platoon_speed']) for j in range(len(test_env.avs))] \
+        + [('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
         ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
         ('rl_reward', rollout_dict['training']['rewards']),
     ]:
-        for fn_name, fn in [('min', np.min), ('mean', np.mean), ('max', np.max)]:
+        for fn_name, fn in [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]:
             exp_metrics[f'{name} ({fn_name})'].append(fn(array))
 
-print(f'Metrics aggregated over {args.n_runs} runs:\n')
+    exp_metrics['rl_episode_reward'].append(np.sum(rollout_dict['training']['rewards']))
+
+print(f'Metrics aggregated over {args.n_runs} runs:')
 for k, v in exp_metrics.items():
     print(f'{k}: {np.mean(v):.2f} ± {np.std(v):.2f} (min = {np.min(v):.2f}, max = {np.max(v):.2f})')
 print()
