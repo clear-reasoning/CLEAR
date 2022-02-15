@@ -56,10 +56,8 @@ def parse_args_simulate():
                         'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
-    parser.add_argument('--road_grade', type=str, default="",
-                        help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
-    parser.add_argument('--all_trajectories', default=False, action='store_true',
-                        help='If set, the script will be ran for all the trajectories in the dataset.')
+    parser.add_argument('--road_grade', type=str, default=None,
+                        help='Can be set to i24 or i680. If set, road grade will be included in the energy function computations.')
 
     args = parser.parse_args()
     return args

@@ -10,7 +10,7 @@ import os
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True, road_grade=''):
+    def __init__(self, timestep, enable_lane_changing=True, road_grade=None):
         """Simulation object
 
         timestep: dt in seconds
@@ -40,43 +40,31 @@ class Simulation(object):
         self.setup_grade_and_altitude_map(network=road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
-        if network == 'i24':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                self.road_grade_map = road_grade['road_grade_map']
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-        elif network == 'i680':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                # Need to convert to degrees
-                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-
-        else:
-            if network != '':
+        if network not in ['i24', 'i680']:
+            if network is not None:
                 print(f"Network '{network}' does not exist. Setting all road grades to 0.")
             self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]
             self.grade_bounds = [0, 0]
+            return
+
+        grade_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_road_grade_interp.pkl'))
+        with open(grade_path, 'rb') as fp:
+            road_grade = pickle.load(fp)
+            self.road_grade_map = road_grade['road_grade_map']
+            if network == 'i680':
+                # Need to convert to degrees
+                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(self.road_grade_map(pos)))
+            self.grade_bounds = road_grade['bounds']
+
+        altitude_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_altitude_interp.pkl'))
+        with open(altitude_path, 'rb') as fp:
+            altitude = pickle.load(fp)
+            self.altitude_map = altitude['altitude_map']
+            self.altitude_bounds = altitude['bounds']
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
