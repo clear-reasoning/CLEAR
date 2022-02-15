@@ -73,6 +73,15 @@ assert args.av_controller in ['rl', 'idm', 'fs']
 
 assert args.data_pipeline is None or args.n_runs == 1
 
+# logging function
+logs_str = ''
+def print_and_log(*args):
+    global logs_str
+    for string in args:
+        logs_str += string 
+    logs_str += '\n'
+    print(*args)
+
 # generate env config
 env_config = DEFAULT_ENV_CONFIG
 
@@ -92,13 +101,13 @@ if 'rl' in args.av_controller.lower():
     # load checkpoint into model
     model = algorithm.load(cp_path)
 
-    print(f'\nLoaded model checkpoint at {cp_path}\n'
-          f'\n\ttrained for {model.num_timesteps} timesteps'
-          f'\n\talgorithm = {alg_module}.{alg_class}'
-          f'\n\tobservation space = {model.observation_space}'
-          f'\n\taction space = {model.action_space}'
-          f'\n\tpolicy = {model.policy_class}'
-          f'\n\n{model.policy}')
+    print_and_log(f'\nLoaded model checkpoint at {cp_path}\n'
+                  f'\n\ttrained for {model.num_timesteps} timesteps'
+                  f'\n\talgorithm = {alg_module}.{alg_class}'
+                  f'\n\tobservation space = {model.observation_space}'
+                  f'\n\taction space = {model.action_space}'
+                  f'\n\tpolicy = {model.policy_class}'
+                  f'\n\n{model.policy}')
 
     def get_action(state):
         return model.predict(state, deterministic=True)[0]
@@ -122,13 +131,17 @@ if args.horizon is not None:
     })
 
 # create env
-test_env = TrajectoryEnv(config=env_config, _simulate=True)
+test_env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
 
 now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
 timestamp = datetime.now().timestamp()
-exp_dir = Path(f'logs/simulate/{int(timestamp)}_{now}/')
+exp_dir = Path(f'data/simulate/{int(timestamp)}_{now}/')
 exp_dir.mkdir(parents=True, exist_ok=False)
-print(f'Created experiment folder at {exp_dir}\n')
+print_and_log(f'Created experiment folder at {exp_dir}\n')
+
+print_and_log('Running experiment with the following platoon:', ' '.join([v.name for v in test_env.sim.vehicles]))
+print_and_log(f'with av controller {args.av_controller} (kwargs = {args.av_kwargs})')
+print_and_log(f'with human controller {args.human_controller} (kwargs = {args.human_kwargs})\n')
 
 exp_metrics = defaultdict(list)
 
@@ -137,8 +150,8 @@ for i in range(args.n_runs):
 
     traj_path = test_env.traj['path']
     horizon = test_env.horizon
-    print(f'Running experiment {i+1}/{args.n_runs}, lasting {horizon} timesteps.')
-    print(f'Using trajectory {traj_path}')
+    print_and_log(f'Running experiment {i+1}/{args.n_runs}, lasting {horizon} timesteps.')
+    print_and_log(f'Using trajectory {traj_path}')
 
     # run one rollout
     test_env.start_collecting_rollout()
@@ -169,7 +182,7 @@ for i in range(args.n_runs):
                 pr += '.0'
             metadata['penetration_rate'] = pr
         metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
-        print(f'Data will be uploaded to leaderboard with metadata {metadata}')
+        print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
         test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True, additional_metadata=metadata)
     else:
         test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
@@ -183,17 +196,18 @@ for i in range(args.n_runs):
     for group, metrics in rollout_dict.items():
         for k, v in metrics.items():
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        plotter.save(f'{group}_{i+1}', log=True)
+        fig_name = f'{group}_{i+1}'
+        plotter.save(fig_name, log=False)
+        print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
 
-    output_tsd_path = exp_dir / f'time_space_diagram_{i}.png'
+    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i}.png'
     plot_time_space_diagram(emissions_path, output_tsd_path)
-    print(f'Wrote {output_tsd_path}')
-    print()
+    print_and_log(f'Wrote {output_tsd_path}\n')
 
     # accumulate metrics
     exp_metrics['av_mpg'].append(rollout_dict['sim_data_av']['avg_mpg'][-1])
     for j in range(len(test_env.avs)):
-        exp_metrics[f'platoon_{j}_mpg'].append(rollout_dict[f'platoon_{i}']['platoon_mpg'][-1])
+        exp_metrics[f'platoon_{j}_mpg'].append(rollout_dict[f'platoon_{j}']['platoon_mpg'][-1])
 
     for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
         count_penalty = sum(rollout_dict['custom_metrics'][penalty])
@@ -212,7 +226,13 @@ for i in range(args.n_runs):
 
     exp_metrics['rl_episode_reward'].append(np.sum(rollout_dict['training']['rewards']))
 
-print(f'Metrics aggregated over {args.n_runs} runs:')
+print_and_log(f'Metrics aggregated over {args.n_runs} runs:\n')
 for k, v in exp_metrics.items():
-    print(f'{k}: {np.mean(v):.2f} ± {np.std(v):.2f} (min = {np.min(v):.2f}, max = {np.max(v):.2f})')
-print()
+    print_and_log(f'{k}: {np.mean(v):.2f} ± {np.std(v):.2f} (min = {np.min(v):.2f}, max = {np.max(v):.2f})')
+
+logs_path = exp_dir / 'logs.txt'
+with open(logs_path, 'w') as f:
+    f.write(logs_str)
+
+print(f'\nExperiment logs have been saved at {logs_path}')
+print(f'Experiment folder is {exp_dir}')
