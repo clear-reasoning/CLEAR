@@ -54,7 +54,7 @@ for i in range(len(timesteps)):
             running = False
 
         if event.type == pygame.KEYDOWN:  # or event.type == pygame.KEYUP:
-            if event.mod == pygame.KMOD_NONE:
+            if (not (event.mod & pygame.KMOD_SHIFT)) and (not (event.mod & pygame.KMOD_CTRL)):
                 if event.key == 1073741903:
                     timestep += 0.1  # right
                 elif event.key == 1073741904:
