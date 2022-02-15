@@ -64,10 +64,22 @@ if True:
     # load checkpoint into model
     model = algorithm.load(cp_path)
 
+    # calibrate number of vf states
+    n_vf_states = 0
+    state = [0, 0, 0]
+    while True:
+        try:
+            model.predict(state)
+        except ValueError:
+            n_vf_states += 1
+            state.append(0)
+        else:
+            break
+
 def get_accel(ego_speed, leader_speed, space_gap):
     # return the acceleration output of your controller
     # the following code is for the RL controller
-    state = np.array([ego_speed / 40.0, leader_speed / 40.0, space_gap / 100.0, 0, 0, 0])
+    state = np.array([ego_speed / 40.0, leader_speed / 40.0, space_gap / 100.0] + ([0] * n_vf_states))
     return model.predict(state, deterministic=True)[0][0]
 
 with open(controller_file_name, 'w', newline='') as csvfile:
