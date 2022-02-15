@@ -64,6 +64,7 @@ def parse_args_simulate():
     args = parser.parse_args()
     return args
 
+
 # parse command line arguments
 args = parse_args_simulate()
 
@@ -99,7 +100,7 @@ if 'rl' in args.av_controller.lower():
           f'\n\tpolicy = {model.policy_class}'
           f'\n\n{model.policy}')
 
-    def get_action(state): 
+    def get_action(state):
         return model.predict(state, deterministic=True)[0]
 
 env_config.update({
@@ -137,7 +138,7 @@ for i in range(args.n_runs):
     traj_path = test_env.traj['path']
     horizon = test_env.horizon
     print(f'Running experiment {i+1}/{args.n_runs}, lasting {horizon} timesteps.')
-    print(f'Using trajectory', traj_path)
+    print(f'Using trajectory {traj_path}')
 
     # run one rollout
     test_env.start_collecting_rollout()
@@ -175,7 +176,7 @@ for i in range(args.n_runs):
 
     # gen metrics
     tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
-    rollout_dict = tb_callback.get_rollout_dict(test_env) 
+    rollout_dict = tb_callback.get_rollout_dict(test_env)
 
     # plot metrics
     plotter = Plotter(exp_dir / 'figs')

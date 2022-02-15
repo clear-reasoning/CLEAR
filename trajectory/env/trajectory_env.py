@@ -79,7 +79,7 @@ class TrajectoryEnv(gym.Env):
 
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader()
-        
+
         chunk_size = None if self.whole_trajectory else self.horizon
         self.trajectories = self.data_loader.get_trajectories(
             chunk_size=chunk_size,

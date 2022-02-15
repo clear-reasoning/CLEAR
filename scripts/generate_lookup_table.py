@@ -14,7 +14,7 @@ Run python scripts/generate_lookup_table.py, this generate controller_data.csv
 
 Run Benni's transform_controller_into_3d_array.m (you might need to uncomment
 or modify the first line so that it links to the .csv file) to convert the
-.csv file into a controller_data.mat file 
+.csv file into a controller_data.mat file
 
 Run Benni's controller_properties.m so that it generates plots from the data
 contained in controller_data.mat
@@ -23,7 +23,6 @@ contained in controller_data.mat
 import numpy as np
 import csv
 from pathlib import Path
-import numpy as np
 import json
 import re
 import sys
@@ -76,11 +75,13 @@ if True:
         else:
             break
 
+
 def get_accel(ego_speed, leader_speed, space_gap):
     # return the acceleration output of your controller
     # the following code is for the RL controller
     state = np.array([ego_speed / 40.0, leader_speed / 40.0, space_gap / 100.0] + ([0] * n_vf_states))
     return model.predict(state, deterministic=True)[0][0]
+
 
 with open(controller_file_name, 'w', newline='') as csvfile:
     fieldnames = ['ego_speed', 'leader_speed', 'space_gap', 'accel']
