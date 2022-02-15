@@ -253,18 +253,18 @@ class Simulation(object):
             # if self.step_counter % 1000 == 0:
             #     print(len(self.vehicles), self.n_cutins, self.n_cutouts)
 
+        return_status = True
+
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
             # independant of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            status = veh.step()
-            if status is False:
-                return False
+            return_status &= veh.step()
 
         self.collect_data()
 
-        return True
+        return return_status
 
     def add_data(self, veh, key, value):
         self.data_by_vehicle[veh.name][key].append(value)
