@@ -75,12 +75,15 @@ assert args.data_pipeline is None or args.n_runs == 1
 
 # logging function
 logs_str = ''
+
+
 def print_and_log(*args):
     global logs_str
     for string in args:
-        logs_str += string 
+        logs_str += string
     logs_str += '\n'
     print(*args)
+
 
 # generate env config
 env_config = DEFAULT_ENV_CONFIG
@@ -214,12 +217,14 @@ for i in range(args.n_runs):
         exp_metrics[f'count_{penalty}'].append(count_penalty)
 
     for (name, array) in [
-        ('av_headway', rollout_dict['sim_data_av']['headway']),
-        ('av_speed', rollout_dict['base_state']['speed'])] \
+            ('av_headway', rollout_dict['sim_data_av']['headway']),
+            ('av_speed', rollout_dict['base_state']['speed'])
+        ] \
         + [(f'platoon_{j}_speed', rollout_dict[f'platoon_{j}']['platoon_speed']) for j in range(len(test_env.avs))] \
-        + [('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
-        ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
-        ('rl_reward', rollout_dict['training']['rewards']),
+        + [
+            ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
+            ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
+            ('rl_reward', rollout_dict['training']['rewards']),
     ]:
         for fn_name, fn in [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]:
             exp_metrics[f'{name} ({fn_name})'].append(fn(array))
