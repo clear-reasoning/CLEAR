@@ -48,6 +48,8 @@ DEFAULT_ENV_CONFIG = {
     'lane_changing': True,
     # enable road grade in energy function
     'road_grade': '',
+    # set size of platoon for observation
+    'platoon_size': 5,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -146,6 +148,15 @@ class TrajectoryEnv(gym.Env):
         }
 
         return vf_state
+
+    def get_platoon_state(self, veh):
+        """ Return the platoon state of veh."""
+        platoon = self.sim.get_platoon(veh, self.platoon_size)
+        state = {
+            'platoon_speed': np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in platoon]),
+            'platoon_mpg': np.mean([self.sim.get_data(veh, 'avg_mpg')[-1] for veh in platoon]),
+        }
+        return state
 
     def get_state(self, _store_state=False, av_idx=None):
         if av_idx is not None and _store_state:
@@ -332,6 +343,8 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
+            for i, av in enumerate(self.avs):
+                self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 
         return next_state, reward, done, infos
 
@@ -491,3 +504,5 @@ class TrajectoryEnv(gym.Env):
             upload_to_pipeline(
                 tsd_path, file_type='tsd', log=True
             )
+
+        return emissions_path

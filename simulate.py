@@ -13,6 +13,7 @@ from trajectory.callbacks import TensorboardCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
+from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
 def parse_args_simulate():
@@ -53,10 +54,10 @@ def parse_args_simulate():
     parser.add_argument('--human_kwargs', type=str, default='{}',
                         help='Kwargs to pass to the human vehicles, as a string that will be evaluated into a dict. '
                         'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
-
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
-
+    parser.add_argument('--road_grade', type=str, default="",
+                        help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
     parser.add_argument('--all_trajectories', default=False, action='store_true',
                         help='If set, the script will be ran for all the trajectories in the dataset.')
 
@@ -116,7 +117,8 @@ env_config.update({
     'av_controller': args.av_controller,
     'av_kwargs': args.av_kwargs,
     'human_kwargs': args.human_kwargs,
-    'lane_changing': not args.no_lc
+    'lane_changing': not args.no_lc,
+    'road_grade': args.road_grade
 })
 
 if args.horizon is not None:
@@ -124,6 +126,9 @@ if args.horizon is not None:
         'whole_trajectory': False,
         'horizon': args.horizon,
     })
+
+if args.gen_metrics:
+    args.gen_emissions = True  # for time-space diagram
 
 # create env
 test_env = TrajectoryEnv(config=env_config, _simulate=True)
@@ -180,12 +185,12 @@ while True:
                 metadata['penetration_rate'] = pr
             metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
             print(f'Data will be uploaded to leaderboard with metadata {metadata}')
-            test_env.gen_emissions(emissions_path=emissions_path,
-                                   upload_to_leaderboard=True,
-                                   additional_metadata=metadata)
+            emissions_path = test_env.gen_emissions(emissions_path=emissions_path,
+                                                    upload_to_leaderboard=True,
+                                                    additional_metadata=metadata)
         else:
-            test_env.gen_emissions(emissions_path=emissions_path,
-                                   upload_to_leaderboard=False)
+            emissions_path = test_env.gen_emissions(emissions_path=emissions_path,
+                                                    upload_to_leaderboard=False)
 
     if args.gen_metrics:
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)  # temporary shortcut
@@ -207,6 +212,10 @@ while True:
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
         print('\tepisode_reward', episode_reward)
         print('\tav_mpg', av_mpg)
+        for i in range(len(test_env.avs)):
+            platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
+            print(f'\tplatoon_{i}_mpg', platoon_mpg)
+
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
             has_penalty = int(any(rollout_dict['custom_metrics'][penalty]))
             print(f'\thas_{penalty}', has_penalty)
@@ -216,9 +225,15 @@ while True:
             ('headway', rollout_dict['sim_data_av']['headway']),
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
-        ]:
+            ('speed', rollout_dict['base_state']['speed'])] + \
+                [(f'platoon_{i}_speed', rollout_dict[f'platoon_{i}']['platoon_speed']) for i in range(len(test_env.avs))]:
             print(f'\tmin_{name}', np.min(array))
             print(f'\tmax_{name}', np.max(array))
+            print(f'\tmean_{name}', np.mean(array))
+
+        output_tsd_path = f'figs/simulate/{now}/time_space_diagram.png'
+        plot_time_space_diagram(emissions_path, output_tsd_path)
+        print(f'\nGenerated time-space diagram at {output_tsd_path}')
 
     if not args.all_trajectories:
         break

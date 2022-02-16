@@ -58,7 +58,7 @@ class Simulation(object):
                 os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
-                self.road_grade_map = road_grade['road_grade_map']
+                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
@@ -73,7 +73,7 @@ class Simulation(object):
             with open(grade_path, 'rb') as fp:
                 road_grade = pickle.load(fp)
                 # Need to convert to degrees
-                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
+                self.road_grade_map = lambda pos: np.arctan(road_grade['road_grade_map'](pos))
                 self.grade_bounds = road_grade['bounds']
 
             altitude_path = os.path.abspath(
@@ -84,7 +84,8 @@ class Simulation(object):
                 self.altitude_bounds = altitude['bounds']
 
         else:
-            print(f"Network {network} does not exist. Setting all road grades to 0.")
+            if network != '':
+                print(f"Network '{network}' does not exist. Setting all road grades to 0.")
             self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]
@@ -109,6 +110,17 @@ class Simulation(object):
             return self.vehicles
         else:
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
+
+    def get_platoon(self, veh, k=5):
+        # Return the k vehicles behind veh or max num vehicles behind veh
+        platoon = []
+        for _ in range(k):
+            if (follower := veh.follower) is not None and follower.kind != 'av':
+                platoon.append(follower)
+                veh = follower
+            else:
+                break
+        return platoon
 
     def add_vehicle(self, controller='idm', kind=None, tags=None, gap=20,
                     initial_speed=None, insert_at_index=None,
