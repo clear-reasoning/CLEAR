@@ -291,7 +291,7 @@ class Simulation(object):
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
             self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
-                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel_no_noise_with_failsafe, veh.speed,
                                                                                self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',
