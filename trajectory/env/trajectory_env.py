@@ -267,7 +267,7 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # execute one simulation step
-        end_of_horizon = not self.sim.step()
+        end_of_horizon = not self.sim.step(self)
 
         # print progress every 5s if running from simulate.py
         if self.simulate:
