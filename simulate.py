@@ -210,8 +210,12 @@ while True:
         print('\nMetrics:')
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        system_mpg = rollout_dict['system']['avg_mpg'][-1]
+        system_speed = rollout_dict['system']['speed'][-1]
         print('\tepisode_reward', episode_reward)
         print('\tav_mpg', av_mpg)
+        print('\tsystem_mpg', system_mpg)
+        print('\tsystem_speed', system_speed)
         for i in range(len(test_env.avs)):
             platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
             print(f'\tplatoon_{i}_mpg', platoon_mpg)

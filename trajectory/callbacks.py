@@ -58,8 +58,12 @@ class TensorboardCallback(BaseCallback):
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        system_mpg = rollout_dict['system']['avg_mpg'][-1]
+        system_speed = rollout_dict['system']['speed'][-1]
         self.logger.record(f'{base_name}/{base_name}_episode_reward', episode_reward)
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
+        self.logger.record(f'{base_name}/{base_name}_system_mpg', system_mpg)
+        self.logger.record(f'{base_name}/{base_name}_system_speed', system_speed)
         for i in range(len(self.env.avs)):
             platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
             self.logger.record(f'{base_name}/{base_name}_platoon_{i}_mpg', platoon_mpg)
@@ -108,6 +112,10 @@ class TensorboardCallback(BaseCallback):
             for platoon_state in collected_rollout[f'platoon_{i}']:
                 for k, v in platoon_state.items():
                     rollout_dict[f'platoon_{i}'][k].append(v)
+
+        for system_info in collected_rollout['system']:
+            for k, v in system_info.items():
+                rollout_dict['system'][k].append(v)
 
         return rollout_dict
 
