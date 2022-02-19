@@ -219,7 +219,7 @@ for i in range(args.n_runs):
     for group, metrics in rollout_dict.items():
         for k, v in metrics.items():
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        fig_name = f'{group}_{i+1}'
+        fig_name = f'{group}_{i+1}.png'
         plotter.save(fig_name, log=False)
         print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
 
