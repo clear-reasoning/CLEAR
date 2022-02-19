@@ -25,7 +25,8 @@ class Renderer:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                import sys; sys.exit(0)
+                import sys
+                sys.exit(0)
 
             if event.type == pygame.KEYDOWN:  # or event.type == pygame.KEYUP:
                 print('pressed key', event.key)
@@ -48,13 +49,12 @@ class Renderer:
                         self.interval -= 10  # left
                     self.interval = min(max(self.interval, 20), 1000)
 
-                if event.key == 97: # A
+                if event.key == 97:  # A
                     pass
-                elif event.key == 100: # D
+                elif event.key == 100:  # D
                     pass
-                elif event.key == 32: # Space
+                elif event.key == 32:  # Space
                     pass
-
 
     def step(self, t, car_types, car_positions, car_speeds):
         self.time = t
@@ -95,8 +95,8 @@ class Renderer:
             pygame.draw.rect(self.screen, (0, 200, 0), pygame.Rect(pos_x * self.zoom - 1 + shift_x, 0, 2, 20))
 
             img = self.font.render(f'{self.interval}m', True, (0, 100, 0))
-            self.screen.blit(img, ((pos_x + self.interval // 2) * self.zoom + shift_x - img.get_width() //
-                        2, self.screen_rect.height - 10 - img.get_height() // 2))
+            self.screen.blit(img, ((pos_x + self.interval // 2) * self.zoom + shift_x - img.get_width() // 2,
+                                   self.screen_rect.height - 10 - img.get_height() // 2))
             pygame.draw.rect(self.screen, (0, 200, 0), pygame.Rect(pos_x * self.zoom - 1 + shift_x, self.screen_rect.height - 20, 2, 20))
 
         for car_type, car_x, car_speed in zip(self.car_types, self.car_positions, self.car_speeds):
