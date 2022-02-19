@@ -19,7 +19,7 @@ class Renderer:
         self.font = pygame.font.SysFont('Verdana', 10)
 
         self.pos_x = 0
-        self.t0 = time.time() - timesteps[0]
+        self.t0 = None
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -48,11 +48,22 @@ class Renderer:
                         self.interval -= 10  # left
                     self.interval = min(max(self.interval, 20), 1000)
 
-    def step(self, time, car_types, car_positions, car_speeds):
-        self.time = time
+                if event.key == 97: # A
+                    pass
+                elif event.key == 100: # D
+                    pass
+                elif event.key == 32: # Space
+                    pass
+
+
+    def step(self, t, car_types, car_positions, car_speeds):
+        self.time = t
         self.car_types = car_types
         self.car_positions = car_positions
         self.car_speeds = car_speeds
+
+        if self.t0 is None:
+            self.t0 = time.time() - t
 
         self.handle_events()
 

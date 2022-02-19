@@ -14,6 +14,7 @@ from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, PLATOON_PRESETS, T
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
+from trajectory.visualize.render import Renderer
 
 
 def parse_args_simulate():
@@ -34,6 +35,14 @@ def parse_args_simulate():
                         'Arguments are [author] [strategy name] [is baseline]. '
                         'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
                         'Note that [is baseline] should by default be set to False (or 0).')
+    # render
+    parser.add_argument('--render', default=False, action='store_true',
+                        help='If set, the experiment will be rendered in a window (which is slower).')
+    parser.add_argument('--keyboard', default=False, action='store_true',
+                        help='[NOT IMPLEMENTED YET] '
+                        'If set, the leader vehicle will be controlled using keyboard instead of following '
+                        'a trajectory. Control: A to brake, D to accelerate, space bar + A or D to brake slower '
+                        'or accelerate faster.')
     # vehicles
     parser.add_argument('--platoon', type=str, default='av human*5',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
@@ -159,6 +168,8 @@ for i in range(args.n_runs):
     # run one rollout
     test_env.start_collecting_rollout()
     done = False
+    if args.render:
+        renderer = Renderer()
     while not done:
         if 'rl' in args.av_controller:
             # get RL action
@@ -170,6 +181,15 @@ for i in range(args.n_runs):
             # other controllers should be implemented via Vehicle objects
             action = 0
         state, reward, done, infos = test_env.step(action)
+
+        if args.render:
+            time = test_env.sim.time_counter
+            veh_types = [v.kind for v in test_env.sim.vehicles]
+            veh_positions = [v.pos for v in test_env.sim.vehicles]
+            veh_speeds = [v.speed for v in test_env.sim.vehicles]
+            renderer.step(time, veh_types, veh_positions, veh_speeds)
+            renderer.render()
+
     test_env.stop_collecting_rollout()
 
     # generate emissions file and optionally upload to leaderboard
