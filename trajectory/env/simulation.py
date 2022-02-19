@@ -243,11 +243,13 @@ class Simulation(object):
             # move to next vehicle in platoon
             i += 1
 
-    def step(self):
+    def step(self, env):
         self.step_counter += 1
         self.time_counter += self.timestep
 
-        if self.enable_lane_changing:
+        if self.enable_lane_changing and self.step_counter < env.horizon:
+            # Catch the edge case where lane change happens on last step and then data
+            # isn't collected.
             self.handle_lane_changes()
 
             # if self.step_counter % 1000 == 0:

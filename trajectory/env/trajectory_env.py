@@ -152,9 +152,11 @@ class TrajectoryEnv(gym.Env):
     def get_platoon_state(self, veh):
         """ Return the platoon state of veh."""
         platoon = self.sim.get_platoon(veh, self.platoon_size)
+
         state = {
             'platoon_speed': np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in platoon]),
-            'platoon_mpg': np.mean([self.sim.get_data(veh, 'avg_mpg')[-1] for veh in platoon]),
+            'platoon_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1] for veh in platoon]) /
+            np.sum([self.sim.get_data(veh, 'total_gallons')[-1] for veh in platoon])
         }
         return state
 
@@ -262,7 +264,7 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # execute one simulation step
-        end_of_horizon = not self.sim.step()
+        end_of_horizon = not self.sim.step(self)
 
         # print progress every 5s if running from simulate.py
         if self.simulate:
@@ -333,6 +335,12 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
+            self.collected_rollout['system'].append({'avg_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1]
+                                                                        for veh in self.sim.vehicles]) /
+                                                     np.sum([self.sim.get_data(veh, 'total_gallons')[-1]
+                                                             for veh in self.sim.vehicles]),
+                                                     'speed': np.mean([self.sim.get_data(veh, 'speed')[-1]
+                                                                      for veh in self.sim.vehicles])})
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 

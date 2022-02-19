@@ -228,6 +228,8 @@ for i in range(args.n_runs):
     print_and_log(f'Wrote {output_tsd_path}\n')
 
     # accumulate metrics
+    exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])
+    exp_metrics['system_speed'].append(rollout_dict['system']['speed'][-1])
     exp_metrics['av_mpg'].append(rollout_dict['sim_data_av']['avg_mpg'][-1])
     for j in range(len(test_env.avs)):
         exp_metrics[f'platoon_{j}_mpg'].append(rollout_dict[f'platoon_{j}']['platoon_mpg'][-1])
