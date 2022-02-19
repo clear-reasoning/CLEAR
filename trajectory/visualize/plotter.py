@@ -119,7 +119,7 @@ class Plotter(object):
         self.plot_data.clear()
 
         if log:
-            print(f'{log if type(log) is str else ""}Written {save_path}')
+            print(f'{log if type(log) is str else ""}Wrote {save_path}')
 
 
 class TensorboardPlotter(Plotter):

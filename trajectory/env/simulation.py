@@ -10,7 +10,7 @@ import os
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True, road_grade=''):
+    def __init__(self, timestep, enable_lane_changing=True, road_grade=None):
         """Simulation object
 
         timestep: dt in seconds
@@ -40,43 +40,32 @@ class Simulation(object):
         self.setup_grade_and_altitude_map(network=road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
-        if network == 'i24':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-        elif network == 'i680':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                # Need to convert to degrees
-                self.road_grade_map = lambda pos: np.arctan(road_grade['road_grade_map'](pos))
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-
-        else:
-            if network != '':
+        if network not in ['i24', 'i680']:
+            if network is not None:
                 print(f"Network '{network}' does not exist. Setting all road grades to 0.")
             self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]
             self.grade_bounds = [0, 0]
+            return
+
+        grade_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_road_grade_interp.pkl'))
+        with open(grade_path, 'rb') as fp:
+            road_grade = pickle.load(fp)
+            if network == 'i24':
+                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
+            if network == 'i680':
+                # Need to convert to degrees
+                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
+            self.grade_bounds = road_grade['bounds']
+
+        altitude_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_altitude_interp.pkl'))
+        with open(altitude_path, 'rb') as fp:
+            altitude = pickle.load(fp)
+            self.altitude_map = altitude['altitude_map']
+            self.altitude_bounds = altitude['bounds']
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
@@ -266,18 +255,18 @@ class Simulation(object):
             # if self.step_counter % 1000 == 0:
             #     print(len(self.vehicles), self.n_cutins, self.n_cutouts)
 
+        return_status = True
+
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
             # independant of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            status = veh.step()
-            if status is False:
-                return False
+            return_status &= veh.step()
 
         self.collect_data()
 
-        return True
+        return return_status
 
     def add_data(self, veh, key, value):
         self.data_by_vehicle[veh.name][key].append(value)
@@ -304,7 +293,7 @@ class Simulation(object):
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
             self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
-                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel_no_noise_with_failsafe, veh.speed,
                                                                                self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',
