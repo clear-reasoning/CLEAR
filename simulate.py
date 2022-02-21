@@ -222,11 +222,13 @@ for i in range(args.n_runs):
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
         fig_name = f'{group}_{i+1}.png'
         plotter.save(fig_name, log=False)
-        print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
+        if args.n_runs == 1:
+            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
 
     output_tsd_path = exp_dir / f'figs/time_space_diagram_{i}.png'
     plot_time_space_diagram(emissions_path, output_tsd_path)
-    print_and_log(f'Wrote {output_tsd_path}\n')
+    if args.n_runs == 1:
+        print_and_log(f'Wrote {output_tsd_path}\n')
 
     # accumulate metrics
     exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])
