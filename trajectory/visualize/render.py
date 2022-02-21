@@ -29,7 +29,6 @@ class Renderer:
                 sys.exit(0)
 
             if event.type == pygame.KEYDOWN:  # or event.type == pygame.KEYUP:
-                print('pressed key', event.key)
                 if (not (event.mod & pygame.KMOD_SHIFT)) and (not (event.mod & pygame.KMOD_CTRL)):
                     if event.key == 1073741903:
                         self.timestep += 0.1  # right
