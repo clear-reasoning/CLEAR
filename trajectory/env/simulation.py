@@ -27,7 +27,6 @@ class Simulation(object):
 
         self.energy_model = PFM2019RAV4()
 
-        self.data_by_time = []
         self.data_by_vehicle = defaultdict(lambda: defaultdict(list))
 
         self.vids = 0
@@ -202,34 +201,41 @@ class Simulation(object):
         cutin_multipier = np.exp(- multiplier_coef * ratio_gained)
         cutout_multipier = np.exp(- multiplier_coef * ratio_lost)
 
+        min_gap = 1.0  # minimum space gap for cut-ins (in meters)
+        min_time_gap = 0.5  # minimum time gap (gap / speed) for cut-ins (in seconds)
+
         # iterate over the list of vehicles, starting from index 1 (vehicle behind leader,
         # ie second vehicle in the platoon) since we don't want to insert in front of leader
         i = 1
         while i < len(self.vehicles):
             veh = self.vehicles[i]
 
-            # handle cut-ins: first make sure there's enough room to insert
-            # a vehicle (with a 1m safety margin on both sides)
-            if (gap := veh.get_headway()) > veh.length + 2.0:
+            # handle cut-ins: first make sure there's enough room to insert a vehicle
+            if (gap := veh.get_headway()) > veh.length + 2.0 * min_gap:
                 if random.random() <= cutin_proba_fn(gap, veh.leader.speed) * cutin_multipier:
                     gap_ratio = gap_ratio_fn()
-                    inserted_gap = gap_ratio * gap
                     inserted_speed = random.uniform(veh.speed, veh.leader.speed)
 
-                    # clip inserted_gap to insert vehicle without collision and with the 1m margin
-                    inserted_gap = min(max(inserted_gap, veh.leader.pos - veh.pos - veh.length - 1.0), 1.0)
+                    # bounds on inserted_gap to respect min_gap and min_time_gap constraints on both
+                    # the inserted vehicle and the vehicle behind it (ie the vehicle it cut in front of)
+                    min_insertion_gap = max(min_gap, min_time_gap * veh.speed)
+                    max_insertion_gap = gap - veh.length - max(min_gap, min_time_gap * inserted_speed)
 
-                    # add vehicle in front of veh
-                    self.add_vehicle(
-                        controller='idm',
-                        kind='human',
-                        gap=inserted_gap,
-                        initial_speed=inserted_speed,
-                        insert_at_index=i)
-                    self.n_cutins += 1
+                    if min_insertion_gap < max_insertion_gap:
+                        # compute gap between veh and the inserted vehicle
+                        inserted_gap = min_insertion_gap + gap_ratio * (max_insertion_gap - min_insertion_gap)
 
-                    # increment index to skip newly inserted vehicle in loop
-                    i += 1
+                        # add vehicle in front of veh
+                        self.add_vehicle(
+                            controller='idm',
+                            kind='human',
+                            gap=inserted_gap,
+                            initial_speed=inserted_speed,
+                            insert_at_index=i)
+                        self.n_cutins += 1
+
+                        # increment index to skip newly inserted vehicle in loop
+                        i += 1
 
             # handle cut-outs: first make sure we wouldn't remove an
             # AV or the trajectory leader
