@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 import importlib
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import os
@@ -142,22 +143,22 @@ if args.horizon is not None:
         'horizon': args.horizon,
     })
 
-# create env
-test_env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
-
 now = datetime.now().strftime('%d%b%y_%Hh%Mm%Ss')
 timestamp = datetime.now().timestamp()
 exp_dir = Path(f'data/simulate/{int(timestamp)}_{now}/')
 exp_dir.mkdir(parents=True, exist_ok=False)
 print_and_log(f'Created experiment folder at {exp_dir}\n')
 
-print_and_log('Running experiment with the following platoon:', ' '.join([v.name for v in test_env.sim.vehicles]))
-print_and_log(f'with av controller {args.av_controller} (kwargs = {args.av_kwargs})')
-print_and_log(f'with human controller {args.human_controller} (kwargs = {args.human_kwargs})\n')
-
 exp_metrics = defaultdict(list)
 
 for i in range(args.n_runs):
+    # create env
+    test_env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
+    if i == 0:
+        print_and_log('Running experiment with the following platoon:', ' '.join([v.name for v in test_env.sim.vehicles]))
+        print_and_log(f'with av controller {args.av_controller} (kwargs = {args.av_kwargs})')
+        print_and_log(f'with human controller {args.human_controller} (kwargs = {args.human_kwargs})\n')
+    
     state = test_env.reset()
 
     traj_path = test_env.traj['path']
@@ -252,6 +253,8 @@ for i in range(args.n_runs):
             exp_metrics[f'{name} ({fn_name})'].append(fn(array))
 
     exp_metrics['rl_episode_reward'].append(np.sum(rollout_dict['training']['rewards']))
+
+    plt.close('all')
 
 print_and_log(f'Metrics aggregated over {args.n_runs} runs:\n')
 for k, v in exp_metrics.items():
