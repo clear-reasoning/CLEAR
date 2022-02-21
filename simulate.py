@@ -241,6 +241,7 @@ for i in range(args.n_runs):
         count_penalty = sum(rollout_dict['custom_metrics'][penalty])
         exp_metrics[f'count_{penalty}'].append(count_penalty)
 
+    stat_fns = [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]
     for (name, array) in [
             ('av_headway', rollout_dict['sim_data_av']['headway']),
             ('av_speed', rollout_dict['base_state']['speed'])
@@ -251,10 +252,15 @@ for i in range(args.n_runs):
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
             ('rl_reward', rollout_dict['training']['rewards']),
     ]:
-        for fn_name, fn in [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]:
+        for fn_name, fn in stat_fns:
             exp_metrics[f'{name} ({fn_name})'].append(fn(array))
 
     exp_metrics['rl_episode_reward'].append(np.sum(rollout_dict['training']['rewards']))
+
+    exp_metrics['n_cutins'].append(test_env.sim.n_cutins)
+    exp_metrics['n_cutouts'].append(test_env.sim.n_cutouts)
+    for fn_name, fn in stat_fns:
+        exp_metrics[f'n_vehicles ({fn_name})'].append(fn(test_env.sim.n_vehicles))
 
     plt.close('all')
 

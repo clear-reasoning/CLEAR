@@ -36,6 +36,7 @@ class Simulation(object):
 
         self.n_cutins = 0
         self.n_cutouts = 0
+        self.n_vehicles = []
 
         self.setup_grade_and_altitude_map(network=road_grade)
 
@@ -193,6 +194,7 @@ class Simulation(object):
 
         # compute ratio of gained and lost vehicles from the initial count, to balance out cut-ins and cut-outs
         n_vehicles = len(self.vehicles)
+        self.n_vehicles.append(n_vehicles)
         n_vehicles_initially = n_vehicles - self.n_cutins + self.n_cutouts
         ratio_gained = (n_vehicles - n_vehicles_initially) / n_vehicles_initially
         ratio_lost = (n_vehicles_initially - n_vehicles) / n_vehicles_initially
