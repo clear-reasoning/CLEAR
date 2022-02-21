@@ -36,11 +36,18 @@ class Renderer:
                         self.timestep -= 0.1  # left
                     self.timestep = min(max(self.timestep, 0.0), 2.0)
                 elif event.mod & pygame.KMOD_SHIFT:
-                    if event.key == 1073741903:
-                        self.zoom += 1  # right
-                    elif event.key == 1073741904:
-                        self.zoom -= 1  # left
-                    self.zoom = min(max(self.zoom, 1), 10)
+                    if event.key == 1073741903:  # right
+                        if self.zoom < 1:
+                            self.zoom *= 2.0
+                            if self.zoom >= 1.0:
+                                self.zoom = 1.0
+                        else:
+                            self.zoom += 1.0
+                    elif event.key == 1073741904: # left
+                        if int(self.zoom) <= 1:
+                            self.zoom /= 2.0
+                        else:
+                            self.zoom -= 1
                 elif event.mod & pygame.KMOD_CTRL:
                     if event.key == 1073741903:
                         self.interval += 10  # right
@@ -71,7 +78,8 @@ class Renderer:
 
         img = self.font.render(f'Timestep: {round(self.timestep, 1)}s (commands: Left / Right) (0 = real time)', True, (0, 0, 0))
         self.screen.blit(img, (20, 50))
-        img = self.font.render(f'Zoom: x{int(self.zoom)} (commands: Shift + Left / Right)', True, (0, 0, 0))
+        zoom_display = round(self.zoom, 3) if self.zoom < 1 else int(self.zoom)
+        img = self.font.render(f'Zoom: x{zoom_display} (commands: Shift + Left / Right)', True, (0, 0, 0))
         self.screen.blit(img, (20, 70))
         img = self.font.render(f'Interval: {int(self.interval)}m (commands: Ctrl + Left / Right)', True, (0, 0, 0))
         self.screen.blit(img, (20, 90))
