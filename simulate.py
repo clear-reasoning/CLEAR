@@ -158,7 +158,7 @@ for i in range(args.n_runs):
         print_and_log('Running experiment with the following platoon:', ' '.join([v.name for v in test_env.sim.vehicles]))
         print_and_log(f'with av controller {args.av_controller} (kwargs = {args.av_kwargs})')
         print_and_log(f'with human controller {args.human_controller} (kwargs = {args.human_kwargs})\n')
-    
+
     state = test_env.reset()
 
     traj_path = test_env.traj['path']
