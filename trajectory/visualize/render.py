@@ -43,7 +43,7 @@ class Renderer:
                                 self.zoom = 1.0
                         else:
                             self.zoom += 1.0
-                    elif event.key == 1073741904: # left
+                    elif event.key == 1073741904:  # left
                         if int(self.zoom) <= 1:
                             self.zoom /= 2.0
                         else:
