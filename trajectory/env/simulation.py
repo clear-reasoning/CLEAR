@@ -288,6 +288,7 @@ class Simulation(object):
             self.add_data(veh, 'headway', veh.get_headway())
             self.add_data(veh, 'leader_speed', veh.get_leader_speed())
             self.add_data(veh, 'speed_difference', None if veh.leader is None else veh.leader.speed - veh.speed)
+            self.add_data(veh, 'time_to_collision', veh.get_time_to_collision())
             self.add_data(veh, 'leader_id', None if veh.leader is None else veh.leader.name)
             self.add_data(veh, 'follower_id', None if veh.follower is None else veh.follower.name)
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
