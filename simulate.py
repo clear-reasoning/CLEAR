@@ -220,12 +220,33 @@ for i in range(args.n_runs):
     for group, metrics in rollout_dict.items():
         for k, v in metrics.items():
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        fig_name = f'{group}_{i+1}.png'
+        fig_name = f'{group}_{i+1}'
         plotter.save(fig_name, log=False)
         if args.n_runs == 1:
-            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
+            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+    
+    # plot speed and accel profiles
+    
+    with plotter.subplot(title='Velocity profiles', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+        for veh in test_env.sim.vehicles[::-1]:
+            if veh.vid not in [0,1,2,5,9]:
+                continue
+            times = test_env.sim.get_data(veh, 'time')
+            speeds = test_env.sim.get_data(veh, 'speed')
+            plotter.plot(times, speeds, label=veh.name)
+    with plotter.subplot(title='Acceleration profiles', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+        for veh in test_env.sim.vehicles[::-1]:
+            if veh.vid not in [0,1,2,5,9]:
+                continue
+            times = test_env.sim.get_data(veh, 'time')
+            speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
+            plotter.plot(times, speeds, label=veh.name)
+    fig_name = f'speed_accel_profiles_{i+1}'
+    plotter.save(fig_name, log=False, figsize=(7, 6), legend_pos='auto')
+    if args.n_runs == 1:
+        print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
 
-    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i}.png'
+    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i+1}.png'
     plot_time_space_diagram(emissions_path, output_tsd_path)
     if args.n_runs == 1:
         print_and_log(f'Wrote {output_tsd_path}\n')

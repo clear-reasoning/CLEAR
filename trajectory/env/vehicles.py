@@ -10,12 +10,12 @@ class Vehicle(object):
                  timestep=None, leader=None, follower=None,
                  **controller_args):
 
-        self.vid = vid
-        self.controller = controller
-        self.kind = kind
-        self.tags = tags
+        self.vid = vid  # eg 3
+        self.controller = controller  # eg rl, idm
+        self.kind = kind  # eg av, human
+        self.tags = tags  # list of strings
 
-        self.name = f'{self.vid}_{self.controller}'
+        self.name = f'{self.vid}_{self.controller}'  # eg 2_idm_human#metrics
         if self.kind is not None:
             self.name += f'_{self.kind}'
         if self.tags is not None:

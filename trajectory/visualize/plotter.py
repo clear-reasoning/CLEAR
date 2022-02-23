@@ -90,10 +90,10 @@ class Plotter(object):
         save_path = self.save_dir / (file_name + '.png')
         plt.savefig(save_path)
 
-    def makefig(self, dpi=100):
+    def makefig(self, dpi=100, figsize=None, legend_pos='manual'):
         # figsize in inches, dpi = dots (pixels) per inches
-        fig, axes = plt.subplots(len(self.plot_data),
-                                 figsize=(15, 2 * len(self.plot_data)), dpi=dpi)
+        figsize = figsize if figsize is not None else (15, 2 * len(self.plot_data))
+        fig, axes = plt.subplots(len(self.plot_data), figsize=figsize, dpi=dpi)
         if len(self.plot_data) == 1:
             axes = [axes]
         for ax, data in zip(axes, self.plot_data):
@@ -107,12 +107,17 @@ class Plotter(object):
             if data['grid']:
                 ax.grid()
             if data['legend']:
-                ax.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+                if legend_pos == 'manual':
+                    ax.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+                elif legend_pos == 'auto':
+                    ax.legend()
+                else:
+                    print(f'Unknown value legend_pos={legend_pos}')
         fig.tight_layout()
         return fig
 
-    def save(self, file_name, log=None):
-        fig = self.makefig()
+    def save(self, file_name, log=None, figsize=None, legend_pos='manual'):
+        fig = self.makefig(figsize=figsize, legend_pos=legend_pos)
         save_path = self.save_dir / (file_name + '.png')
         fig.savefig(save_path)
         plt.close(fig)
