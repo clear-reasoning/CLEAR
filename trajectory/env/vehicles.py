@@ -10,13 +10,13 @@ class Vehicle(object):
                  timestep=None, leader=None, follower=None,
                  **controller_args):
 
-        self.vid = vid
-        self.controller = controller
-        self.kind = kind
-        self.tags = tags
+        self.vid = vid  # eg 3
+        self.controller = controller  # eg rl, idm
+        self.kind = kind  # eg av, human
+        self.tags = tags  # list of strings
         self._tse = None
 
-        self.name = f'{self.vid}_{self.controller}'
+        self.name = f'{self.vid}_{self.controller}'  # eg 2_idm_human#metrics
         if self.kind is not None:
             self.name += f'_{self.kind}'
         if self.tags is not None:
@@ -148,6 +148,7 @@ class TrajectoryVehicle(Vehicle):
         self.accel_no_noise_with_failsafe = self.accel
         self.accel_with_noise_no_failsafe = self.accel
         self.accel_no_noise_no_failsafe = self.accel
+        return True
 
 
 class RLVehicle(Vehicle):

@@ -15,7 +15,7 @@ class Simulation(object):
     def __init__(self,
                  timestep,
                  enable_lane_changing=True,
-                 road_grade='',
+                 road_grade=None,
                  downstream_path=None):
         """Simulation object
 
@@ -35,7 +35,6 @@ class Simulation(object):
 
         self.energy_model = PFM2019RAV4()
 
-        self.data_by_time = []
         self.data_by_vehicle = defaultdict(lambda: defaultdict(list))
 
         self.vids = 0
@@ -45,6 +44,7 @@ class Simulation(object):
 
         self.n_cutins = 0
         self.n_cutouts = 0
+        self.n_vehicles = []
 
         # Store downstream information data.
         self._prev_tse = None
@@ -53,43 +53,32 @@ class Simulation(object):
         self.setup_grade_and_altitude_map(network=road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
-        if network == 'i24':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i24_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-        elif network == 'i680':
-            grade_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_road_grade_interp.pkl'))
-            with open(grade_path, 'rb') as fp:
-                road_grade = pickle.load(fp)
-                # Need to convert to degrees
-                self.road_grade_map = lambda pos: np.arctan(road_grade['road_grade_map'](pos))
-                self.grade_bounds = road_grade['bounds']
-
-            altitude_path = os.path.abspath(
-                os.path.join(__file__, '../../../dataset/i680_altitude_interp.pkl'))
-            with open(altitude_path, 'rb') as fp:
-                altitude = pickle.load(fp)
-                self.altitude_map = altitude['altitude_map']
-                self.altitude_bounds = altitude['bounds']
-
-        else:
-            if network != '':
+        if network not in ['i24', 'i680']:
+            if network is not None:
                 print(f"Network '{network}' does not exist. Setting all road grades to 0.")
             self.road_grade_map = lambda x: 0
             self.altitude_map = lambda x: 0
             self.altitude_bounds = [0, 0]
             self.grade_bounds = [0, 0]
+            return
+
+        grade_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_road_grade_interp.pkl'))
+        with open(grade_path, 'rb') as fp:
+            road_grade = pickle.load(fp)
+            if network == 'i24':
+                self.road_grade_map = lambda x: road_grade['road_grade_map'](x) * np.pi / 180
+            if network == 'i680':
+                # Need to convert to degrees
+                self.road_grade_map = lambda pos: np.rad2deg(np.arctan(road_grade['road_grade_map'](pos)))
+            self.grade_bounds = road_grade['bounds']
+
+        altitude_path = os.path.abspath(
+            os.path.join(__file__, f'../../../dataset/{network}_altitude_interp.pkl'))
+        with open(altitude_path, 'rb') as fp:
+            altitude = pickle.load(fp)
+            self.altitude_map = altitude['altitude_map']
+            self.altitude_bounds = altitude['bounds']
 
     def get_road_grade(self, veh):
         # Return road grade in degrees
@@ -224,34 +213,41 @@ class Simulation(object):
         cutin_multipier = np.exp(- multiplier_coef * ratio_gained)
         cutout_multipier = np.exp(- multiplier_coef * ratio_lost)
 
+        min_gap = 1.0  # minimum space gap for cut-ins (in meters)
+        min_time_gap = 0.5  # minimum time gap (gap / speed) for cut-ins (in seconds)
+
         # iterate over the list of vehicles, starting from index 1 (vehicle behind leader,
         # ie second vehicle in the platoon) since we don't want to insert in front of leader
         i = 1
         while i < len(self.vehicles):
             veh = self.vehicles[i]
 
-            # handle cut-ins: first make sure there's enough room to insert
-            # a vehicle (with a 1m safety margin on both sides)
-            if (gap := veh.get_headway()) > veh.length + 2.0:
+            # handle cut-ins: first make sure there's enough room to insert a vehicle
+            if (gap := veh.get_headway()) > veh.length + 2.0 * min_gap:
                 if random.random() <= cutin_proba_fn(gap, veh.leader.speed) * cutin_multipier:
                     gap_ratio = gap_ratio_fn()
-                    inserted_gap = gap_ratio * gap
                     inserted_speed = random.uniform(veh.speed, veh.leader.speed)
 
-                    # clip inserted_gap to insert vehicle without collision and with the 1m margin
-                    inserted_gap = min(max(inserted_gap, veh.leader.pos - veh.pos - veh.length - 1.0), 1.0)
+                    # bounds on inserted_gap to respect min_gap and min_time_gap constraints on both
+                    # the inserted vehicle and the vehicle behind it (ie the vehicle it cut in front of)
+                    min_insertion_gap = max(min_gap, min_time_gap * veh.speed)
+                    max_insertion_gap = gap - veh.length - max(min_gap, min_time_gap * inserted_speed)
 
-                    # add vehicle in front of veh
-                    self.add_vehicle(
-                        controller='idm',
-                        kind='human',
-                        gap=inserted_gap,
-                        initial_speed=inserted_speed,
-                        insert_at_index=i)
-                    self.n_cutins += 1
+                    if min_insertion_gap < max_insertion_gap:
+                        # compute gap between veh and the inserted vehicle
+                        inserted_gap = min_insertion_gap + gap_ratio * (max_insertion_gap - min_insertion_gap)
 
-                    # increment index to skip newly inserted vehicle in loop
-                    i += 1
+                        # add vehicle in front of veh
+                        self.add_vehicle(
+                            controller='idm',
+                            kind='human',
+                            gap=inserted_gap,
+                            initial_speed=inserted_speed,
+                            insert_at_index=i)
+                        self.n_cutins += 1
+
+                        # increment index to skip newly inserted vehicle in loop
+                        i += 1
 
             # handle cut-outs: first make sure we wouldn't remove an
             # AV or the trajectory leader
@@ -336,31 +332,34 @@ class Simulation(object):
             "avg_speed": self._tse_obs["avg_speed"][index, :],
         }
 
-    def step(self):
+    def step(self, env):
         self.step_counter += 1
         self.time_counter += self.timestep
 
         # Collect macroscopic traffic state estimates.
         tse = self._get_tse() if self.downstream_path is not None else None
 
-        if self.enable_lane_changing:
+        if self.enable_lane_changing and self.step_counter < env.horizon:
+            # Catch the edge case where lane change happens on last step and then data
+            # isn't collected.
             self.handle_lane_changes()
 
             # if self.step_counter % 1000 == 0:
             #     print(len(self.vehicles), self.n_cutins, self.n_cutouts)
+        self.n_vehicles.append(len(self.vehicles))
+
+        return_status = True
 
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
             # independent of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            status = veh.step(tse=tse)
-            if status is False:
-                return False
+            return_status &= veh.step(tse=tse)
 
         self.collect_data()
 
-        return True
+        return return_status
 
     def add_data(self, veh, key, value):
         self.data_by_vehicle[veh.name][key].append(value)
@@ -387,7 +386,7 @@ class Simulation(object):
             self.add_data(veh, 'road_grade', 0 if self.get_road_grade(veh) is None else self.get_road_grade(veh))
             self.add_data(veh, 'altitude', self.get_altitude(veh))
             self.add_data(veh, 'instant_energy_consumption',
-                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel, veh.speed,
+                          self.energy_model.get_instantaneous_fuel_consumption(veh.accel_no_noise_with_failsafe, veh.speed,
                                                                                self.get_data(veh, 'road_grade')[-1]))
             self.add_data(veh,
                           'total_energy_consumption',

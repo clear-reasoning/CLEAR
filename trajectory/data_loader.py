@@ -62,11 +62,18 @@ class DataLoader(object):
         random.shuffle(self.trajectories)
         return iter(self.trajectories)
 
-    def get_trajectories(self, chunk_size=None, count=None):
+    def get_trajectories(self, chunk_size=None, count=None, fixed_traj_path=None):
+        available_trajectories = self.trajectories
+        if fixed_traj_path is not None:
+            available_trajectories = [
+                t for t in available_trajectories
+                if str(t['path']).split("/")[-2] == fixed_traj_path.split("/")[-2]
+            ]
         for _ in counter(count):
-            traj = random.sample(self.trajectories, k=1)[0]
+            traj = random.sample(available_trajectories, k=1)[0]
             if chunk_size is None:
                 yield dict(traj)
+                continue
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
                 k: traj[k][start_idx:start_idx + chunk_size]

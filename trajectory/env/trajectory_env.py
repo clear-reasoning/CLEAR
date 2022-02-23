@@ -33,7 +33,6 @@ DEFAULT_ENV_CONFIG = {
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
-    'num_steps_per_sim': 1,
     # platoon (combination of avs and humans following the leader car)
     'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
@@ -83,10 +82,12 @@ class TrajectoryEnv(gym.Env):
 
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader()
-        if self.whole_trajectory:
-            self.trajectories = self.data_loader.get_all_trajectories()
-        else:
-            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.horizon * self.num_steps_per_sim)
+
+        chunk_size = None if self.whole_trajectory else self.horizon
+        self.trajectories = self.data_loader.get_trajectories(
+            chunk_size=chunk_size,
+            fixed_traj_path=self.fixed_traj_path,
+        )
         self.traj = None
 
         # create simulation
@@ -95,8 +96,8 @@ class TrajectoryEnv(gym.Env):
         self._verbose = _verbose
         if self._verbose:
             print('\nRunning experiment with the following platoon:', ' '.join([v.name for v in self.sim.vehicles]))
-            print(f'with av controller {self.av_controller} ({self.av_kwargs})')
-            print(f'with human controller {self.human_controller} ({self.human_kwargs})\n')
+            print(f'\twith av controller {self.av_controller} (kwargs = {self.av_kwargs})')
+            print(f'\twith human controller {self.human_controller} (kwargs = {self.human_kwargs})\n')
             if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
@@ -152,9 +153,11 @@ class TrajectoryEnv(gym.Env):
     def get_platoon_state(self, veh):
         """ Return the platoon state of veh."""
         platoon = self.sim.get_platoon(veh, self.platoon_size)
+
         state = {
             'platoon_speed': np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in platoon]),
-            'platoon_mpg': np.mean([self.sim.get_data(veh, 'avg_mpg')[-1] for veh in platoon]),
+            'platoon_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1] for veh in platoon]) /
+            np.sum([self.sim.get_data(veh, 'total_gallons')[-1] for veh in platoon])
         }
         return state
 
@@ -179,14 +182,8 @@ class TrajectoryEnv(gym.Env):
 
     def create_simulation(self):
         # collect the next trajectory
-        if self.fixed_traj_path is not None and self.traj is None:
-            self.traj = next(
-                t for t in self.data_loader.trajectories
-                if str(t['path']).split("/")[-2]
-                == self.fixed_traj_path.split("/")[-2])
-
-        if not self.fixed_traj_path:
-            self.traj = next(self.trajectories)
+        self.traj = next(self.trajectories)
+        self.horizon = len(self.traj['positions'])
 
         # create a simulation object
         self.time_step = self.traj['timestep']
@@ -272,7 +269,7 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # execute one simulation step
-        end_of_horizon = not self.sim.step()
+        end_of_horizon = not self.sim.step(self)
 
         # print progress every 5s if running from simulate.py
         if self.simulate:
@@ -343,6 +340,12 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
+            self.collected_rollout['system'].append({'avg_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1]
+                                                                        for veh in self.sim.vehicles]) /
+                                                     np.sum([self.sim.get_data(veh, 'total_gallons')[-1]
+                                                             for veh in self.sim.vehicles]),
+                                                     'speed': np.mean([self.sim.get_data(veh, 'speed')[-1]
+                                                                      for veh in self.sim.vehicles])})
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 

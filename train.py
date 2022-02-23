@@ -103,9 +103,6 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
                         help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
-    parser.add_argument('--env_num_steps_per_sim', type=int, default=1, nargs='+',
-                        help='We take this many sim-steps per environment step i.e. this lets us taking steps '
-                             'bigger than 0.1')
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
@@ -113,7 +110,7 @@ def parse_args_train():
                         'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
-    parser.add_argument('--road_grade', type=str, default="",
+    parser.add_argument('--road_grade', type=str, default=None,
                         help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
     parser.add_argument('--platoon_size', type=int, default=5,
                         help='Sets the size of the platoon to observe during training.')
@@ -139,7 +136,6 @@ def run_experiment(config):
         'minimal_time_headway': config['env_minimal_time_headway'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
-        'num_steps_per_sim': config['env_num_steps_per_sim'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
         'road_grade': config['road_grade'],
