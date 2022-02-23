@@ -8,6 +8,7 @@ import numpy as np
 from pathlib import Path
 import os
 import re
+import uuid
 
 import trajectory.config as tc
 from trajectory.callbacks import TensorboardCallback
@@ -36,6 +37,8 @@ def parse_args_simulate():
                         'Arguments are [author] [strategy name] [is baseline]. '
                         'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
                         'Note that [is baseline] should by default be set to False (or 0).')
+    parser.add_argument('--large_tsd', default=False, action='store_true',
+                        help='If set, the script will be ran for 200 vehicles and generate a large tsd.')
     # render
     parser.add_argument('--render', default=False, action='store_true',
                         help='If set, the experiment will be rendered in a window (which is slower).')
@@ -158,7 +161,7 @@ for i in range(args.n_runs):
         print_and_log('Running experiment with the following platoon:', ' '.join([v.name for v in test_env.sim.vehicles]))
         print_and_log(f'with av controller {args.av_controller} (kwargs = {args.av_kwargs})')
         print_and_log(f'with human controller {args.human_controller} (kwargs = {args.human_kwargs})\n')
-    
+
     state = test_env.reset()
 
     traj_path = test_env.traj['path']
@@ -196,7 +199,10 @@ for i in range(args.n_runs):
     # generate emissions file and optionally upload to leaderboard
     emissions_path = exp_dir / f'emissions/emissions_{i+1}.csv'
     if args.data_pipeline is not None:
+        source_id = f'flow_{uuid.uuid4().hex}'
+        emissions_path = f'/home/circles/sdb/emissions/{source_id}.csv'
         metadata = {
+            'source_id': source_id,
             'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
             'author': args.data_pipeline[0],
             'strategy': args.data_pipeline[1]}
@@ -207,7 +213,8 @@ for i in range(args.n_runs):
             metadata['penetration_rate'] = pr
         metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
         print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
-        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True, additional_metadata=metadata)
+        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
+                               large_tsd=args.large_tsd, additional_metadata=metadata)
     else:
         test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 

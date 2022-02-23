@@ -356,7 +356,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False,additional_metadata={}):
         # create emissions dir if it doesn't exist
         if emissions_path is None:
             emissions_path = 'emissions'
@@ -389,7 +389,7 @@ class TrajectoryEnv(gym.Env):
             date_now = now.date().isoformat()
 
             # create metadata file
-            source_id = f'flow_{uuid.uuid4().hex}'
+            source_id = additional_metadata.get('source_id', 'blank')
             is_baseline = additional_metadata.get('is_baseline', 0)
             submitter_name = additional_metadata.get('author', 'blank')
             strategy = additional_metadata.get('strategy', 'blank')
@@ -410,7 +410,7 @@ class TrajectoryEnv(gym.Env):
             })
             print('Metadata:', metadata)
 
-            metadata_path = dir_path / 'metadata.csv'
+            metadata_path = dir_path / f'{source_id}_metadata.csv'
             metadata.to_csv(metadata_path, index=False)
 
             # custom emissions for leaderboard
@@ -471,14 +471,19 @@ class TrajectoryEnv(gym.Env):
                                          'source_id',
                                          'run_id',
                                          'submission_date']]
-            leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
+            leaderboard_emissions_path = dir_path / f'{source_id}_emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
             # platoon_mpg_path = dir_path / 'platoon_mpg.png'
             # print(f'Generating platoon MPG plot at {platoon_mpg_path}')
             # plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
 
-            tsd_path = dir_path / 'time_space_diagram.png'
+            tsd_dir_path = Path(f'/home/circles/sdb/tsd/{strategy}/')
+            tsd_dir_path.mkdir(parents=True, exist_ok=True)
+            if large_tsd:
+                tsd_path = tsd_dir_path / 'large_tsd.png'
+            else:
+                tsd_path = tsd_dir_path / f'{source_id}.png'
             print(f'Generating time-space diagram plot at {tsd_path}')
             plot_time_space_diagram(emissions_path, save_path=tsd_path)
 
@@ -486,21 +491,16 @@ class TrajectoryEnv(gym.Env):
 
             # upload data to S3
 
-            # metadata
-            upload_to_pipeline(
-                metadata_path, file_type='metadata', log=True
-            )
-            # emissions
-            upload_to_pipeline(
-                leaderboard_emissions_path, file_type='emission', log=True
-            )
-            # # platoons MPG plot
-            # upload_to_pipeline(
-            #     platoon_mpg_path, type='platoon_mpg', log=True
-            # )
-            # time-space diagram
-            upload_to_pipeline(
-                tsd_path, file_type='tsd', log=True
-            )
+            if not large_tsd:
+                # metadata
+                upload_to_pipeline(
+                    metadata_path, file_type='metadata',
+                    source_id=source_id, log=True
+                )
+                # emissions
+                upload_to_pipeline(
+                    leaderboard_emissions_path, file_type='emission',
+                    source_id=source_id, log=True
+                )
 
         return emissions_path
