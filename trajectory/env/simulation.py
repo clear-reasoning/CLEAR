@@ -193,7 +193,6 @@ class Simulation(object):
 
         # compute ratio of gained and lost vehicles from the initial count, to balance out cut-ins and cut-outs
         n_vehicles = len(self.vehicles)
-        self.n_vehicles.append(n_vehicles)
         n_vehicles_initially = n_vehicles - self.n_cutins + self.n_cutouts
         ratio_gained = (n_vehicles - n_vehicles_initially) / n_vehicles_initially
         ratio_lost = (n_vehicles_initially - n_vehicles) / n_vehicles_initially
@@ -262,6 +261,7 @@ class Simulation(object):
 
             # if self.step_counter % 1000 == 0:
             #     print(len(self.vehicles), self.n_cutins, self.n_cutouts)
+        self.n_vehicles.append(len(self.vehicles))
 
         return_status = True
 
