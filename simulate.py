@@ -232,12 +232,50 @@ for i in range(args.n_runs):
     for group, metrics in rollout_dict.items():
         for k, v in metrics.items():
             plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        fig_name = f'{group}_{i+1}.png'
+        fig_name = f'{group}_{i+1}'
         plotter.save(fig_name, log=False)
         if args.n_runs == 1:
-            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}')
+            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+    
+    # plot speed and accel profiles
+    if args.no_lc:
+        if args.platoon == 'av human*8':
+            # special plot for slides
+            veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
+            figsize = (7, 6)
 
-    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i}.png'
+            with plotter.subplot(title='Velocity profiles', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                for veh in veh_lst:
+                    times = test_env.sim.get_data(veh, 'time')
+                    speeds = test_env.sim.get_data(veh, 'speed')
+                    plotter.plot(times, speeds, label=veh.name)
+            with plotter.subplot(title='Acceleration profiles', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                for veh in veh_lst:
+                    times = test_env.sim.get_data(veh, 'time')
+                    speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
+                    plotter.plot(times, speeds, label=veh.name)
+        else:
+            # plot profiles of AVs and their respective leaders
+            figsize = None
+            for k, veh in enumerate(test_env.avs):
+                veh_lst = [veh, veh.leader]
+                with plotter.subplot(title=f'Velocity profiles (AV {k+1})', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                    for veh in veh_lst:
+                        times = test_env.sim.get_data(veh, 'time')
+                        speeds = test_env.sim.get_data(veh, 'speed')
+                        plotter.plot(times, speeds, label=veh.name)
+                with plotter.subplot(title=f'Acceleration profiles (AV {k+1})', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                    for veh in veh_lst:
+                        times = test_env.sim.get_data(veh, 'time')
+                        speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
+                        plotter.plot(times, speeds, label=veh.name)
+
+        fig_name = f'speed_accel_profiles_{i+1}'
+        plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+        if args.n_runs == 1:
+            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+
+    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i+1}.png'
     plot_time_space_diagram(emissions_path, output_tsd_path)
     if args.n_runs == 1:
         print_and_log(f'Wrote {output_tsd_path}\n')
@@ -253,6 +291,7 @@ for i in range(args.n_runs):
         count_penalty = sum(rollout_dict['custom_metrics'][penalty])
         exp_metrics[f'count_{penalty}'].append(count_penalty)
 
+    stat_fns = [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]
     for (name, array) in [
             ('av_headway', rollout_dict['sim_data_av']['headway']),
             ('av_speed', rollout_dict['base_state']['speed'])
@@ -263,10 +302,15 @@ for i in range(args.n_runs):
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
             ('rl_reward', rollout_dict['training']['rewards']),
     ]:
-        for fn_name, fn in [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]:
+        for fn_name, fn in stat_fns:
             exp_metrics[f'{name} ({fn_name})'].append(fn(array))
 
     exp_metrics['rl_episode_reward'].append(np.sum(rollout_dict['training']['rewards']))
+
+    exp_metrics['n_cutins'].append(test_env.sim.n_cutins)
+    exp_metrics['n_cutouts'].append(test_env.sim.n_cutouts)
+    for fn_name, fn in stat_fns:
+        exp_metrics[f'n_vehicles ({fn_name})'].append(fn(test_env.sim.n_vehicles))
 
     plt.close('all')
 
