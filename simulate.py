@@ -81,6 +81,10 @@ def parse_args_simulate():
 # parse command line arguments
 args = parse_args_simulate()
 
+# baseline use idm controller
+if args.av_controller == 'baseline':
+    args.av_controller = 'idm'
+
 assert args.human_controller in ['idm', 'fs']
 assert args.av_controller in ['rl', 'idm', 'fs']
 
@@ -211,7 +215,8 @@ for i in range(args.n_runs):
             if '.' not in pr:
                 pr += '.0'
             metadata['penetration_rate'] = pr
-        metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
+        metadata['version'] = '4.1 wo LC' if args.no_lc else '4.1 w LCv0.1'
+        metadata['traj_name'] = traj_path.name[:-4]
         print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
         test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
                                large_tsd=args.large_tsd, additional_metadata=metadata)

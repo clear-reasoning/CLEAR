@@ -395,6 +395,7 @@ class TrajectoryEnv(gym.Env):
             strategy = additional_metadata.get('strategy', 'blank')
             penetration_rate = additional_metadata.get('penetration_rate', 'x')
             version = additional_metadata.get('version', '4.0')
+            traj_name = additional_metadata.get('traj_name', 'traj_default')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_date': [date_now],
@@ -407,6 +408,7 @@ class TrajectoryEnv(gym.Env):
                 'penetration_rate': [penetration_rate],
                 'road_grade': [0],
                 'is_benchmark': [0],
+                'traj_name': [traj_name],
             })
             print('Metadata:', metadata)
 
