@@ -306,6 +306,7 @@ for i in range(args.n_runs):
         exp_metrics[f'n_vehicles ({fn_name})'].append(fn(test_env.sim.n_vehicles))
 
     plt.close('all')
+    print()
 
 print_and_log(f'Metrics aggregated over {args.n_runs} runs:\n')
 for k, v in exp_metrics.items():
@@ -317,3 +318,6 @@ with open(logs_path, 'w') as f:
 
 print(f'\nExperiment logs have been saved at {logs_path}')
 print(f'Experiment folder is {exp_dir}')
+
+system_mpg: 41.48 ± 0.01 (min = 41.46, max = 41.49)
+system_speed: 19.82 ± 0.02 (min = 19.79, max = 19.83)
