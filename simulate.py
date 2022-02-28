@@ -318,6 +318,3 @@ with open(logs_path, 'w') as f:
 
 print(f'\nExperiment logs have been saved at {logs_path}')
 print(f'Experiment folder is {exp_dir}')
-
-system_mpg: 41.48 ± 0.01 (min = 41.46, max = 41.49)
-system_speed: 19.82 ± 0.02 (min = 19.79, max = 19.83)
