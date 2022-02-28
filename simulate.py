@@ -30,6 +30,8 @@ def parse_args_simulate():
     parser.add_argument('--n_runs', type=int, default=1,
                         help='How many times to run the experiment. If > 1, will run several times the same experiment '
                         '(on the same trajectory if --traj_path is set) and compute average and variance of collected metrics.')
+    parser.add_argument('--fast', default=False, action='store_true',
+                        help='If set, emission files and plots will not be generated.')
     # leaderboard
     parser.add_argument('--data_pipeline', default=None, nargs=3,
                         help='If set, the emission file and metadata will be uploaded to leaderboard. '
@@ -207,66 +209,69 @@ for i in range(args.n_runs):
             metadata['penetration_rate'] = pr
         metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
         print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
-        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True, additional_metadata=metadata)
+        if not args.fast:
+            test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True, additional_metadata=metadata)
     else:
-        test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
+        if not args.fast:
+            test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
     # gen metrics
     tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
     rollout_dict = tb_callback.get_rollout_dict(test_env)
 
-    # plot metrics
-    plotter = Plotter(exp_dir / 'figs')
-    for group, metrics in rollout_dict.items():
-        for k, v in metrics.items():
-            plotter.plot(v, title=k, grid=True, linewidth=1.0)
-        fig_name = f'{group}_{i+1}'
-        plotter.save(fig_name, log=False)
-        if args.n_runs == 1:
-            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
-    
-    # plot speed and accel profiles
-    if args.no_lc:
-        if args.platoon == 'av human*8':
-            # special plot for slides
-            veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
-            figsize = (7, 6)
+    if not args.fast:
+        # plot metrics
+        plotter = Plotter(exp_dir / 'figs')
+        for group, metrics in rollout_dict.items():
+            for k, v in metrics.items():
+                plotter.plot(v, title=k, grid=True, linewidth=1.0)
+            fig_name = f'{group}_{i+1}'
+            plotter.save(fig_name, log=False)
+            if args.n_runs == 1:
+                print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+        
+        # plot speed and accel profiles
+        if args.no_lc:
+            if args.platoon == 'av human*8':
+                # special plot for slides
+                veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
+                figsize = (7, 6)
 
-            with plotter.subplot(title='Velocity profiles', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
-                for veh in veh_lst:
-                    times = test_env.sim.get_data(veh, 'time')
-                    speeds = test_env.sim.get_data(veh, 'speed')
-                    plotter.plot(times, speeds, label=veh.name)
-            with plotter.subplot(title='Acceleration profiles', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
-                for veh in veh_lst:
-                    times = test_env.sim.get_data(veh, 'time')
-                    speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
-                    plotter.plot(times, speeds, label=veh.name)
-        else:
-            # plot profiles of AVs and their respective leaders
-            figsize = None
-            for k, veh in enumerate(test_env.avs):
-                veh_lst = [veh, veh.leader]
-                with plotter.subplot(title=f'Velocity profiles (AV {k+1})', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                with plotter.subplot(title='Velocity profiles', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
                     for veh in veh_lst:
                         times = test_env.sim.get_data(veh, 'time')
                         speeds = test_env.sim.get_data(veh, 'speed')
                         plotter.plot(times, speeds, label=veh.name)
-                with plotter.subplot(title=f'Acceleration profiles (AV {k+1})', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                with plotter.subplot(title='Acceleration profiles', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
                     for veh in veh_lst:
                         times = test_env.sim.get_data(veh, 'time')
                         speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
                         plotter.plot(times, speeds, label=veh.name)
+            else:
+                # plot profiles of AVs and their respective leaders
+                figsize = None
+                for k, veh in enumerate(test_env.avs):
+                    veh_lst = [veh, veh.leader]
+                    with plotter.subplot(title=f'Velocity profiles (AV {k+1})', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                        for veh in veh_lst:
+                            times = test_env.sim.get_data(veh, 'time')
+                            speeds = test_env.sim.get_data(veh, 'speed')
+                            plotter.plot(times, speeds, label=veh.name)
+                    with plotter.subplot(title=f'Acceleration profiles (AV {k+1})', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                        for veh in veh_lst:
+                            times = test_env.sim.get_data(veh, 'time')
+                            speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
+                            plotter.plot(times, speeds, label=veh.name)
 
-        fig_name = f'speed_accel_profiles_{i+1}'
-        plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+            fig_name = f'speed_accel_profiles_{i+1}'
+            plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+            if args.n_runs == 1:
+                print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+
+        output_tsd_path = exp_dir / f'figs/time_space_diagram_{i+1}.png'
+        plot_time_space_diagram(emissions_path, output_tsd_path)
         if args.n_runs == 1:
-            print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
-
-    output_tsd_path = exp_dir / f'figs/time_space_diagram_{i+1}.png'
-    plot_time_space_diagram(emissions_path, output_tsd_path)
-    if args.n_runs == 1:
-        print_and_log(f'Wrote {output_tsd_path}\n')
+            print_and_log(f'Wrote {output_tsd_path}\n')
 
     # accumulate metrics
     exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])
