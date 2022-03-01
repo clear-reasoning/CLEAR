@@ -191,7 +191,7 @@ class TrajectoryEnv(gym.Env):
             timestep=self.time_step,
             enable_lane_changing=self.lane_changing,
             road_grade=self.road_grade,
-            downstream_path=os.path.dirname(self.traj["path"]),
+            downstream_path=None if "east" in self.traj["path"] else os.path.dirname(self.traj["path"]),
         )
 
         # populate simulation with a trajectoy leader
