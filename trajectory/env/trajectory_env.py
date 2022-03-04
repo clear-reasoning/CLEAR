@@ -264,28 +264,6 @@ class TrajectoryEnv(gym.Env):
                 metrics['vdes_delta'] = float(action) * self.time_step
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
-        # execute one simulation step
-        end_of_horizon = not self.sim.step(self)
-
-        # print progress every 5s if running from simulate.py
-        if self.simulate:
-            # veh_str = ''
-            # for v in self.sim.vehicles:
-            #     if h := v.get_headway():
-            #         veh_str += ' ' * (int(h) // 10)
-            #     if v.kind == 'human':
-            #         veh_str += 'O'
-            #     elif v.kind == 'av':
-            #         veh_str += 'X'
-            #     elif v.kind == 'leader':
-            #         veh_str += '∆'
-            # print(veh_str[::-1])
-
-            if end_of_horizon or time.time() - self.log_time_counter > 5.0:
-                steps, max_steps = self.sim.step_counter, self.traj['size']
-                print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
-                self.log_time_counter = time.time()
-
         # compute reward & done
         h = self.avs[0].get_headway()
         th = self.avs[0].get_time_headway()
@@ -325,6 +303,28 @@ class TrajectoryEnv(gym.Env):
         metrics['crash'] = int(crash)
         for k, v in headway_penalties.items():
             metrics[k] = int(v)
+
+        # execute one simulation step
+        end_of_horizon = not self.sim.step(self)
+
+        # print progress every 5s if running from simulate.py
+        if self.simulate:
+            # veh_str = ''
+            # for v in self.sim.vehicles:
+            #     if h := v.get_headway():
+            #         veh_str += ' ' * (int(h) // 10)
+            #     if v.kind == 'human':
+            #         veh_str += 'O'
+            #     elif v.kind == 'av':
+            #         veh_str += 'X'
+            #     elif v.kind == 'leader':
+            #         veh_str += '∆'
+            # print(veh_str[::-1])
+
+            if end_of_horizon or time.time() - self.log_time_counter > 5.0:
+                steps, max_steps = self.sim.step_counter, self.traj['size']
+                print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
+                self.log_time_counter = time.time()
 
         # get next state & done
         next_state = self.get_state(_store_state=True)
