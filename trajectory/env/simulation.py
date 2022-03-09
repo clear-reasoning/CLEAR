@@ -23,7 +23,7 @@ class Simulation(object):
         trajectory: ITERATOR yielding triples (position, speed, accel)
             that will be used for the first vehicle in the platoon (not spawned if this is None)
         downstream_path: the directory containing relevant downstream information.
-            If set to None, no downstream data is available for this trajectory.
+            If set to None or the path does not exist, no downstream data is shared.
         """
         self.timestep = timestep
         # vehicles in order, from first in the platoon to last
@@ -288,8 +288,9 @@ class Simulation(object):
         list of float
             the times when traffic state estimates get updated
         """
-        # If no downstream path was specific, no data will be available.
-        if downstream_path is None:
+        # If no downstream path was specific, or the data does not exist, no
+        # data will be available.
+        if (downstream_path is None) or not os.path.exists(downstream_path):
             return None, None
 
         tse = {}
@@ -337,7 +338,7 @@ class Simulation(object):
         self.time_counter += self.timestep
 
         # Collect macroscopic traffic state estimates.
-        tse = self._get_tse() if self.downstream_path is not None else None
+        tse = self._get_tse() if self._tse_obs is not None else None
 
         if self.enable_lane_changing and self.step_counter < env.horizon:
             # Catch the edge case where lane change happens on last step and then data
