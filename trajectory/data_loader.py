@@ -67,7 +67,7 @@ class DataLoader(object):
         if fixed_traj_path is not None:
             available_trajectories = [
                 t for t in available_trajectories
-                if str(t['path']).split("/")[-1] == fixed_traj_path.split("/")[-1]
+                if str(t['path']).split("/")[-2] == fixed_traj_path.split("/")[-2]
             ]
         for _ in counter(count):
             traj = random.sample(available_trajectories, k=1)[0]

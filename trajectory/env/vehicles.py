@@ -14,7 +14,7 @@ class Vehicle(object):
         self.controller = controller  # eg rl, idm
         self.kind = kind  # eg av, human
         self.tags = tags  # list of strings
-        self._tse = None
+        self._tse = {"segments": None, "avg_speed": None}
 
         self.name = f'{self.vid}_{self.controller}'  # eg 2_idm_human#metrics
         if self.kind is not None:
