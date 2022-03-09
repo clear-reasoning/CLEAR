@@ -10,13 +10,13 @@ class Vehicle(object):
                  timestep=None, leader=None, follower=None,
                  **controller_args):
 
-        self.vid = vid
-        self.controller = controller
-        self.kind = kind
-        self.tags = tags
+        self.vid = vid  # eg 3
+        self.controller = controller  # eg rl, idm
+        self.kind = kind  # eg av, human
+        self.tags = tags  # list of strings
         self._tse = None
 
-        self.name = f'{self.vid}_{self.controller}'
+        self.name = f'{self.vid}_{self.controller}'  # eg 2_idm_human#metrics
         if self.kind is not None:
             self.name += f'_{self.kind}'
         if self.tags is not None:
@@ -77,6 +77,16 @@ class Vehicle(object):
         if self.leader is None:
             return None
         return self.leader.speed
+
+    def get_speed_difference(self):
+        if self.leader is None:
+            return None
+        return self.speed - self.leader.speed
+
+    def get_time_to_collision(self):
+        if self.leader is None:
+            return None
+        return np.inf if self.get_speed_difference() <= 0 else self.get_headway() / self.get_speed_difference()
 
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
@@ -148,6 +158,7 @@ class TrajectoryVehicle(Vehicle):
         self.accel_no_noise_with_failsafe = self.accel
         self.accel_with_noise_no_failsafe = self.accel
         self.accel_no_noise_no_failsafe = self.accel
+        return True
 
 
 class RLVehicle(Vehicle):

@@ -1,3 +1,4 @@
+import matplotlib as mpl
 from matplotlib import colors
 from matplotlib.collections import LineCollection
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ def plot_time_space_diagram(emissions_path, save_path):
     cmap = colors.LinearSegmentedColormap('my_colormap', cdict, 1024)
 
     # plot line segments
-    lc = LineCollection(segs, cmap=cmap)  # , norm=norm)
+    lc = LineCollection(segs, cmap=cmap, norm=mpl.colors.Normalize(vmin=0, vmax=40))
     lc.set_array(df['speed'].values)
     lc.set_linewidth(1)
     ax.add_collection(lc)
