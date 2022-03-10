@@ -277,11 +277,14 @@ class TrajectoryEnv(gym.Env):
             reward -= 50.0
 
         # forcibly prevent the car from getting too small or large headways
+        ttc_val = ttc < self.minimal_time_to_collision and accel > 0 if \
+                  self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
         headway_penalties = {
-            'low_headway_penalty': h < self.min_headway,
+            # 'low_headway_penalty': h < self.min_headway,
             'large_headway_penalty': h > self.max_headway,
-            'low_time_headway_penalty': th < self.minimal_time_headway,
-            'low_ttc_penalty': ttc < self.minimal_time_to_collision}
+            # 'low_time_headway_penalty': th < self.minimal_time_headway,
+            'low_ttc_penalty': ttc_val
+        }
         if any(headway_penalties.values()):
             reward -= 2.0
 
