@@ -1,6 +1,7 @@
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity
 import numpy as np
+import bisect
 
 
 class Vehicle(object):
@@ -98,15 +99,51 @@ class Vehicle(object):
             safe_accel = accel
         return safe_accel
 
-    @property
-    def segments(self):
+    def get_segments(self):
         """Return the starting position of every segment whose macroscopic state is approximated."""
         return self._tse["segments"]
 
-    @property
-    def avg_speed(self):
-        """Return the average speed of every segment (in m/s)."""
-        return self._tse["avg_speed"]
+    def get_avg_speed(self):
+        """Return a tuple of traffic state estimation data.
+
+        This tuple consists of the following elements:
+
+        1. the time (relative to the start of the simulation) when the estimate
+           was taken (in seconds)
+        2. the average speed of every segment (in m/s).
+        3. Confidence score — This is a simple confidence factor. 30 — high
+           confidence, based on real-time data for that specific segment 20 —
+           medium confidence
+        4. Indicates the probability that the current probe reading represents
+           the actual roadway conditions based on recent and historic trends.
+           This value is presented only when the confidence score is 30.
+           (0 = low probability, 100 = high probability)
+        """
+        return (self._tse["time"],
+                self._tse["avg_speed"],
+                self._tse["confidence"],
+                self._tse["cvalue"])
+
+    def get_distance_to_next_segment(self):
+        """Return the distance to the next segment."""
+        index = bisect.bisect(self.segments, self.pos)
+
+        return self.segments[index] - self.pos
+
+    def get_local_avg_speed(self, k=10):
+        """Return traffic-state info within k segments from your position.
+
+        See the docstring for `avg_speed` to learn more about what each element
+        in the tuple consists of.
+        """
+        index = bisect.bisect(self.segments, self.pos)
+
+        t, avg_speed, confidence, cvalue = self.avg_speed
+
+        return (t,
+                avg_speed[index - k: index + k],
+                confidence[index - k: index + k],
+                cvalue[index - k: index + k])
 
 
 class IDMVehicle(Vehicle):

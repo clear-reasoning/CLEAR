@@ -195,7 +195,7 @@ class TrajectoryEnv(gym.Env):
             downstream_path=os.path.dirname(self.traj["path"]),
         )
 
-        # populate simulation with a trajectoy leader
+        # populate simulation with a trajectory leader
         self.sim.add_vehicle(
             controller='trajectory',
             kind='leader',

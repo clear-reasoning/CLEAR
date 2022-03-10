@@ -290,7 +290,8 @@ class Simulation(object):
         """
         # If no downstream path was specific, or the data does not exist, no
         # data will be available.
-        if (downstream_path is None) or not os.path.exists(downstream_path):
+        if (downstream_path is None) or \
+                not os.path.exists(os.path.join(downstream_path, "speed.csv")):
             return None, None
 
         tse = {}
@@ -302,6 +303,12 @@ class Simulation(object):
         # Load available traffic-state estimation data.
         tse["avg_speed"] = np.genfromtxt(
             os.path.join(downstream_path, "speed.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["confidence"] = np.genfromtxt(
+            os.path.join(downstream_path, "confidence.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["cvalue"] = np.genfromtxt(
+            os.path.join(downstream_path, "cvalue.csv"),
             delimiter=",", skip_header=1)[:, 1:]
 
         # Import times when the traffic state estimate is updated.
@@ -323,6 +330,8 @@ class Simulation(object):
             * segments: the list of the starting positions of different
               estimated segments
             * avg_speed: average speed of every segment
+            * confidence: confidence scores for INRIX data
+            * cvalue: c-values for INRIX data
         """
         # Find the index of the current observation.
         index = max(bisect.bisect(self._tse_times, self.time_counter) - 1, 0)
@@ -331,6 +340,8 @@ class Simulation(object):
         return {
             "segments": self._tse_obs["segments"],
             "avg_speed": self._tse_obs["avg_speed"][index, :],
+            "confidence": self._tse_obs["confidence"][index, :],
+            "cvalue": self._tse_obs["cvalue"][index, :],
         }
 
     def step(self, env):
