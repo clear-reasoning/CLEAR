@@ -15,7 +15,13 @@ class Vehicle(object):
         self.controller = controller  # eg rl, idm
         self.kind = kind  # eg av, human
         self.tags = tags  # list of strings
-        self._tse = {"segments": None, "avg_speed": None}
+        self._tse = {
+            "time": None,
+            "segments": None,
+            "avg_speed": None,
+            "confidence": None,
+            "cvalue": None,
+        }
 
         self.name = f'{self.vid}_{self.controller}'  # eg 2_idm_human#metrics
         if self.kind is not None:
@@ -126,9 +132,12 @@ class Vehicle(object):
 
     def get_distance_to_next_segment(self):
         """Return the distance to the next segment."""
-        index = bisect.bisect(self.segments, self.pos)
+        if self.get_segments() is None:
+            return None
 
-        return self.segments[index] - self.pos
+        index = bisect.bisect(self.get_segments(), self.pos)
+
+        return self.get_segments()[index] - self.pos
 
     def get_local_avg_speed(self, k=10):
         """Return traffic-state info within k segments from your position.
@@ -136,9 +145,12 @@ class Vehicle(object):
         See the docstring for `avg_speed` to learn more about what each element
         in the tuple consists of.
         """
-        index = bisect.bisect(self.segments, self.pos)
+        if self.get_segments() is None:
+            return None
 
-        t, avg_speed, confidence, cvalue = self.avg_speed
+        index = bisect.bisect(self.get_segments(), self.pos)
+
+        t, avg_speed, confidence, cvalue = self.get_avg_speed()
 
         return (t,
                 avg_speed[index - k: index + k],

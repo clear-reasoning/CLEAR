@@ -313,8 +313,7 @@ class Simulation(object):
 
         # Import times when the traffic state estimate is updated.
         tse_times = sorted(list(pd.read_csv(
-            os.path.join(downstream_path, "speed.csv"))["Time"]))
-        tse_times = [x - tse_times[0] for x in tse_times]
+            os.path.join(downstream_path, "speed.csv"))["time"]))
 
         return tse, tse_times
 
@@ -338,6 +337,7 @@ class Simulation(object):
 
         # Return the traffic state estimates corresponding to this time.
         return {
+            "time": self._tse_times[index],
             "segments": self._tse_obs["segments"],
             "avg_speed": self._tse_obs["avg_speed"][index, :],
             "confidence": self._tse_obs["confidence"][index, :],
