@@ -49,7 +49,7 @@ class DataLoader(object):
         # Add eastbound and westbound I-24 trajectories.
         file_paths = \
             list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
-            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))\
+            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))
 
         # Add I-680 trajectories (if available).
         if os.path.isdir(opj(tc.PROJECT_PATH, 'dataset/i680')):
