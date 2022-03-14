@@ -229,7 +229,7 @@ for i in range(args.n_runs):
             plotter.save(fig_name, log=False)
             if args.n_runs == 1:
                 print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
-        
+
         # plot speed and accel profiles
         if args.no_lc:
             if args.platoon == 'av human*8':
@@ -237,12 +237,20 @@ for i in range(args.n_runs):
                 veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
                 figsize = (7, 6)
 
-                with plotter.subplot(title='Velocity profiles', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                with plotter.subplot(title='Velocity profiles',
+                                     xlabel='Time (s)',
+                                     ylabel='Velocity (m/s)',
+                                     grid=True,
+                                     legend=False):
                     for veh in veh_lst:
                         times = test_env.sim.get_data(veh, 'time')
                         speeds = test_env.sim.get_data(veh, 'speed')
                         plotter.plot(times, speeds, label=veh.name)
-                with plotter.subplot(title='Acceleration profiles', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                with plotter.subplot(title='Acceleration profiles',
+                                     xlabel='Time (s)',
+                                     ylabel='Acceleration (m/s²)',
+                                     grid=True,
+                                     legend=True):
                     for veh in veh_lst:
                         times = test_env.sim.get_data(veh, 'time')
                         speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
@@ -252,12 +260,20 @@ for i in range(args.n_runs):
                 figsize = None
                 for k, veh in enumerate(test_env.avs):
                     veh_lst = [veh, veh.leader]
-                    with plotter.subplot(title=f'Velocity profiles (AV {k+1})', xlabel='Time (s)', ylabel='Velocity (m/s)', grid=True, legend=False):
+                    with plotter.subplot(title=f'Velocity profiles (AV {k+1})',
+                                         xlabel='Time (s)',
+                                         ylabel='Velocity (m/s)',
+                                         grid=True,
+                                         legend=False):
                         for veh in veh_lst:
                             times = test_env.sim.get_data(veh, 'time')
                             speeds = test_env.sim.get_data(veh, 'speed')
                             plotter.plot(times, speeds, label=veh.name)
-                    with plotter.subplot(title=f'Acceleration profiles (AV {k+1})', xlabel='Time (s)', ylabel='Acceleration (m/s²)', grid=True, legend=True):
+                    with plotter.subplot(title=f'Acceleration profiles (AV {k+1})',
+                                         xlabel='Time (s)',
+                                         ylabel='Acceleration (m/s²)',
+                                         grid=True,
+                                         legend=True):
                         for veh in veh_lst:
                             times = test_env.sim.get_data(veh, 'time')
                             speeds = test_env.sim.get_data(veh, 'target_accel_no_noise_with_failsafe')
