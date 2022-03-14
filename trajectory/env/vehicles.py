@@ -148,14 +148,17 @@ class Vehicle(object):
         if self.get_segments() is None:
             return None
 
-        index = bisect.bisect_left(self.get_segments(), self.pos)
+        index = bisect.bisect(self.get_segments(), self.pos) - 1
 
         t, avg_speed, confidence, cvalue = self.get_avg_speed()
 
+        min_indx = max(index - k, 0)
+        max_indx = min(index, len(avg_speed))
+
         return (t,
-                avg_speed[index - k: index],
-                confidence[index - k: index],
-                cvalue[index - k: index])
+                avg_speed[min_indx: max_indx],
+                confidence[min_indx: max_indx],
+                cvalue[min_indx: max_indx])
 
     def get_downstream_avg_speed(self, k=10):
         """Return traffic-state info of the k closest downstream segments.
@@ -166,14 +169,17 @@ class Vehicle(object):
         if self.get_segments() is None:
             return None
 
-        index = bisect.bisect_left(self.get_segments(), self.pos)
+        index = bisect.bisect(self.get_segments(), self.pos) - 1
 
         t, avg_speed, confidence, cvalue = self.get_avg_speed()
 
+        min_indx = max(index, 0)
+        max_indx = min(index + k, len(avg_speed))
+
         return (t,
-                avg_speed[index: index + k],
-                confidence[index: index + k],
-                cvalue[index: index + k])
+                avg_speed[min_indx: max_indx],
+                confidence[min_indx: max_indx],
+                cvalue[min_indx: max_indx])
 
     def get_local_avg_speed(self, k=10):
         """Return traffic-state info within k segments from your position.
@@ -184,14 +190,17 @@ class Vehicle(object):
         if self.get_segments() is None:
             return None
 
-        index = bisect.bisect_left(self.get_segments(), self.pos)
+        index = bisect.bisect(self.get_segments(), self.pos) - 1
 
         t, avg_speed, confidence, cvalue = self.get_avg_speed()
 
+        min_indx = max(index - k, 0)
+        max_indx = min(index + k, len(avg_speed))
+
         return (t,
-                avg_speed[index - k: index + k],
-                confidence[index - k: index + k],
-                cvalue[index - k: index + k])
+                avg_speed[min_indx: max_indx],
+                confidence[min_indx: max_indx],
+                cvalue[min_indx: max_indx])
 
 
 class IDMVehicle(Vehicle):
