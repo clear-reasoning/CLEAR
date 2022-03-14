@@ -486,7 +486,10 @@ class TrajectoryEnv(gym.Env):
             tsd_dir_path = Path(f'/home/circles/sdb/tsd/{strategy}/')
             tsd_dir_path.mkdir(parents=True, exist_ok=True)
             if large_tsd:
-                tsd_path = tsd_dir_path / 'large_tsd.png'
+                if 'wo LC' in version:
+                    tsd_path = tsd_dir_path / 'large_tsd.png'
+                else:
+                    tsd_path = tsd_dir_path / 'large_tsd_lc.png'
             else:
                 tsd_path = tsd_dir_path / f'{source_id}.png'
             print(f'Generating time-space diagram plot at {tsd_path}')
@@ -498,6 +501,7 @@ class TrajectoryEnv(gym.Env):
 
             if not large_tsd:
                 # metadata
+                start = time.time()
                 upload_to_pipeline(
                     metadata_path, file_type='metadata',
                     source_id=source_id, log=True
@@ -507,5 +511,7 @@ class TrajectoryEnv(gym.Env):
                     leaderboard_emissions_path, file_type='emission',
                     source_id=source_id, log=True
                 )
+                end = time.time()
+                print(end - start)
 
         return emissions_path

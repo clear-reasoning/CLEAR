@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 
 import os
+import sys
 
 
 class Simulation(object):
@@ -110,14 +111,22 @@ class Simulation(object):
             vehicle will have i vehicles in front of it in the platoon)
         controller_kwargs: kwargs that will be passed along to the controller constructor
         """
+
         # get vehicle class corresponding to desired controller
-        vehicle_class = {
+        vehicle_classes = {
             'idm': IDMVehicle,
             'fs': FSVehicle,
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
             'rl_fs': FSWrappedRLVehicle,
-        }[controller]
+        }
+
+        if controller not in vehicle_classes.keys():
+            sys.path.append('/home/circles/trajectory_controllers')
+            from importlib import import_module
+            vehicle_class = import_module(f'trajectory_controllers.{controller}').AvVehicle
+        else:
+            vehicle_class = vehicle_classes[controller]
 
         # get ID of leading and following cars (or None if they do not exist)
         idx_leader = len(self.vehicles) - 1 if len(self.vehicles) > 0 else None

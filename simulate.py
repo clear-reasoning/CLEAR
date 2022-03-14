@@ -1,4 +1,5 @@
 import argparse
+from ast import arg
 from collections import defaultdict
 from datetime import datetime
 import importlib
@@ -86,9 +87,9 @@ if args.av_controller == 'baseline':
     args.av_controller = 'idm'
 
 assert args.human_controller in ['idm', 'fs']
-assert args.av_controller in ['rl', 'idm', 'fs']
+# assert args.av_controller in ['rl', 'idm', 'fs']
 
-assert args.data_pipeline is None or args.n_runs == 1
+# assert args.data_pipeline is None or args.n_runs == 1
 
 # logging function
 logs_str = ''
@@ -236,9 +237,9 @@ for i in range(args.n_runs):
         plotter.save(fig_name, log=False)
         if args.n_runs == 1:
             print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
-    
+
     # plot speed and accel profiles
-    if args.no_lc:
+    if args.no_lc and not args.large_tsd:
         if args.platoon == 'av human*8':
             # special plot for slides
             veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
@@ -271,7 +272,13 @@ for i in range(args.n_runs):
                         plotter.plot(times, speeds, label=veh.name)
 
         fig_name = f'speed_accel_profiles_{i+1}'
-        plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+        if args.data_pipeline is not None:
+            save_dir=f'/home/circles/sdb/speed_accel_profile/{args.data_pipeline[1]}'
+            os.makedirs(save_dir, exist_ok=True)
+            plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto',
+                         save_path=f'{save_dir}/{source_id}.png')
+        else:
+            plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
         if args.n_runs == 1:
             print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
 
