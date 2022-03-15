@@ -6,6 +6,7 @@ import random
 import sys
 import time
 import os
+from os.path import join as opj
 from collections import defaultdict
 
 import trajectory.config as tc
@@ -14,17 +15,25 @@ from trajectory.env.utils import get_bearing, get_driving_direction, get_valid_l
     lat_long_distance, moving_sum, pairwise, counter
 from trajectory.visualize.plotter import Plotter
 
+# assumed time discretization within trajectory data
+DT = 0.1
+
 
 class DataLoader(object):
     def __init__(self, positions_from_speeds=True):
         self.trajectories = []
         for fp, data in self.get_raw_data():
+            # Values for the I-680 are in m/s, while those for the I-24 appear
+            # to be in km/hr.
+            scale = 1. if "i680" in str(fp) else 3.6
+
             if positions_from_speeds:
                 positions = [0]
-                for speed in np.array(data['Velocity'])[:-1] / 3.6:
-                    positions.append(positions[-1] + 0.1 * speed)
+                for speed in np.array(data['Velocity'])[:-1] / scale:
+                    positions.append(positions[-1] + DT * speed)
             else:
                 positions = np.array(data['DistanceGPS'])
+
             self.trajectories.append({
                 'path': fp,
                 'timestep': round(data['Time'][1] - data['Time'][0], 3),
@@ -32,13 +41,20 @@ class DataLoader(object):
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
                 'positions': positions,  #  np.array(data['DistanceGPS']),
-                'velocities': np.array(data['Velocity']) / 3.6,
+                'velocities': np.array(data['Velocity']) / scale,
                 'accelerations': np.array(data['Acceleration'])
             })
 
     def get_raw_data(self):
-        file_paths = list(Path(os.path.join(
-            tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('**/*.csv'))
+        # Add eastbound and westbound I-24 trajectories.
+        file_paths = \
+            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
+            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))
+
+        # Add I-680 trajectories (if available).
+        if os.path.isdir(opj(tc.PROJECT_PATH, 'dataset/i680')):
+            file_paths += list(Path(opj(tc.PROJECT_PATH, 'dataset/i680')).glob('*/trajectory.csv'))
+
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
 
@@ -51,7 +67,7 @@ class DataLoader(object):
         if fixed_traj_path is not None:
             available_trajectories = [
                 t for t in available_trajectories
-                if str(t['path']).split("/")[-1] == fixed_traj_path.split("/")[-1]
+                if str(t['path']).split("/")[-2] == fixed_traj_path.split("/")[-2]
             ]
         for _ in counter(count):
             traj = random.sample(available_trajectories, k=1)[0]

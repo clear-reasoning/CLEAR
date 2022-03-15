@@ -1,3 +1,6 @@
+import json
+import os
+import bisect
 from collections import defaultdict
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
 from trajectory.env.energy_models import PFM2019RAV4
@@ -6,17 +9,23 @@ import random
 import pickle
 import numpy as np
 
-import os
 import sys
+import pandas as pd
 
 
 class Simulation(object):
-    def __init__(self, timestep, enable_lane_changing=True, road_grade=None):
+    def __init__(self,
+                 timestep,
+                 enable_lane_changing=True,
+                 road_grade=None,
+                 downstream_path=None):
         """Simulation object
 
         timestep: dt in seconds
         trajectory: ITERATOR yielding triples (position, speed, accel)
             that will be used for the first vehicle in the platoon (not spawned if this is None)
+        downstream_path: the directory containing relevant downstream information.
+            If set to None or the path does not exist, no downstream data is shared.
         """
         self.timestep = timestep
         # vehicles in order, from first in the platoon to last
@@ -33,10 +42,15 @@ class Simulation(object):
         self.vids = 0
 
         self.enable_lane_changing = enable_lane_changing
+        self.downstream_path = downstream_path
 
         self.n_cutins = 0
         self.n_cutouts = 0
         self.n_vehicles = []
+
+        # Store downstream information data.
+        self._prev_tse = None
+        self._tse_obs, self._tse_times = self._init_tse(self.downstream_path)
 
         self.setup_grade_and_altitude_map(network=road_grade)
 
@@ -259,9 +273,93 @@ class Simulation(object):
             # move to next vehicle in platoon
             i += 1
 
+    @staticmethod
+    def _init_tse(downstream_path):
+        """Store traffic state estimation data.
+
+        Parameters
+        ----------
+        downstream_path : str or None
+            the path to the directory containing the relevant traffic state
+            estimates. If set to None, no estimates are available.
+
+        Returns
+        -------
+        dict or None
+            A dictionary of the traffic state estimates for the current
+            trajectory. This consists of the following terms:
+
+            * segments: the list of the starting positions of different
+              estimated segments
+            * avg_speed: average speed of every segment at different time
+              intervals
+
+            This is set to None if no downstream information is available.
+        list of float
+            the times when traffic state estimates get updated
+        """
+        # If no downstream path was specific, or the data does not exist, no
+        # data will be available.
+        if (downstream_path is None) or \
+                not os.path.exists(os.path.join(downstream_path, "speed.csv")):
+            return None, None
+
+        tse = {}
+
+        # Load segment positions.
+        with open(os.path.join(downstream_path, "segments.json"), "r") as f:
+            tse["segments"] = json.load(f)
+
+        # Load available traffic-state estimation data.
+        tse["avg_speed"] = np.genfromtxt(
+            os.path.join(downstream_path, "speed.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["confidence"] = np.genfromtxt(
+            os.path.join(downstream_path, "confidence.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+        tse["cvalue"] = np.genfromtxt(
+            os.path.join(downstream_path, "cvalue.csv"),
+            delimiter=",", skip_header=1)[:, 1:]
+
+        # Import times when the traffic state estimate is updated.
+        tse_times = sorted(list(pd.read_csv(
+            os.path.join(downstream_path, "speed.csv"))["time"]))
+
+        return tse, tse_times
+
+    def _get_tse(self):
+        """Return the traffic state estimates for this time step.
+
+        Returns
+        -------
+        dict
+            A dictionary of the traffic state estimates for the current time
+            step. This consists of the following terms:
+
+            * segments: the list of the starting positions of different
+              estimated segments
+            * avg_speed: average speed of every segment
+            * confidence: confidence scores for INRIX data
+            * cvalue: c-values for INRIX data
+        """
+        # Find the index of the current observation.
+        index = max(bisect.bisect(self._tse_times, self.time_counter) - 1, 0)
+
+        # Return the traffic state estimates corresponding to this time.
+        return {
+            "time": self._tse_times[index],
+            "segments": self._tse_obs["segments"],
+            "avg_speed": self._tse_obs["avg_speed"][index, :],
+            "confidence": self._tse_obs["confidence"][index, :],
+            "cvalue": self._tse_obs["cvalue"][index, :],
+        }
+
     def step(self, env):
         self.step_counter += 1
         self.time_counter += self.timestep
+
+        # Collect macroscopic traffic state estimates.
+        tse = self._get_tse() if self._tse_obs is not None else None
 
         if self.enable_lane_changing and self.step_counter < env.horizon:
             # Catch the edge case where lane change happens on last step and then data
@@ -276,10 +374,10 @@ class Simulation(object):
 
         for veh in self.vehicles[::-1]:
             # update vehicles in reverse order assuming the controller is
-            # independant of the vehicle behind you. if at some point it is,
+            # independent of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            return_status &= veh.step()
+            return_status &= veh.step(tse=tse)
 
         self.collect_data()
 
@@ -323,7 +421,7 @@ class Simulation(object):
                           ['total_energy_consumption'][-1] / 3600.0 * self.timestep)
             self.add_data(veh, 'avg_mpg', self.data_by_vehicle[veh.name]['total_miles']
                           [-1] / (self.data_by_vehicle[veh.name]['total_gallons'][-1] + 1e-6))
-            self.add_data(veh, 'realized_accel', (veh.prev_speed - veh.speed) / self.timestep)
+            self.add_data(veh, 'realized_accel', (veh.speed - veh.prev_speed) / self.timestep)
             self.add_data(veh, 'target_accel_no_noise_no_failsafe', veh.accel_no_noise_no_failsafe)
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
             self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)

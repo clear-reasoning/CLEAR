@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import time
 import uuid
+import os
 
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
@@ -187,10 +188,14 @@ class TrajectoryEnv(gym.Env):
 
         # create a simulation object
         self.time_step = self.traj['timestep']
-        self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing,
-                              road_grade=self.road_grade)
+        self.sim = Simulation(
+            timestep=self.time_step,
+            enable_lane_changing=self.lane_changing,
+            road_grade=self.road_grade,
+            downstream_path=os.path.dirname(self.traj["path"]),
+        )
 
-        # populate simulation with a trajectoy leader
+        # populate simulation with a trajectory leader
         self.sim.add_vehicle(
             controller='trajectory',
             kind='leader',
