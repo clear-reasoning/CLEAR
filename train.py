@@ -89,6 +89,9 @@ def parse_args_train():
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                         'This works only for the base states and not for the additional vf states.')
+    parser.add_argument('--env_num_concat_states_large', type=int, default=0, nargs='+',
+                        help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
+                        'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
@@ -141,6 +144,7 @@ def run_experiment(config):
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
+        'num_concat_states_large': config['env_num_concat_states_large'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
         'lane_changing': not config['no_lc'],

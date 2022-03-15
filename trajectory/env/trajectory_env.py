@@ -33,6 +33,8 @@ DEFAULT_ENV_CONFIG = {
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
+    # number of larger interval concat states
+    'num_concat_states_large': 0,
     # platoon (combination of avs and humans following the leader car)
     'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
@@ -119,7 +121,7 @@ class TrajectoryEnv(gym.Env):
         assert (n_additional_vf_states <= n_states)
 
         # create buffer to concatenate past states
-        n_states *= self.num_concat_states
+        n_states *= (self.num_concat_states + self.num_concat_states_large)
         self.past_states = np.zeros(n_states)
 
         # define observation space
@@ -166,10 +168,19 @@ class TrajectoryEnv(gym.Env):
             raise ValueError('Training with several AVs is not supported.')
 
         if _store_state or av_idx is not None:
-            # preprend new state to the saved past states
-            state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
-            self.past_states = np.roll(self.past_states, len(state))
-            self.past_states[:len(state)] = state
+            if self.num_concat_states_large == 0:
+                # preprend new state to the saved past states
+                state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
+                self.past_states = np.roll(self.past_states, len(state))
+                self.past_states[:len(state)] = state
+            else:
+                state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
+                index = self.num_concat_states_large * len(state)
+                self.past_states[:-index] = np.roll(self.past_states[:-index], len(state))
+                self.past_states[:len(state)] = state
+                if round(self.sim.time_counter, 1) % 1 == 0:
+                    self.past_states[-index:] = np.roll(self.past_states[-index:], len(state))
+                    self.past_states[-index: -index + len(state)] = state
 
         if self.augment_vf:
             additional_vf_state = [value / scale for value, scale in self.get_base_additional_vf_state().values()]
