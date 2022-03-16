@@ -90,8 +90,8 @@ def parse_args_train():
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                         'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_num_concat_states_large', type=int, default=0, nargs='+',
-                        help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
-                        'This works only for the base states and not for the additional vf states.')
+                        help='Same as --env_num_concat_states, but this concatenate states at a 1s interval instead of 0.1s. '
+                        'The two commands can be used together.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',

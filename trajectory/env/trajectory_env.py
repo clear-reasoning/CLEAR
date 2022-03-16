@@ -121,8 +121,14 @@ class TrajectoryEnv(gym.Env):
         assert (n_additional_vf_states <= n_states)
 
         # create buffer to concatenate past states
+        assert self.num_concat_states >= 0  # we store at least the current state
+        assert self.num_concat_states_large >= 0
         n_states *= (self.num_concat_states + self.num_concat_states_large)
-        self.past_states = np.zeros(n_states)
+        self.n_states = n_states
+        self.past_states = {
+            i: np.zeros(self.n_states)
+            for i in range(len(self.avs))
+        }
 
         # define observation space
         n_obs = n_states
@@ -163,31 +169,40 @@ class TrajectoryEnv(gym.Env):
         }
         return state
 
-    def get_state(self, _store_state=False, av_idx=None):
-        if av_idx is not None and _store_state:
-            raise ValueError('Training with several AVs is not supported.')
+    def get_state(self, av_idx=None):
+        # during training (always single-agent), this is called with av_idx=None
+        # av_idx is set from simulate.py when evaluating with several AVs
+        if av_idx is None:
+            av_idx = 0
 
-        if _store_state or av_idx is not None:
-            if self.num_concat_states_large == 0:
-                # preprend new state to the saved past states
-                state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
-                self.past_states = np.roll(self.past_states, len(state))
-                self.past_states[:len(state)] = state
-            else:
-                state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
-                index = self.num_concat_states_large * len(state)
-                self.past_states[:-index] = np.roll(self.past_states[:-index], len(state))
-                self.past_states[:len(state)] = state
-                if round(self.sim.time_counter, 1) % 1 == 0:
-                    self.past_states[-index:] = np.roll(self.past_states[-index:], len(state))
-                    self.past_states[-index: -index + len(state)] = state
+        # self.past_states[av_idx] is an array of size len(state) * (self.num_concat_states + self.num_concat_states_large)
+        # self.past_states[av_idx][0:len(state)*self.num_concat_states] stores past states at a 0.1s interval (short-term)
+        # self.past_states[av_idx][len(state)*self.num_concat_states:] stores past states at a 1s interval (long-term)
+
+        # get current state
+        state = [value / scale for value, scale in self.get_base_state(av_idx=av_idx).values()]
+
+        # roll short-term memory and preprend new state
+        index = self.num_concat_states * len(state)
+        self.past_states[av_idx][:index] = np.roll(self.past_states[av_idx][:index], len(state))
+        self.past_states[av_idx][:len(state)] = state
+
+        if self.num_concat_states_large > 0:
+            # roll long-term memory and preprend new state every second
+            if round(self.sim.time_counter, 1) % 1 == 0:
+                self.past_states[av_idx][index:] = np.roll(self.past_states[av_idx][index:], len(state))
+                self.past_states[av_idx][index: index + len(state)] = state
+        
+        # use past states (including current state) as state
+        state = self.past_states[av_idx]
 
         if self.augment_vf:
+            # add value function augmentation to states
             additional_vf_state = [value / scale for value, scale in self.get_base_additional_vf_state().values()]
-            additional_vf_state += [0] * (len(self.past_states) - len(additional_vf_state))
-            state = np.concatenate((self.past_states, additional_vf_state))
-        else:
-            state = self.past_states
+            # vf additional state should be the same size as base policy state
+            # because policy network keeps the first half of the whole state (including augmentation)
+            additional_vf_state += [0] * (len(state) - len(additional_vf_state))
+            state = np.concatenate((state, additional_vf_state))
 
         return state
 
@@ -249,7 +264,12 @@ class TrajectoryEnv(gym.Env):
 
     def reset(self):
         self.create_simulation()
-        return self.get_state(_store_state=True)
+        # reset memory
+        self.past_states = {
+            i: np.zeros(self.n_states)
+            for i in range(len(self.avs))
+        }
+        return self.get_state() if not self.simulate else None  # don't stack memory here during eval
 
     def step(self, actions):
         # additional trajectory data that will be plotted in tensorboard
@@ -323,25 +343,13 @@ class TrajectoryEnv(gym.Env):
 
         # print progress every 5s if running from simulate.py
         if self.simulate:
-            # veh_str = ''
-            # for v in self.sim.vehicles:
-            #     if h := v.get_headway():
-            #         veh_str += ' ' * (int(h) // 10)
-            #     if v.kind == 'human':
-            #         veh_str += 'O'
-            #     elif v.kind == 'av':
-            #         veh_str += 'X'
-            #     elif v.kind == 'leader':
-            #         veh_str += '∆'
-            # print(veh_str[::-1])
-
             if end_of_horizon or time.time() - self.log_time_counter > 5.0:
                 steps, max_steps = self.sim.step_counter, self.traj['size']
                 print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
                 self.log_time_counter = time.time()
 
         # get next state & done
-        next_state = self.get_state(_store_state=True)
+        next_state = self.get_state() if not self.simulate else None  # don't stack memory here during eval
         done = (end_of_horizon or crash)
         infos = {'metrics': metrics}
 
