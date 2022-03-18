@@ -10,6 +10,8 @@ from pathlib import Path
 import os
 import re
 import uuid
+import shutil
+import sys
 
 import trajectory.config as tc
 from trajectory.callbacks import TensorboardCallback
@@ -108,10 +110,21 @@ def print_and_log(*args):
 # generate env config
 env_config = DEFAULT_ENV_CONFIG
 
+# unpack zip files
+sys.path.append('/home/circles/trajectory_controllers')
+for file in os.listdir('/home/circles/trajectory_controllers'):
+    if file.endswith('.zip'):
+        shutil.unpack_archive(f'/home/circles/trajectory_controllers/{file}',
+                                extract_dir='/home/circles/trajectory_controllers/')
+
 # load AV controller
 if 'rl' in args.av_controller.lower():
     # load config file
-    cp_path = Path(args.cp_path)
+    if args.cp_path is None:
+        cp_path = Path(f'/home/circles/trajectory_controllers/{args.av_controller}/checkpoints/{args.av_controller}.zip')
+        args.av_controller = 'rl'
+    else:
+        cp_path = Path(args.cp_path)
     with open(cp_path.parent.parent / 'configs.json', 'r') as fp:
         configs = json.load(fp)
     env_config.update(configs['env_config'])
@@ -219,7 +232,7 @@ for i in range(args.n_runs):
                 pr += '.0'
             metadata['penetration_rate'] = pr
         metadata['version'] = '4.1 wo LC' if args.no_lc else '4.1 w LCv0.1'
-        metadata['traj_name'] = traj_path.name[:-4]
+        metadata['traj_name'] = traj_path.parent.name
         print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
         if not args.fast:
             test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,

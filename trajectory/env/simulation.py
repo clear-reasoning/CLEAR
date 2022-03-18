@@ -136,9 +136,12 @@ class Simulation(object):
         }
 
         if controller not in vehicle_classes.keys():
-            sys.path.append('/home/circles/trajectory_controllers')
             from importlib import import_module
-            vehicle_class = import_module(f'trajectory_controllers.{controller}').AvVehicle
+            try:
+                vehicle_class = import_module(f'trajectory_controllers.{controller}').AvVehicle
+            except (ModuleNotFoundError, AttributeError):
+                sys.path.append(f'/home/circles/trajectory_controllers/{controller}/')
+                vehicle_class = import_module(f'{controller}').AvVehicle
         else:
             vehicle_class = vehicle_classes[controller]
 
