@@ -13,6 +13,8 @@ from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
+import simulate
+from simulate import simulate_dir, parse_args_simulate
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
@@ -34,25 +36,25 @@ def parse_args_train():
                              'will be saved under {logdir}/{expname}_[current_time]/.')
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to run in parallel. Useful when running grid searches.'
-                        'Can be more than the number of available CPUs.')
+                             'Can be more than the number of available CPUs.')
     parser.add_argument('--s3', default=False, action='store_true',
                         help='If set, experiment data will be uploaded to s3://trajectory.env/. '
-                        'AWS credentials must have been set in ~/.aws in order to use this.')
+                             'AWS credentials must have been set in ~/.aws in order to use this.')
 
     parser.add_argument('--iters', type=int, default=1, nargs='+',
                         help='Number of iterations (rollouts) to train for.'
-                        'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
+                             'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
     parser.add_argument('--n_steps', type=int, default=640, nargs='+',
                         help='Number of environment steps to sample in each rollout in each environment.'
-                        'This can span over less or more than the environment horizon.'
-                        'Ideally should be a multiple of {batch_size}.')
+                             'This can span over less or more than the environment horizon.'
+                             'Ideally should be a multiple of {batch_size}.')
     parser.add_argument('--n_envs', type=int, default=1, nargs='+',
                         help='Number of environments to run in parallel.')
 
     parser.add_argument('--cp_frequency', type=int, default=10,
                         help='A checkpoint of the model will be saved every {cp_frequency} iterations.'
-                        'Set to None to not save no checkpoints during training.'
-                        'Either way, a checkpoint will automatically be saved at the end of training.')
+                             'Set to None to not save no checkpoints during training.'
+                             'Either way, a checkpoint will automatically be saved at the end of training.')
     parser.add_argument('--eval_frequency', type=int, default=10,
                         help='An evaluation of the model will be done and saved to tensorboard every {eval_frequency}'
                              ' iterations. Set to None to run no evaluations during training. Either way, an'
@@ -66,10 +68,10 @@ def parse_args_train():
 
     parser.add_argument('--hidden_layer_size', type=int, default=32, nargs='+',
                         help='Hidden layer size to use for the policy and value function networks.'
-                        'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
+                             'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
     parser.add_argument('--network_depth', type=int, default=2, nargs='+',
                         help='Number of hidden layers to use for the policy and value function networks.'
-                        'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
+                             'The networks will be composed of {network_depth} hidden layers of size {hidden_layer_size}.')
 
     parser.add_argument('--lr', type=float, default=3e-4, nargs='+',
                         help='Learning rate.')
@@ -88,10 +90,10 @@ def parse_args_train():
     # env params
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
-                        'This works only for the base states and not for the additional vf states.')
+                             'This works only for the base states and not for the additional vf states.')
     parser.add_argument('--env_num_concat_states_large', type=int, default=0, nargs='+',
                         help='Same as --env_num_concat_states, but this concatenate states at a 1s interval instead of 0.1s. '
-                        'The two commands can be used together.')
+                             'The two commands can be used together.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
@@ -111,8 +113,8 @@ def parse_args_train():
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
-                        '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
-                        'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
+                             '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
+                             'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
     parser.add_argument('--no_lc', default=False, action='store_true',
@@ -170,7 +172,7 @@ def run_experiment(config):
             save_freq=config['cp_frequency'],
             save_at_end=True,
             s3_bucket='trajectory.env' if config['s3'] else None,
-            exp_logdir=config['exp_logdir'],),
+            exp_logdir=config['exp_logdir'], ),
     ]
     callbacks = CallbackList(callbacks)
 
@@ -336,3 +338,12 @@ if __name__ == '__main__':
         pool.join()
 
     print(f'\nTraining terminated\n\t{exp_logdir}')
+
+    # Simulate all trained policies
+    simulate_args = parse_args_simulate(return_defaults=True)  # Get default simulate args
+    simulate_args.cp_dir = exp_logdir
+    simulate_args.no_lc = args.no_lc
+    simulate_args.road_grade = args.road_grade
+    simulate_args.n_runs = 5
+
+    simulate_dir(simulate_args)
