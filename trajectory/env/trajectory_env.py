@@ -414,7 +414,7 @@ class TrajectoryEnv(gym.Env):
                 'version': [version],
                 'on_ramp': [0],
                 'penetration_rate': [penetration_rate],
-                'road_grade': [0],
+                'road_grade': [1],
                 'is_benchmark': [0],
                 'traj_name': [traj_name],
             })
@@ -444,7 +444,7 @@ class TrajectoryEnv(gym.Env):
             self.emissions['x'] = self.emissions['position']
             self.emissions['y'] = [0] * len(self.emissions['x'])
             self.emissions['leader_rel_speed'] = self.emissions['speed_difference']
-            self.emissions['road_grade'] = [0] * len(self.emissions['x'])
+            self.emissions['road_grade'] = self.emissions['road_grade']
             self.emissions['edge_id'] = ['edge0'] * len(self.emissions['x'])
             self.emissions['lane_id'] = [0] * len(self.emissions['x'])
             self.emissions['distance'] = self.emissions['total_distance_traveled']
@@ -518,5 +518,7 @@ class TrajectoryEnv(gym.Env):
                 )
                 end = time.time()
                 print(end - start)
+            os.remove(leaderboard_emissions_path)
+            os.remove(emissions_path)
 
         return emissions_path

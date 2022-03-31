@@ -220,7 +220,7 @@ for i in range(args.n_runs):
     emissions_path = exp_dir / f'emissions/emissions_{i+1}.csv'
     if args.data_pipeline is not None:
         source_id = f'flow_{uuid.uuid4().hex}'
-        emissions_path = f'/home/circles/sdb/emissions/{source_id}.csv'
+        emissions_path = f'/home/circles/emissions/{source_id}.csv'
         metadata = {
             'source_id': source_id,
             'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
