@@ -1,5 +1,6 @@
 import argparse
 import traceback
+from ast import arg
 from collections import defaultdict
 from datetime import datetime
 import importlib
@@ -11,6 +12,9 @@ import pandas as pd
 from pathlib import Path
 import os
 import re
+import uuid
+import shutil
+import sys
 
 import trajectory.config as tc
 from trajectory.callbacks import TensorboardCallback
@@ -31,7 +35,7 @@ def parse_args_simulate(return_defaults=False):
     parser.add_argument('--horizon', type=int, default=None,
                         help='Number of environment steps to simulate. If None, use a whole trajectory.')
     parser.add_argument('--traj_path', type=str,
-                        default='dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050.csv',
+                        default='dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
                         help='Use a specific trajectory by default. Set to None to use a random trajectory.')
     parser.add_argument('--n_runs', type=int, default=1,
                         help='How many times to run the experiment. If > 1, will run several times the same experiment '
@@ -44,6 +48,9 @@ def parse_args_simulate(return_defaults=False):
                              'Arguments are [author] [strategy name] [is baseline]. '
                              'ie. --data_pipeline "Your name" "Your training strategy/controller name" True|False. '
                              'Note that [is baseline] should by default be set to False (or 0).')
+    parser.add_argument('--large_tsd', default=False, action='store_true',
+                        help='If set, the script will be ran for 200 vehicles and generate a large tsd.')
+
     # render
     parser.add_argument('--render', default=False, action='store_true',
                         help='If set, the experiment will be rendered in a window (which is slower).')
@@ -66,7 +73,7 @@ def parse_args_simulate(return_defaults=False):
                         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
                              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
     parser.add_argument('--cp_path', type=str, default=None,
-                        help='Path to a saved model checkpoint when using --av_controller rl. '
+                        help='Path to a saved model checkpoint when using --av_controller rl. ')
                              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
     parser.add_argument('--cp_dir', type=str, default=None,
                         help='Path to a directory of checkpoints when using --av_controller rl. '
@@ -90,6 +97,15 @@ def parse_args_simulate(return_defaults=False):
         return parser.parse_args()
     # return args
 
+
+# parse command line arguments
+args = parse_args_simulate()
+
+# baseline use idm controller
+if args.av_controller == 'baseline':
+    args.av_controller = 'idm'
+
+assert args.human_controller in ['idm', 'fs']
 
 logs_str = ''
 
@@ -227,23 +243,26 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
         if not args.fast:
             emissions_path = exp_dir / f'emissions/emissions_{i + 1}.csv'
             if args.data_pipeline is not None:
-                metadata = {
-                    'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
-                    'author': args.data_pipeline[0],
-                    'strategy': args.data_pipeline[1]}
-                if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
-                    pr = match[0]
-                    if '.' not in pr:
-                        pr += '.0'
-                    metadata['penetration_rate'] = pr
-                metadata['version'] = '4.0 wo LC' if args.no_lc else '4.0 w LCv0'
-                print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
-                if not args.fast:
-                    test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
-                                           additional_metadata=metadata)
+              source_id = f'flow_{uuid.uuid4().hex}'
+              emissions_path = f'/home/circles/emissions/{source_id}.csv'
+              metadata = {
+                  'source_id': source_id,
+                  'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
+                  'author': args.data_pipeline[0],
+                  'strategy': args.data_pipeline[1]}
+              if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
+                  pr = match[0]
+                  if '.' not in pr:
+                      pr += '.0'
+                  metadata['penetration_rate'] = pr
+              metadata['version'] = '4.1 wo LC' if args.no_lc else '4.1 w LCv0.1'
+              metadata['traj_name'] = traj_path.parent.name
+              print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
+              if not args.fast:
+                  test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
+                                      large_tsd=args.large_tsd, additional_metadata=metadata)
             else:
-                if not args.fast:
-                    test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
+              test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
         # gen metrics
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
@@ -261,7 +280,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                     print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
 
             # plot speed and accel profiles
-            if args.no_lc:
+            if args.no_lc and not args.large_tsd:
                 if args.platoon == 'av human*8':
                     # special plot for slides
                     veh_lst = [veh for veh in test_env.sim.vehicles[::-1] if veh.vid in [0, 1, 2, 5, 9]]
@@ -298,14 +317,15 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                                 plotter.plot(times, speeds, label=veh.name)
 
                 fig_name = f'speed_accel_profiles_{i + 1}'
-                plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+                if args.data_pipeline is not None:
+                  save_dir=f'/home/circles/sdb/speed_accel_profile/{args.data_pipeline[1]}'
+                  os.makedirs(save_dir, exist_ok=True)
+                  plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto',
+                              save_path=f'{save_dir}/{source_id}.png')
+                else:
+                  plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
                 if args.n_runs == 1:
                     print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
-
-            output_tsd_path = exp_dir / f'figs/time_space_diagram_{i + 1}.png'
-            plot_time_space_diagram(emissions_path, output_tsd_path)
-            if args.n_runs == 1:
-                print_and_log(f'Wrote {output_tsd_path}\n')
 
         # accumulate metrics
         exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])

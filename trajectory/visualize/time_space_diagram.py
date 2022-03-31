@@ -36,6 +36,7 @@ def plot_time_space_diagram(emissions_path, save_path):
     ax.autoscale()
 
     # add colorbar
+    lc.set_clim(0,40)
     axcb = fig.colorbar(lc)
 
     # set title and axes labels

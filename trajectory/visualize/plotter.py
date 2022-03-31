@@ -116,9 +116,10 @@ class Plotter(object):
         fig.tight_layout()
         return fig
 
-    def save(self, file_name, log=None, figsize=None, legend_pos='manual'):
+    def save(self, file_name, log=None, figsize=None, legend_pos='manual', save_path=None):
         fig = self.makefig(figsize=figsize, legend_pos=legend_pos)
-        save_path = self.save_dir / (file_name + '.png')
+        if save_path==None:
+            save_path = self.save_dir / (file_name + '.png')
         fig.savefig(save_path)
         plt.close(fig)
         self.plot_data.clear()

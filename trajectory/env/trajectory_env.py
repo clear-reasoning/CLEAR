@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import time
 import uuid
+import os
 
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
@@ -213,10 +214,14 @@ class TrajectoryEnv(gym.Env):
 
         # create a simulation object
         self.time_step = self.traj['timestep']
-        self.sim = Simulation(timestep=self.time_step, enable_lane_changing=self.lane_changing,
-                              road_grade=self.road_grade)
+        self.sim = Simulation(
+            timestep=self.time_step,
+            enable_lane_changing=self.lane_changing,
+            road_grade=self.road_grade,
+            downstream_path=os.path.dirname(self.traj["path"]),
+        )
 
-        # populate simulation with a trajectoy leader
+        # populate simulation with a trajectory leader
         self.sim.add_vehicle(
             controller='trajectory',
             kind='leader',
@@ -381,7 +386,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False,additional_metadata={}):
         # create emissions dir if it doesn't exist
         if emissions_path is None:
             emissions_path = 'emissions'
@@ -414,12 +419,13 @@ class TrajectoryEnv(gym.Env):
             date_now = now.date().isoformat()
 
             # create metadata file
-            source_id = f'flow_{uuid.uuid4().hex}'
+            source_id = additional_metadata.get('source_id', 'blank')
             is_baseline = additional_metadata.get('is_baseline', 0)
             submitter_name = additional_metadata.get('author', 'blank')
             strategy = additional_metadata.get('strategy', 'blank')
             penetration_rate = additional_metadata.get('penetration_rate', 'x')
             version = additional_metadata.get('version', '4.0')
+            traj_name = additional_metadata.get('traj_name', 'traj_default')
             metadata = pd.DataFrame({
                 'source_id': [source_id],
                 'submission_date': [date_now],
@@ -430,12 +436,13 @@ class TrajectoryEnv(gym.Env):
                 'version': [version],
                 'on_ramp': [0],
                 'penetration_rate': [penetration_rate],
-                'road_grade': [0],
+                'road_grade': [1],
                 'is_benchmark': [0],
+                'traj_name': [traj_name],
             })
             print('Metadata:', metadata)
 
-            metadata_path = dir_path / 'metadata.csv'
+            metadata_path = dir_path / f'{source_id}_metadata.csv'
             metadata.to_csv(metadata_path, index=False)
 
             # custom emissions for leaderboard
@@ -459,7 +466,7 @@ class TrajectoryEnv(gym.Env):
             self.emissions['x'] = self.emissions['position']
             self.emissions['y'] = [0] * len(self.emissions['x'])
             self.emissions['leader_rel_speed'] = self.emissions['speed_difference']
-            self.emissions['road_grade'] = [0] * len(self.emissions['x'])
+            self.emissions['road_grade'] = self.emissions['road_grade']
             self.emissions['edge_id'] = ['edge0'] * len(self.emissions['x'])
             self.emissions['lane_id'] = [0] * len(self.emissions['x'])
             self.emissions['distance'] = self.emissions['total_distance_traveled']
@@ -496,14 +503,22 @@ class TrajectoryEnv(gym.Env):
                                          'source_id',
                                          'run_id',
                                          'submission_date']]
-            leaderboard_emissions_path = dir_path / 'emissions_leaderboard.csv'
+            leaderboard_emissions_path = dir_path / f'{source_id}_emissions_leaderboard.csv'
             emissions_df.to_csv(leaderboard_emissions_path, index=False)
 
             # platoon_mpg_path = dir_path / 'platoon_mpg.png'
             # print(f'Generating platoon MPG plot at {platoon_mpg_path}')
             # plot_platoon_mpg(emissions_path, save_path=platoon_mpg_path)
 
-            tsd_path = dir_path / 'time_space_diagram.png'
+            tsd_dir_path = Path(f'/home/circles/sdb/tsd/{strategy}/')
+            tsd_dir_path.mkdir(parents=True, exist_ok=True)
+            if large_tsd:
+                if 'wo LC' in version:
+                    tsd_path = tsd_dir_path / 'large_tsd.png'
+                else:
+                    tsd_path = tsd_dir_path / 'large_tsd_lc.png'
+            else:
+                tsd_path = tsd_dir_path / f'{source_id}.png'
             print(f'Generating time-space diagram plot at {tsd_path}')
             plot_time_space_diagram(emissions_path, save_path=tsd_path)
 
@@ -511,21 +526,21 @@ class TrajectoryEnv(gym.Env):
 
             # upload data to S3
 
-            # metadata
-            upload_to_pipeline(
-                metadata_path, file_type='metadata', log=True
-            )
-            # emissions
-            upload_to_pipeline(
-                leaderboard_emissions_path, file_type='emission', log=True
-            )
-            # # platoons MPG plot
-            # upload_to_pipeline(
-            #     platoon_mpg_path, type='platoon_mpg', log=True
-            # )
-            # time-space diagram
-            upload_to_pipeline(
-                tsd_path, file_type='tsd', log=True
-            )
+            if not large_tsd:
+                # metadata
+                start = time.time()
+                upload_to_pipeline(
+                    metadata_path, file_type='metadata',
+                    source_id=source_id, log=True
+                )
+                # emissions
+                upload_to_pipeline(
+                    leaderboard_emissions_path, file_type='emission',
+                    source_id=source_id, log=True
+                )
+                end = time.time()
+                print(end - start)
+            os.remove(leaderboard_emissions_path)
+            os.remove(emissions_path)
 
         return emissions_path
