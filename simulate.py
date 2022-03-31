@@ -372,7 +372,7 @@ def find_best_policies(df, n=3):
 
     good_policies = mean_df[(mean_df["av_headway (max)"] < 350) & (mean_df["av_headway (min)"] > 0.5) & (
                 mean_df["count_crash"] == 0)].sort_values(
-        'system_mpg').head(n=n).index
+        'system_mpg', ascending=False).head(n=n).index
 
     good_policy_metrics = df[df['cp_path'].isin(good_policies)].drop("run", axis=1).groupby('cp_path')
 
@@ -389,6 +389,7 @@ def find_best_policies(df, n=3):
             print_and_log(
                 f'{metric}: {means.loc[cp][metric]:.2f} ± {stds.loc[cp][metric]:.2f} (min = {mins.loc[cp][metric]:.2f}, max = {maxs.loc[cp][metric]:.2f})')
 
+    return mean_df.drop("run", axis=1)
 
 def simulate_dir(args):
     cp_dir = Path(args.cp_dir).expanduser()
@@ -420,10 +421,10 @@ def simulate_dir(args):
 
             simulate(args, highest_cp_path, select_policy=True, df=df)
 
-    find_best_policies(df)
+    save_df = find_best_policies(df)
 
     pkl_file = str(exp_dir / "df.pkl")
-    df.to_pickle(pkl_file)
+    save_df.to_pickle(pkl_file)
     print_and_log(f"\nFull metrics (including data for each run) can be found at Pandas DataFrame saved to {pkl_file}")
     save_logs(exp_dir)
 
