@@ -73,7 +73,7 @@ def parse_args_simulate(return_defaults=False):
                         help='Kwargs to pass to the AV controller, as a string that will be evaluated into a dict. '
                              'For instance "{\'a\':1, \'b\': 2}" or "dict(a=1, b=2)" for IDM.')
     parser.add_argument('--cp_path', type=str, default=None,
-                        help='Path to a saved model checkpoint when using --av_controller rl. ')
+                        help='Path to a saved model checkpoint when using --av_controller rl. '
                              'Checkpoint must be a .zip file and have a configs.json file in its parent directory.')
     parser.add_argument('--cp_dir', type=str, default=None,
                         help='Path to a directory of checkpoints when using --av_controller rl. '

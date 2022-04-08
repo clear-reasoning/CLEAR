@@ -2,7 +2,7 @@ import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
 import numpy as np
-from sim_metrics_backend.submit_data import submitData
+# from sim_metrics_backend.submit_data import submitData
 
 
 def lat_long_distance(pos1, pos2):
