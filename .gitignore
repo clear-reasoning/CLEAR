@@ -24,3 +24,6 @@ vandertest_*/
 ssl-cert/
 ICRA_2021/
 *.pdf
+leaderboard_uploads/
+*.mat
+*.m
