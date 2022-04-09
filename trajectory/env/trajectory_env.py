@@ -105,14 +105,16 @@ class TrajectoryEnv(gym.Env):
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
+        a_min = -3.0
+        a_max = 1.5
         if self.discrete:
             self.action_space = Discrete(self.num_actions)
-            self.action_set = np.linspace(-1, 1, self.num_actions)
+            self.action_set = np.linspace(a_min, a_max, self.num_actions)
         else:
             if self.use_fs:
-                self.action_space = Box(low=-2.0, high=2.0, shape=(1,), dtype=np.float32)
+                self.action_space = Box(low=a_min, high=a_max, shape=(1,), dtype=np.float32)
             else:
-                self.action_space = Box(low=-3.0, high=1.5, shape=(1,), dtype=np.float32)
+                self.action_space = Box(low=a_min, high=a_max, shape=(1,), dtype=np.float32)
 
         # get number of states
         n_states = len(self.get_base_state())
@@ -193,7 +195,7 @@ class TrajectoryEnv(gym.Env):
             if round(self.sim.time_counter, 1) % 1 == 0:
                 self.past_states[av_idx][index:] = np.roll(self.past_states[av_idx][index:], len(state))
                 self.past_states[av_idx][index: index + len(state)] = state
-        
+
         # use past states (including current state) as state
         state = self.past_states[av_idx]
 
@@ -314,7 +316,7 @@ class TrajectoryEnv(gym.Env):
 
         # forcibly prevent the car from getting too small or large headways
         ttc_val = ttc < self.minimal_time_to_collision and accel > 0 if \
-                  self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
+            self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
         headway_penalties = {
             # 'low_headway_penalty': h < self.min_headway,
             'large_headway_penalty': h > self.max_headway,
@@ -386,7 +388,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False,additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False, additional_metadata={}):
         # create emissions dir if it doesn't exist
         if emissions_path is None:
             emissions_path = 'emissions'
