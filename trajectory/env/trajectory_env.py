@@ -193,7 +193,7 @@ class TrajectoryEnv(gym.Env):
             if round(self.sim.time_counter, 1) % 1 == 0:
                 self.past_states[av_idx][index:] = np.roll(self.past_states[av_idx][index:], len(state))
                 self.past_states[av_idx][index: index + len(state)] = state
-        
+
         # use past states (including current state) as state
         state = self.past_states[av_idx]
 
@@ -314,7 +314,7 @@ class TrajectoryEnv(gym.Env):
 
         # forcibly prevent the car from getting too small or large headways
         ttc_val = ttc < self.minimal_time_to_collision and accel > 0 if \
-                  self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
+            self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
         headway_penalties = {
             # 'low_headway_penalty': h < self.min_headway,
             'large_headway_penalty': h > self.max_headway,
@@ -371,6 +371,11 @@ class TrajectoryEnv(gym.Env):
                                                              for veh in self.sim.vehicles]),
                                                      'speed': np.mean([self.sim.get_data(veh, 'speed')[-1]
                                                                       for veh in self.sim.vehicles])})
+            self.collected_rollout['lane_changes'].append({
+                'n_cutins': self.sim.n_cutins,
+                'n_cutouts': self.sim.n_cutouts,
+                'n_vehicles': self.sim.n_vehicles[-1],
+            })
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 
@@ -386,7 +391,7 @@ class TrajectoryEnv(gym.Env):
     def get_collected_rollout(self):
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False,additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False, additional_metadata={}):
         # create emissions dir if it doesn't exist
         if emissions_path is None:
             emissions_path = 'emissions'

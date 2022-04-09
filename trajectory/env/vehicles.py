@@ -260,13 +260,13 @@ class RLVehicle(Vehicle):
         super().__init__(**kwargs)
 
     def step(self, accel=None, ballistic=False, tse=None):
-        self.accel_no_noise_with_failsafe = self.accel
-        self.accel_with_noise_no_failsafe = self.accel
-        self.accel_no_noise_no_failsafe = self.accel
-        return super().step(ballistic=True, tse=tse)
+        return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel):
+        self.accel_with_noise_no_failsafe = accel
+        self.accel_no_noise_no_failsafe = accel
         self.accel = self.apply_failsafe(accel)
+        self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
 
