@@ -156,7 +156,7 @@ class TensorboardCallback(BaseCallback):
 class CheckpointCallback(BaseCallback):
     """Callback for saving a model every `save_freq` rollouts."""
 
-    def __init__(self, save_freq=10, save_path='./checkpoints', save_at_end=False, s3_bucket=None, exp_logdir=None):
+    def __init__(self, save_freq=100, save_path='./checkpoints', save_at_end=True, s3_bucket=None, exp_logdir=None):
         super(CheckpointCallback, self).__init__()
 
         self.save_freq = save_freq
