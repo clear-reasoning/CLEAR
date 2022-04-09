@@ -58,9 +58,9 @@ class TensorboardCallback(BaseCallback):
                         'trajectory': rollout_dict['sim_data_leader']['speed'],
                     },
                     'headway': rollout_dict['sim_data_av']['headway'],
-                    'gaps': {
+                    'gaps (max 10 for readability)': {
                         'time_gap': [min(x, 10) for x in rollout_dict['sim_data_av']['time_gap']],
-                        'ttc': [min(x, 10) for x in rollout_dict['sim_data_av']['time_to_collision']],
+                        'time_to_collision': [min(x, 10) for x in rollout_dict['sim_data_av']['time_to_collision']],
                     },
                     'accels': {
                         'before_failsafe': rollout_dict['sim_data_av']['target_accel_no_noise_no_failsafe'],
