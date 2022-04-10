@@ -2,7 +2,6 @@ import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
 import numpy as np
-# from sim_metrics_backend.submit_data import submitData
 
 
 def lat_long_distance(pos1, pos2):
@@ -119,14 +118,3 @@ def get_first_element(arr):
             val = val[0]
     except BaseException:
         return val
-
-
-# def upload_to_pipeline(file_path, file_type, source_id, log=False):
-#     """Update files to the datapipeline."""
-#     if file_type == 'metadata':
-#         submitData(file_path, True, source_id)
-#     elif file_type == 'emission':
-#         submitData(file_path, False, source_id)
-
-#     if log:
-#         print(f'Uploaded {file_path} to data pipeline.')

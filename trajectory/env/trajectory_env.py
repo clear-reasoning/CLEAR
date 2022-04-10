@@ -12,7 +12,7 @@ import os
 
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
-from trajectory.env.utils import get_first_element, upload_to_pipeline
+from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
@@ -527,22 +527,6 @@ class TrajectoryEnv(gym.Env):
 
             print()
 
-            # upload data to S3
-
-            if not large_tsd:
-                # metadata
-                start = time.time()
-                upload_to_pipeline(
-                    metadata_path, file_type='metadata',
-                    source_id=source_id, log=True
-                )
-                # emissions
-                upload_to_pipeline(
-                    leaderboard_emissions_path, file_type='emission',
-                    source_id=source_id, log=True
-                )
-                end = time.time()
-                print(end - start)
             os.remove(leaderboard_emissions_path)
             os.remove(emissions_path)
 
