@@ -118,7 +118,7 @@ class Plotter(object):
 
     def save(self, file_name, log=None, figsize=None, legend_pos='manual', save_path=None):
         fig = self.makefig(figsize=figsize, legend_pos=legend_pos)
-        if save_path==None:
+        if save_path is None:
             save_path = self.save_dir / (file_name + '.png')
         fig.savefig(save_path)
         plt.close(fig)
