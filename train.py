@@ -13,7 +13,6 @@ from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
-import simulate
 from simulate import simulate_dir, parse_args_simulate
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO

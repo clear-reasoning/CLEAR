@@ -1,6 +1,5 @@
 import argparse
 import traceback
-from ast import arg
 from collections import defaultdict
 from datetime import datetime
 import importlib
@@ -13,15 +12,12 @@ from pathlib import Path
 import os
 import re
 import uuid
-import shutil
-import sys
 
 import trajectory.config as tc
 from trajectory.callbacks import TensorboardCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, PLATOON_PRESETS, TrajectoryEnv
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
-from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 from trajectory.visualize.render import Renderer
 
 
@@ -65,7 +61,7 @@ def parse_args_simulate(return_defaults=False):
                              '"(av human*2)*2" is a shortcut for "av human human av human human". '
                              'Vehicle tags can be passed with hashtags, eg. "av#tag", "human#tag*3". '
                              'Available presets: ' + ', '.join(
-                            [f'{k} ({v})' for k, v in PLATOON_PRESETS.items()]).replace('%', '%%'))
+                                 [f'{k} ({v})' for k, v in PLATOON_PRESETS.items()]).replace('%', '%%'))
     # avs controller
     parser.add_argument('--av_controller', type=str, default='idm',
                         help='Controller to control the AV(s) with. Can be either one of "rl", "idm" or "fs".')
@@ -234,26 +230,26 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
         if not args.fast:
             emissions_path = exp_dir / f'emissions/emissions_{i + 1}.csv'
             if args.data_pipeline is not None:
-              source_id = f'flow_{uuid.uuid4().hex}'
-              emissions_path = f'/home/circles/emissions/{source_id}.csv'
-              metadata = {
-                  'source_id': source_id,
-                  'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
-                  'author': args.data_pipeline[0],
-                  'strategy': args.data_pipeline[1]}
-              if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
-                  pr = match[0]
-                  if '.' not in pr:
-                      pr += '.0'
-                  metadata['penetration_rate'] = pr
-              metadata['version'] = '4.1 wo LC' if args.no_lc else '4.1 w LCv0.1'
-              metadata['traj_name'] = traj_path.parent.name
-              print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
-              if not args.fast:
-                  test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
-                                      large_tsd=args.large_tsd, additional_metadata=metadata)
+                source_id = f'flow_{uuid.uuid4().hex}'
+                emissions_path = f'/home/circles/emissions/{source_id}.csv'
+                metadata = {
+                    'source_id': source_id,
+                    'is_baseline': int(args.data_pipeline[2].lower() in ['true', '1', 't', 'y', 'yes']),
+                    'author': args.data_pipeline[0],
+                    'strategy': args.data_pipeline[1]}
+                if len(match := re.findall('2avs_([0-9]+)%', args.platoon)) > 0:
+                    pr = match[0]
+                    if '.' not in pr:
+                        pr += '.0'
+                    metadata['penetration_rate'] = pr
+                metadata['version'] = '4.1 wo LC' if args.no_lc else '4.1 w LCv0.1'
+                metadata['traj_name'] = traj_path.parent.name
+                print_and_log(f'Data will be uploaded to leaderboard with metadata {metadata}')
+                if not args.fast:
+                    test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=True,
+                                           large_tsd=args.large_tsd, additional_metadata=metadata)
             else:
-              test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
+                test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
         # gen metrics
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
@@ -309,12 +305,12 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
 
                 fig_name = f'speed_accel_profiles_{i + 1}'
                 if args.data_pipeline is not None:
-                  save_dir=f'/home/circles/sdb/speed_accel_profile/{args.data_pipeline[1]}'
-                  os.makedirs(save_dir, exist_ok=True)
-                  plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto',
-                              save_path=f'{save_dir}/{source_id}.png')
+                    save_dir = f'/home/circles/sdb/speed_accel_profile/{args.data_pipeline[1]}'
+                    os.makedirs(save_dir, exist_ok=True)
+                    plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto',
+                                 save_path=f'{save_dir}/{source_id}.png')
                 else:
-                  plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
+                    plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
                 if args.n_runs == 1:
                     print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
 
@@ -331,17 +327,17 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
 
         stat_fns = [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]
         for (name, array) in [
-                                 ('av_headway', rollout_dict['sim_data_av']['headway']),
-                                 ('av_speed', rollout_dict['base_state']['speed'])
-                             ] \
-                             + [(f'platoon_{j}_speed', rollout_dict[f'platoon_{j}']['platoon_speed']) for j in
-                                range(len(test_env.avs))] \
-                             + [
-                                 ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
-                                 ('instant_energy_consumption',
-                                  rollout_dict['sim_data_av']['instant_energy_consumption']),
-                                 ('rl_reward', rollout_dict['training']['rewards']),
-                             ]:
+            ('av_headway', rollout_dict['sim_data_av']['headway']),
+            ('av_speed', rollout_dict['base_state']['speed'])
+        ] \
+            + [(f'platoon_{j}_speed', rollout_dict[f'platoon_{j}']['platoon_speed']) for j in
+               range(len(test_env.avs))] \
+            + [
+            ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
+            ('instant_energy_consumption',
+             rollout_dict['sim_data_av']['instant_energy_consumption']),
+            ('rl_reward', rollout_dict['training']['rewards']),
+        ]:
             for fn_name, fn in stat_fns:
                 exp_metrics[f'{name} ({fn_name})'].append(fn(array))
 
@@ -382,7 +378,7 @@ def find_best_policies(df, n=3):
     mean_df = df.groupby('cp_path').mean()
 
     good_policies = mean_df[(mean_df["av_headway (max)"] < 350) & (mean_df["av_headway (min)"] > 0.5) & (
-                mean_df["count_crash"] == 0)].sort_values(
+        mean_df["count_crash"] == 0)].sort_values(
         'system_mpg', ascending=False).head(n=n).index
 
     good_policy_metrics = df[df['cp_path'].isin(good_policies)].drop("run", axis=1).groupby('cp_path')
@@ -392,15 +388,17 @@ def find_best_policies(df, n=3):
     mins = good_policy_metrics.min()
     maxs = good_policy_metrics.max()
 
-    print_and_log(f"Reasonable policies (positive reward, no crashes) by System MPG, best first:")
+    print_and_log("Reasonable policies (positive reward, no crashes) by System MPG, best first:")
 
     for cp in good_policies:
         print_and_log("\n" + str(cp))
         for metric in means.loc[cp].keys():
             print_and_log(
-                f'{metric}: {means.loc[cp][metric]:.2f} ± {stds.loc[cp][metric]:.2f} (min = {mins.loc[cp][metric]:.2f}, max = {maxs.loc[cp][metric]:.2f})')
+                f'{metric}: {means.loc[cp][metric]:.2f} ± {stds.loc[cp][metric]:.2f} '
+                f'(min = {mins.loc[cp][metric]:.2f}, max = {maxs.loc[cp][metric]:.2f})')
 
     return mean_df.drop("run", axis=1)
+
 
 def simulate_dir(args):
     cp_dir = Path(args.cp_dir).expanduser()
@@ -423,7 +421,7 @@ def simulate_dir(args):
             checkpoints = hparams_dir / 'checkpoints'
 
         if checkpoints.is_dir() and len(list(checkpoints.iterdir())) > 0:
-            get_path = lambda path: re.search("\d+", str(path).split("/")[-1]).group(0)
+            def get_path(path): return re.search(r"\d+", str(path).split("/")[-1]).group(0)
             try:
                 highest_cp_path = max(list(checkpoints.iterdir()), key=get_path)
             except ValueError:
