@@ -2,12 +2,12 @@ name: CI
 on: [push]
 
 jobs:
-    documentation:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
-            - run: pip install pydocstyle
-            - run: pydocstyle
+    # documentation:
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #         - uses: actions/checkout@v2
+    #         - run: pip install pydocstyle
+    #         - run: pydocstyle
     formatting:
         runs-on: ubuntu-latest
         steps:
