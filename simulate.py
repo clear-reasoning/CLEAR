@@ -98,15 +98,6 @@ def parse_args_simulate(return_defaults=False):
     # return args
 
 
-# parse command line arguments
-args = parse_args_simulate()
-
-# baseline use idm controller
-if args.av_controller == 'baseline':
-    args.av_controller = 'idm'
-
-assert args.human_controller in ['idm', 'fs']
-
 logs_str = ''
 
 
