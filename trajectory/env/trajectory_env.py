@@ -8,7 +8,6 @@ import pandas as pd
 from pathlib import Path
 import re
 import time
-import uuid
 import os
 
 from trajectory.data_loader import DataLoader
@@ -302,7 +301,6 @@ class TrajectoryEnv(gym.Env):
 
         # compute reward & done
         h = self.avs[0].get_headway()
-        th = self.avs[0].get_time_headway()
         ttc = self.avs[0].get_time_to_collision()
 
         reward = 0

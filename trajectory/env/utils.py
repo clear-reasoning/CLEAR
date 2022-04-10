@@ -121,12 +121,12 @@ def get_first_element(arr):
         return val
 
 
-def upload_to_pipeline(file_path, file_type, source_id, log=False):
-    """Update files to the datapipeline."""
-    if file_type == 'metadata':
-        submitData(file_path, True, source_id)
-    elif file_type == 'emission':
-        submitData(file_path, False, source_id)
+# def upload_to_pipeline(file_path, file_type, source_id, log=False):
+#     """Update files to the datapipeline."""
+#     if file_type == 'metadata':
+#         submitData(file_path, True, source_id)
+#     elif file_type == 'emission':
+#         submitData(file_path, False, source_id)
 
-    if log:
-        print(f'Uploaded {file_path} to data pipeline.')
+#     if log:
+#         print(f'Uploaded {file_path} to data pipeline.')
