@@ -29,32 +29,63 @@ class TensorboardCallback(BaseCallback):
 
     def _on_training_end(self):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
-            self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
-            self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'))
+            # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
+            # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'), custom_plot=True)
 
     def _on_rollout_start(self):
-        if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
-            self.env.start_collecting_rollout()
+        self.env.start_collecting_rollout()
 
     def _on_rollout_end(self):
+        self.env.stop_collecting_rollout()
+        self.log_rollout_dict('metrics', self.get_rollout_dict(self.env), plot_images=False)
+
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
-            self.env.stop_collecting_rollout()
-
-            self.log_rollout_dict('rollout', self.get_rollout_dict(self.env))
-
-            self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
-            self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'))
+            # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
+            # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'), custom_plot=True)
 
         self.rollout += 1
 
-    def log_rollout_dict(self, base_name, rollout_dict):
-        plotter = TensorboardPlotter(self.logger)
-        for group, metrics in rollout_dict.items():
-            for k, v in metrics.items():
-                plotter.plot(v, title=k, grid=True, linewidth=2.0)
-            plotter.save(f'{base_name}/{base_name}_{group}')
+    def log_rollout_dict(self, base_name, rollout_dict, plot_images=True, custom_plot=False):
+        if plot_images:
+            plotter = TensorboardPlotter(self.logger)
+            if custom_plot:
+                custom_metrics = {
+                    'speeds': {
+                        'ego': rollout_dict['sim_data_av']['speed'],
+                        'leader': rollout_dict['sim_data_av']['leader_speed'],
+                        'trajectory': rollout_dict['sim_data_leader']['speed'],
+                    },
+                    'headway': rollout_dict['sim_data_av']['headway'],
+                    'gaps (max 10 for readability)': {
+                        'time_gap': [min(x, 10) for x in rollout_dict['sim_data_av']['time_gap']],
+                        'time_to_collision': [min(x, 10) for x in rollout_dict['sim_data_av']['time_to_collision']],
+                    },
+                    'accels': {
+                        'before_failsafe': rollout_dict['sim_data_av']['target_accel_no_noise_no_failsafe'],
+                        'after_failsafe': rollout_dict['sim_data_av']['target_accel_no_noise_with_failsafe'],
+                    },
+                    'n_vehicles': rollout_dict['lane_changes']['n_vehicles'],
+                    'lane_changes': {
+                        'n_cutins': rollout_dict['lane_changes']['n_cutins'],
+                        'n_cutouts': rollout_dict['lane_changes']['n_cutouts'],
+                    },
+                    'rewards': rollout_dict['training']['rewards'],
+                }
+                for k, v in custom_metrics.items():
+                    if isinstance(v, dict):
+                        with plotter.subplot(title=k, grid=True, legend=True):
+                            for subk, subv in v.items():
+                                plotter.plot(subv, label=subk, linewidth=2.0,)
+                    else:
+                        plotter.plot(v, title=k, grid=True, linewidth=2.0)
+                plotter.save(f'{base_name}/{base_name}_data')
+            else:
+                for group, metrics in rollout_dict.items():
+                    for k, v in metrics.items():
+                        plotter.plot(v, title=k, grid=True, linewidth=2.0)
+                    plotter.save(f'{base_name}/{base_name}_{group}')
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
@@ -64,6 +95,10 @@ class TensorboardCallback(BaseCallback):
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_mpg', system_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_speed', system_speed)
+        self.logger.record(f'{base_name}/{base_name}_n_veh_start', rollout_dict['lane_changes']['n_vehicles'][0])
+        self.logger.record(f'{base_name}/{base_name}_n_veh_end', rollout_dict['lane_changes']['n_vehicles'][-1])
+        self.logger.record(f'{base_name}/{base_name}_n_cutins', rollout_dict['lane_changes']['n_cutins'][-1])
+        self.logger.record(f'{base_name}/{base_name}_n_cutouts', rollout_dict['lane_changes']['n_cutouts'][-1])
         for i in range(len(self.env.avs)):
             platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
             self.logger.record(f'{base_name}/{base_name}_platoon_{i}_mpg', platoon_mpg)
@@ -103,10 +138,18 @@ class TensorboardCallback(BaseCallback):
             for k, v in base_state_vf.items():
                 rollout_dict['base_state'][f'vf_{k}'].append(v[0])
 
+        for lane_change_info in collected_rollout['lane_changes']:
+            for k, v in lane_change_info.items():
+                rollout_dict['lane_changes'][k].append(v)
+
         for veh in env.sim.vehicles:
             if veh.kind == 'av':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     rollout_dict['sim_data_av'][k] = v
+            if veh.kind == 'leader':
+                for k, v in env.sim.data_by_vehicle[veh.name].items():
+                    if k == 'speed':
+                        rollout_dict['sim_data_leader'][k] = v
 
         for i in range(len(env.avs)):
             for platoon_state in collected_rollout[f'platoon_{i}']:

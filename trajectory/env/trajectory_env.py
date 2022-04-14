@@ -371,6 +371,11 @@ class TrajectoryEnv(gym.Env):
                                                              for veh in self.sim.vehicles]),
                                                      'speed': np.mean([self.sim.get_data(veh, 'speed')[-1]
                                                                       for veh in self.sim.vehicles])})
+            self.collected_rollout['lane_changes'].append({
+                'n_cutins': self.sim.n_cutins,
+                'n_cutouts': self.sim.n_cutouts,
+                'n_vehicles': self.sim.n_vehicles[-1],
+            })
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 
