@@ -104,14 +104,16 @@ class TrajectoryEnv(gym.Env):
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
+        a_min = -3.0
+        a_max = 1.5
         if self.discrete:
             self.action_space = Discrete(self.num_actions)
-            self.action_set = np.linspace(-1, 1, self.num_actions)
+            self.action_set = np.linspace(a_min, a_max, self.num_actions)
         else:
             if self.use_fs:
-                self.action_space = Box(low=-2.0, high=2.0, shape=(1,), dtype=np.float32)
+                self.action_space = Box(low=a_min, high=a_max, shape=(1,), dtype=np.float32)
             else:
-                self.action_space = Box(low=-3.0, high=1.5, shape=(1,), dtype=np.float32)
+                self.action_space = Box(low=a_min, high=a_max, shape=(1,), dtype=np.float32)
 
         # get number of states
         n_states = len(self.get_base_state())

@@ -95,6 +95,8 @@ def parse_args_train():
                              'The two commands can be used together.')
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
+    parser.add_argument('--env_num_actions', type=int, default=50, nargs='+',
+                        help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
                         help='If true, use a FollowerStopper wrapper.')
     parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
@@ -107,8 +109,6 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
                         help='Sets the time to collision below which we get penalized.')
-    parser.add_argument('--env_num_actions', type=int, default=7, nargs='+',
-                        help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
