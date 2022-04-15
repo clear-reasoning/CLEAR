@@ -84,7 +84,7 @@ def parse_args_simulate(return_defaults=False):
     # road
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
-    parser.add_argument('--road_grade', type=str, default=None,
+    parser.add_argument('--road_grade', type=str, default='i24',
                         help='Can be set to i24 or i680. If set, road grade will be included in the energy function computations.')
 
     if return_defaults:
@@ -121,6 +121,9 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
 
     assert args.data_pipeline is None or args.n_runs == 1
 
+    if args.av_controller != 'rl' and (args.cp_path or cp_path):
+        print_and_log("\nOverriding av_controller to rl because cp_path provided")
+        args.av_controller = 'rl'
     # logging function
 
     # generate env config
