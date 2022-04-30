@@ -7,7 +7,9 @@ import random
 from pathlib import Path
 import os
 import numpy as np
+from datetime import datetime
 import math
+import pytz
 from collections import defaultdict, deque
 import boto3
 import matplotlib
@@ -344,4 +346,49 @@ class LoggingCallback(BaseCallback):
     def _on_step(self):
         if (infos := self.locals['infos'][0].get('episode')) is not None:
             self.ep_info_buffer.extend([infos])
+        return True
+
+
+class TelegramCallback(BaseCallback):
+    """Callback for sending training notifications through Telegram."""
+
+    def __init__(self, gs_path):
+        super(TelegramCallback, self).__init__()
+        self.gs_path = gs_path
+
+        self.bot_token = os.environ['TELEGRAM_BOT_TOKEN']
+        self.chat_id = os.environ['TELEGRAM_CHAT_ID']
+
+        self.iter = 0
+        self.last_update_time = None
+        self.training_t0 = time.time()
+
+    def send_message(self, msg):
+        import telegram
+        telegram.Bot(token=self.bot_token).send_message(text=msg, chat_id=self.chat_id)
+
+    def total_time_human_readable(self):
+        total_time = time.time() - self.training_t0
+        total_time_hr = time.strftime("%H hours, %M minutes, %S seconds", time.gmtime(int(total_time)))
+        return total_time_hr
+        
+    def _on_rollout_end(self):
+        self.iter += 1
+        if self.iter == 1:
+            self.send_message(f'End of first iteration for {self.gs_path}')
+            self.last_update_time = datetime.now(tz=pytz.UTC)
+        else:
+            import telegram
+            bot = telegram.Bot(token=self.bot_token)
+            for update in bot.get_updates(offset=-100):
+                if update.message is not None and update.message.chat.id == int(self.chat_id):
+                    if update.message.date.replace(tzinfo=pytz.UTC) > self.last_update_time.replace(tzinfo=pytz.UTC):
+                        self.last_update_time = update.message.date
+                        self.send_message(f'Update: iteration {self.iter} for {self.gs_path} after {self.total_time_human_readable()}.')
+
+    def _on_training_end(self):
+        self.send_message(f'Training ended for {self.gs_path} after {self.total_time_human_readable()}. '
+                           'Note that there may still be a few final evaluations running.')
+
+    def _on_step(self):
         return True
