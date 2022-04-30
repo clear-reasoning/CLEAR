@@ -17,7 +17,7 @@ from simulate import simulate_dir, parse_args_simulate
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
-from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback
+from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
 
@@ -60,6 +60,8 @@ def parse_args_train():
                              ' evaluation will automatically be done at the start and at the end of training.')
     parser.add_argument('--no_eval', default=False, action='store_true',
                         help='If set, no evaluation (ie. tensorboard plots) will be done.')
+    parser.add_argument('--telegram', default=False, action='store_true',
+                        help='If set, you will receive training updates on Telegram (need to set up token and chat id).')
 
     # training params
     parser.add_argument('--algorithm', type=str, default='PPO', nargs='+',
@@ -173,6 +175,12 @@ def run_experiment(config):
             s3_bucket='trajectory.env' if config['s3'] else None,
             exp_logdir=config['exp_logdir'], ),
     ]
+    if config['telegram']:
+        callbacks += [
+            TelegramCallback(
+                gs_path=gs_logdir,
+            )
+        ]
     callbacks = CallbackList(callbacks)
 
     # create train config
@@ -346,3 +354,10 @@ if __name__ == '__main__':
     simulate_args.n_runs = 5
 
     simulate_dir(simulate_args)
+
+    if args.telegram:
+        import telegram
+        import os
+        bot_token = os.environ['TELEGRAM_BOT_TOKEN']
+        chat_id = os.environ['TELEGRAM_CHAT_ID']
+        telegram.Bot(token=bot_token).send_message(text=f'Training ended for {exp_logdir}.', chat_id=chat_id)
