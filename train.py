@@ -89,6 +89,9 @@ def parse_args_train():
                         help='If true, the value function will be augmented with some additional states.')
 
     # env params
+    parser.add_argument('--traj_path', type=str,
+                        default=None,
+                        help='Set to train on a specific trajectory (eg dataset/data_v2_preprocessed_west/path/traj.csv).')
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                              'This works only for the base states and not for the additional vf states.')
@@ -153,6 +156,7 @@ def run_experiment(config):
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
+        'fixed_traj_path': config['traj_path'],
     })
 
     # create env
