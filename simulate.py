@@ -19,6 +19,7 @@ from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, PLATOON_PRESETS, T
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.plotter import Plotter
 from trajectory.visualize.render import Renderer
+from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
 def parse_args_simulate(return_defaults=False):
@@ -253,6 +254,10 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                                            large_tsd=args.large_tsd, additional_metadata=metadata)
             else:
                 test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
+                tsd_path = exp_dir / "figs/tsd.png"
+                tsd_path.parent.mkdir(parents=True, exist_ok=True)
+                plot_time_space_diagram(emissions_path, save_path=tsd_path)
+                print("Wrote", tsd_path)
 
         # gen metrics
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
