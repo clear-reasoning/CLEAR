@@ -1,0 +1,83 @@
+{
+    "full_command": "python train.py --logdir /global/scratch/users/kathyjang/ --expname lc_exp_43 --iters 800 --n_steps 26500 --use_fs 0 --n_envs 1 --gae_lambda 0.99 0.95 --gamma 0.99 0.995 --lr 1e-3 1e-4 1e-5 --batch_size 5120 --cp_frequency 100 --augment_vf 1 --hidden_layer_size 64 --network_depth 4 --env_horizon 500 --env_num_concat_states 3 --n_processes 20 --eval_frequency 50 --lc --reward_interval 5 --platoon_reward --platoon_size 6",
+    "timestamp": 1649731607.159908,
+    "user": "kathyjang",
+    "git_branch": "lc_exp_4",
+    "git_commit": "4517d7fb96d978969b6b37344d11e92cf68df3dc",
+    "n_cpus": 20,
+    "args": {
+        "expname": "lc_exp_43",
+        "logdir": "/global/scratch/users/kathyjang/",
+        "n_processes": 20,
+        "s3": false,
+        "iters": [
+            800
+        ],
+        "n_steps": [
+            26500
+        ],
+        "n_envs": [
+            1
+        ],
+        "cp_frequency": 100,
+        "eval_frequency": 50,
+        "no_eval": false,
+        "algorithm": "PPO",
+        "hidden_layer_size": [
+            64
+        ],
+        "network_depth": [
+            4
+        ],
+        "lr": [
+            0.001,
+            0.0001,
+            1e-05
+        ],
+        "batch_size": [
+            5120
+        ],
+        "n_epochs": 10,
+        "gamma": [
+            0.99,
+            0.995
+        ],
+        "gae_lambda": [
+            0.99,
+            0.95
+        ],
+        "augment_vf": [
+            1
+        ],
+        "env_num_concat_states": [
+            3
+        ],
+        "env_num_concat_states_large": 0,
+        "env_discrete": 0,
+        "use_fs": [
+            0
+        ],
+        "env_include_idm_mpg": 0,
+        "env_horizon": [
+            500
+        ],
+        "env_max_headway": 120,
+        "env_minimal_time_headway": 1.0,
+        "env_minimal_time_to_collision": 6.0,
+        "env_jerk_weight": 0.0,
+        "env_num_actions": 7,
+        "env_num_steps_per_sim": 1,
+        "env_platoon": "av human*5",
+        "env_human_kwargs": "{}",
+        "lc": true,
+        "env_prev_accel": false,
+        "road_grade": "",
+        "platoon_speed": false,
+        "platoon_mpg": false,
+        "platoon_size": [
+            6
+        ],
+        "platoon_reward": true,
+        "reward_interval": 5
+    }
+}
