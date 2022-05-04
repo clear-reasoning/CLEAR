@@ -1,6 +1,16 @@
 import math
 
 
+def safe_ttc_velocity(this_vel, lead_vel, headway, time_step,  max_decel):
+    speed_difference = this_vel - (lead_vel - 2)
+    ttc = np.inf if speed_difference <= 0 else headway / speed_difference
+    # return a speed that forces a brake
+    if ttc < 6:
+        return this_vel - time_step * max_decel
+    # return a speed that will never force a brake
+    else:
+        return this_vel + time_step * max_decel
+
 def safe_velocity(this_vel, lead_vel, headway, max_decel, time_step, min_gap=2.5):
     """Compute a safe velocity for the vehicles.
 

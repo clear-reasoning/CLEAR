@@ -1,5 +1,5 @@
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
-from trajectory.env.failsafes import safe_velocity
+from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
 import numpy as np
 import bisect
 
@@ -269,6 +269,16 @@ class RLVehicle(Vehicle):
         self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
+    def apply_failsafe(self, accel):
+        # TODO hardcoded max decel to be conservative
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
+        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway, self.max_decel, self.dt))
+        v_next = self.speed + accel * self.dt
+        if v_next > v_safe:
+            safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
+        else:
+            safe_accel = accel
+        return safe_accel
 
 class FSWrappedRLVehicle(Vehicle):
     def __init__(self, **kwargs):
