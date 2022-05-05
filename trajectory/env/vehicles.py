@@ -280,6 +280,7 @@ class RLVehicle(Vehicle):
             safe_accel = accel
         return safe_accel
 
+
 class FSWrappedRLVehicle(Vehicle):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

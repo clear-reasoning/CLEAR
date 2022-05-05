@@ -371,7 +371,7 @@ class TelegramCallback(BaseCallback):
         total_time = time.time() - self.training_t0
         total_time_hr = time.strftime("%H hours, %M minutes, %S seconds", time.gmtime(int(total_time)))
         return total_time_hr
-        
+
     def _on_rollout_end(self):
         self.iter += 1
         if self.iter == 1:
@@ -388,7 +388,7 @@ class TelegramCallback(BaseCallback):
 
     def _on_training_end(self):
         self.send_message(f'Training ended for {self.gs_path} after {self.total_time_human_readable()}. '
-                           'Note that there may still be a few final evaluations running.')
+                          'Note that there may still be a few final evaluations running.')
 
     def _on_step(self):
         return True
