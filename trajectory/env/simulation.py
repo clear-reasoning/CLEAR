@@ -155,7 +155,7 @@ class Simulation(object):
         # if inputting a gap < 0, defaults to an initial constant time headway of 1.1s
         if gap < 0 and idx_leader is not None:
             leader_speed = self.vehicles[idx_leader].speed
-            gap = leader_speed * default_time_headway
+            gap = max(leader_speed * default_time_headway, 5)
 
         # create vehicle object
         veh = vehicle_class(
