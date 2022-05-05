@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 
 def safe_ttc_velocity(this_vel, lead_vel, headway, max_decel, time_step):
