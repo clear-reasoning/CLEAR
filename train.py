@@ -2,6 +2,7 @@ import argparse
 from datetime import datetime
 import itertools
 import multiprocessing
+import os
 from pathlib import Path
 import platform
 import subprocess
@@ -338,11 +339,16 @@ if __name__ == '__main__':
     if len(configs) == 1:
         run_experiment(configs[0])
     else:
+        # set environment variables so that pytorch threads don't fight each other when multithreading
+        # this makes training **MUCH** faster
+        # cf. https://discuss.pytorch.org/t/running-pytorch-models-in-different-processes/21638/2
+        os.environ['OMP_NUM_THREADS'] = '1'
+        os.environ['MKL_NUM_THREADS'] = '1'
+
+        # run experiments in independent processes
         with multiprocessing.Pool(processes=(n := fixed_config['n_processes'])) as pool:
             print(f'Starting training with {n} parallel processes')
             pool.map(run_experiment, configs)
-        pool.close()
-        pool.join()
 
     print(f'\nTraining terminated\n\t{exp_logdir}')
 
