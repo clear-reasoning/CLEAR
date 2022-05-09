@@ -221,7 +221,7 @@ class TrajectoryEnv(gym.Env):
                            for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
-        reward -= 0.002 * action ** 2
+        reward -= 0.2 * abs(action)
 
         return reward
 

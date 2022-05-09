@@ -265,7 +265,7 @@ class RLVehicle(Vehicle):
     def set_accel(self, accel, large_gap_threshold=120):
         # hardcode gap closing
         if self.get_headway() > large_gap_threshold:
-            accel = 0.2
+            accel = 0.4
 
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = accel
