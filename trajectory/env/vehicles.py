@@ -262,7 +262,11 @@ class RLVehicle(Vehicle):
     def step(self, accel=None, ballistic=False, tse=None):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
-    def set_accel(self, accel):
+    def set_accel(self, accel, large_gap_threshold=120):
+        # hardcode gap closing
+        if self.get_headway() > large_gap_threshold:
+            accel = 0.4
+
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = accel
         self.accel = self.apply_failsafe(accel)

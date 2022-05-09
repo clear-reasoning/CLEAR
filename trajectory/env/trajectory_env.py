@@ -208,6 +208,23 @@ class TrajectoryEnv(gym.Env):
 
         return state
 
+    def reward_function(self, av, action):
+        # reward should be positive, otherwise controller would learn to crash
+        reward = 1
+
+        # crash penalty
+        if av.get_headway() < 0:
+            reward -= 50
+
+        # penalize instant energy consumption for the AV or AV + platoon
+        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+                           for veh in self.mpg_cars]) / 10.0
+
+        # penalize acceleration amplitude
+        reward -= 0.2 * abs(action)
+
+        return reward
+
     def create_simulation(self):
         # collect the next trajectory
         self.traj = next(self.trajectories)
@@ -282,14 +299,15 @@ class TrajectoryEnv(gym.Env):
         metrics = {}
 
         # apply action to AV
+        accel = None
         if self.av_controller == 'rl':
             if type(actions) not in [list, np.ndarray]:
                 actions = [actions]
             for av, action in zip(self.avs, actions):
                 accel = self.action_set[action] if self.discrete else float(action)
-                metrics['rl_accel_before_failsafe'] = accel
-                accel = av.set_accel(accel)  # returns accel with failsafes applied
-                metrics['rl_accel_after_failsafe'] = accel
+                metrics['rl_controller_accel'] = accel
+                accel = av.set_accel(accel, large_gap_threshold=self.max_headway)  # returns accel with gap-closing and failsafe applied
+                metrics['rl_processed_accel'] = accel
         elif self.av_controller == 'rl_fs':
             # RL with FS wrapper
             if type(actions) not in [list, np.ndarray]:
@@ -301,47 +319,14 @@ class TrajectoryEnv(gym.Env):
                 metrics['vdes_delta'] = float(action) * self.time_step
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
-        # compute reward & done
-        h = self.avs[0].get_headway()
-        ttc = self.avs[0].get_time_to_collision()
+        # compute reward
+        reward = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
 
-        reward = 0
-
-        # prevent crashes
-        crash = (h <= 0)
-        if crash:
-            reward -= 50.0
-
-        # forcibly prevent the car from getting too small or large headways
-        ttc_val = ttc < self.minimal_time_to_collision and accel > 0 if \
-            self.av_controller == 'rl' else ttc < self.minimal_time_to_collision
-        headway_penalties = {
-            # 'low_headway_penalty': h < self.min_headway,
-            'large_headway_penalty': h > self.max_headway,
-            # 'low_time_headway_penalty': th < self.minimal_time_headway,
-            'low_ttc_penalty': ttc_val
-        }
-        if any(headway_penalties.values()):
-            reward -= 2.0
-
-        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
-                          for veh in self.mpg_cars]) / 10.0
-        if self.av_controller == 'rl':
-            reward -= 0.002 * accel ** 2
-        reward += 1
-
-        # give average MPG reward at the end
-        # if end_of_horizon:
-        #     mpgs = [self.sim.get_data(veh, 'avg_mpg')[-1] for veh in self.mpg_cars]
-        #     reward += np.mean(mpgs)
-
+        # print crashes
+        crash = (self.avs[0].get_headway() <= 0)
         if crash:
             print('CRASH', self.avs[0].vid)
-
-        # log some metrics
         metrics['crash'] = int(crash)
-        for k, v in headway_penalties.items():
-            metrics[k] = int(v)
 
         # execute one simulation step
         end_of_horizon = not self.sim.step(self)
