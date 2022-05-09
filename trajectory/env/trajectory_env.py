@@ -218,7 +218,7 @@ class TrajectoryEnv(gym.Env):
 
         # penalize instant energy consumption for the AV or AV + platoon
         reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
-                            for veh in self.mpg_cars]) / 10.0
+                           for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
         reward -= 0.002 * action ** 2
