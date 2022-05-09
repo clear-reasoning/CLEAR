@@ -299,6 +299,7 @@ class TrajectoryEnv(gym.Env):
         metrics = {}
 
         # apply action to AV
+        accel = None
         if self.av_controller == 'rl':
             if type(actions) not in [list, np.ndarray]:
                 actions = [actions]
@@ -319,7 +320,7 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # compute reward
-        reward = self.reward_function(av=self.avs[0], action=accel)
+        reward = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
