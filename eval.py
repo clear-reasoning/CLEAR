@@ -86,8 +86,7 @@ if __name__ == '__main__':
             *[{'av_controller': 'av', 'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")'}
               for (config_path, cp_path) in rl_paths],
         ]:  
-            av_short_name = av_config['av_controller']
-            av_full_name = av_short_name if av_short_name != 'av' \
+            av_name = av_config['av_controller'] if av_config['av_controller'] != 'av' \
                 else eval(av_config['av_kwargs'])['cp_path']
 
             # create particular env config
@@ -104,11 +103,11 @@ if __name__ == '__main__':
                 _, _, done, _ = env.step(None)
 
             # generate emission file
-            emissions_path = traj_dir / f'emissions_{av_short_name}.csv'
+            emissions_path = traj_dir / f"emissions_{av_name.replace('/', '_')}.csv"
             env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
             # compute tsd
-            tsd_path = traj_dir / f'tsd_{av_short_name}.png'
+            tsd_path = traj_dir / f"tsd_{av_name.replace('/', '_')}.png"
             plot_time_space_diagram(emissions_path, save_path=tsd_path)
             print('>', tsd_path)
 
@@ -163,7 +162,7 @@ if __name__ == '__main__':
             df_high_speeds = df[df['time'].isin(high_speed_times)]
             mpgs_high_speeds = extract_mpg_metrics(df_high_speeds)
 
-            metrics[eval_traj][av_full_name] = [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds]
+            metrics[eval_traj][av_name] = [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds]
 
             # delete emission file (heavy)
             emissions_path.unlink()
