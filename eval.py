@@ -179,7 +179,7 @@ if __name__ == '__main__':
         if mpg is None or baseline_mpg is None:
             return None
         improvement = (mpg / baseline_mpg - 1) * 100
-        return f'{round(mpg, 2)} ({"+" if improvement >= 0 else ""}{round(improvement, 2)}%)'
+        return f'{mpg:.2f} ({"+" if improvement >= 0 else ""}{improvement:.2f}%)'
 
     tables = []
     metrics_sum_count = defaultdict(lambda: [(0,0)] * 9)
