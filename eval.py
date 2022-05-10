@@ -169,10 +169,10 @@ if __name__ == '__main__':
             emissions_path.unlink()
 
     field_names = [
-        'AV controller',
         'System MPG', 'AVs MPG', 'Platoons MPG',
         'System MPG (LS)', 'AVs MPG (LS)', 'Platoons MPG (LS)',
         'System MPG (HS)', 'AVs MPG (HS)', 'Platoons MPG (HS)',
+        'AV controller',
     ]
 
     def parse_mpg(mpg, baseline_mpg):
@@ -189,7 +189,7 @@ if __name__ == '__main__':
         
         for controller in metrics[traj]:
             mpg_metrics = list(map(parse_mpg, metrics[traj][controller], metrics[traj][baseline_controller]))
-            x.add_row([controller, *mpg_metrics])
+            x.add_row([*mpg_metrics, controller])
 
             for i, mpg in enumerate(metrics[traj][controller]):
                 if mpg is not None:
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     for controller in metrics_sum_count:
         metrics_avg = [s / c if c > 0 else None for s, c in metrics_sum_count[controller]]
         mpg_metrics = list(map(parse_mpg, metrics_avg, metrics_avg_baseline))
-        x.add_row([controller, *mpg_metrics])
+        x.add_row([*mpg_metrics, controller])
 
     with open(avg_metrics_path, 'w') as fp:
         fp.write('Average metrics\n\n' + str(x))
