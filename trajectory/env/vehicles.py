@@ -299,3 +299,57 @@ class FSWrappedRLVehicle(Vehicle):
 
     def set_vdes(self, vdes):
         self.fs.v_des = vdes
+
+
+class AvVehicle(Vehicle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # import libs
+        import json
+        import re
+        import importlib
+
+        # load kwargs
+        config_path = kwargs['config_path']
+        cp_path = kwargs['cp_path']
+
+        # load configs.json
+        with open(config_path, 'r') as fp:
+            self.config = json.load(fp)
+
+        self.max_headway = self.config['env_config']['max_headway']
+
+        # retrieve algorithm
+        alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", self.config['algorithm']).group(1, 2)
+        assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
+        algorithm = getattr(importlib.import_module(alg_module), alg_class)
+
+        # load checkpoint into model
+        self.model = algorithm.load(cp_path)
+
+    def get_action(self, state):
+        return self.model.predict(state, deterministic=True)[0]
+
+    def apply_failsafe(self, accel):
+        # TODO hardcoded max decel to be conservative
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
+        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        v_next = self.speed + accel * self.dt
+        if v_next > v_safe:
+            safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
+        else:
+            safe_accel = accel
+        return safe_accel
+
+    def step(self, accel=None, ballistic=False, tse=None):
+        # TODO compute state (can depend on memory etc)
+        accel = 1.0  # TODO get from model
+
+        # hardcoded gap closing
+        if self.get_headway() > self.max_headway:
+            accel = 0.4
+        # failsafe
+        accel = self.apply_failsafe(accel)
+
+        return super().step(accel=accel, ballistic=True, tse=tse)

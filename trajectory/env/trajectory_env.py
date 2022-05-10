@@ -347,7 +347,7 @@ class TrajectoryEnv(gym.Env):
         end_of_horizon = not self.sim.step(self)
 
         # print progress every 5s if running from simulate.py
-        if self.simulate:
+        if self.simulate and self._verbose:
             if end_of_horizon or time.time() - self.log_time_counter > 5.0:
                 steps, max_steps = self.sim.step_counter, self.traj['size']
                 print(f'Progress: {round(steps / max_steps * 100, 1)}% ({steps}/{max_steps} env steps)')
@@ -416,7 +416,8 @@ class TrajectoryEnv(gym.Env):
         pd.DataFrame(self.emissions) \
             .sort_values(by=['time', 'id']) \
             .to_csv(emissions_path, index=False, float_format="%g")
-        print(f'Saved emissions file at {emissions_path}')
+        if self._verbose:
+            print(f'Saved emissions file at {emissions_path}')
 
         if upload_to_leaderboard:
             # get date & time in appropriate format
