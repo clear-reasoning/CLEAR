@@ -342,13 +342,19 @@ class AvVehicle(Vehicle):
             safe_accel = accel
         return safe_accel
 
+    def get_state(self):
+        return np.array([
+            1, 2, 3
+        ])
+
     def step(self, accel=None, ballistic=False, tse=None):
-        # TODO compute state (can depend on memory etc)
-        accel = 1.0  # TODO get from model
+        # get action from model
+        accel = self.get_action(self.get_state())
 
         # hardcoded gap closing
         if self.get_headway() > self.max_headway:
             accel = 0.4
+
         # failsafe
         accel = self.apply_failsafe(accel)
 
