@@ -353,11 +353,11 @@ class AvVehicle(Vehicle):
         return safe_accel
 
     def get_base_state(self):
-        return np.array([
+        return [
             self.speed / 40.0,
             self.leader.speed / 40.0,
             self.get_headway() / 100.0,
-        ])
+        ]
 
     def get_state(self):
         new_state = self.get_base_state()
