@@ -381,6 +381,7 @@ class AvVehicle(Vehicle):
 
         # get action from model
         accel = self.get_action(self.get_state())
+        print('accel =', accel)
 
         # hardcoded gap closing
         if self.get_headway() > self.max_headway:
