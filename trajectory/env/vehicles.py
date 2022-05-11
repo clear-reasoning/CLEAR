@@ -339,7 +339,7 @@ class AvVehicle(Vehicle):
         self.model = algorithm.load(cp_path)
 
     def get_action(self, state):
-        return self.model.predict(state, deterministic=True)[0]
+        return self.model.predict(state, deterministic=True)[0][0]
 
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
@@ -381,7 +381,6 @@ class AvVehicle(Vehicle):
 
         # get action from model
         accel = self.get_action(self.get_state())
-        print('accel =', accel)
 
         # hardcoded gap closing
         if self.get_headway() > self.max_headway:
