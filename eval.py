@@ -140,7 +140,7 @@ if __name__ == '__main__':
         abstract_env_config = DEFAULT_ENV_CONFIG
         abstract_env_config.update({
             'whole_trajectory': True,
-            'platoon': '(av human*7)*2',
+            'platoon': '(av human*24)*8',
             'fixed_traj_path': str(eval_traj),
             'human_controller': 'idm',
             'human_kwargs': 'dict()',
