@@ -318,7 +318,17 @@ class AvVehicle(Vehicle):
         with open(config_path, 'r') as fp:
             self.config = json.load(fp)
 
+        if self.config['env_config']['discrete']:
+            raise NotImplementedError
+
         self.max_headway = self.config['env_config']['max_headway']
+        self.num_concat_states = self.config['env_config']['num_concat_states']
+        self.num_concat_states_large = self.config['env_config']['num_concat_states_large']
+        self.augment_vf = self.config['env_config']['augment_vf']
+        self.n_base_states = len(self.get_base_state())
+        n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
+        self.states = np.zeros(n_states) 
+        self.step_counter = 0
 
         # retrieve algorithm
         alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", self.config['algorithm']).group(1, 2)
@@ -342,12 +352,33 @@ class AvVehicle(Vehicle):
             safe_accel = accel
         return safe_accel
 
-    def get_state(self):
+    def get_base_state(self):
         return np.array([
-            1, 2, 3
+            self.speed / 40.0,
+            self.leader.speed / 40.0,
+            self.get_headway() / 100.0,
         ])
 
+    def get_state(self):
+        new_state = self.get_base_state()
+
+        # roll short-term memory and preprend new state
+        index = self.num_concat_states * self.n_base_states
+        self.states[:index] = np.roll(self.states[:index], self.n_base_states)
+        self.states[:self.n_base_states] = new_state
+
+        if self.num_concat_states_large > 0:
+            # roll long-term memory and preprend new state every second
+            index2 = index + self.num_concat_states_large * self.n_base_states
+            if self.step_counter % 10 == 0:
+                self.states[index:index2] = np.roll(self.states[index:index2], self.n_base_states)
+                self.states[index:index+self.n_base_states] = new_state
+
+        return self.states
+
     def step(self, accel=None, ballistic=False, tse=None):
+        self.step_counter += 1
+
         # get action from model
         accel = self.get_action(self.get_state())
 
