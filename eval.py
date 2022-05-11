@@ -9,26 +9,108 @@ import pandas as pd
 import copy
 from collections import defaultdict
 import prettytable
-import telegram  # TODO(nl)
+import multiprocessing
+from itertools import repeat
 
-
-# TODO: remove from train set one we get synthetic trajectories merged
-EVAL_TRAJECTORIES = map(Path, [
-    'dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
-])
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate controllers in an experiment logdir.')
 
     parser.add_argument('--logdir', type=str, required=True,
                         help='Experiment logdir (eg. log/09May22/test_18h42m04s)')
-    parser.add_argument('--telegram', default=False, action='store_true',
-                        help='If set, you will receive a Telegram notification once eval is complete.')
+    parser.add_argument('--n_cpus', type=int, default=1,
+                        help='Set to the number of parallel processes you wish to run.')
 
     args = parser.parse_args()
     return args
 
+
+def run_eval(env_config, traj_dir):
+    av_name = env_config['av_controller'] if env_config['av_controller'] != 'av' \
+        else eval(env_config['av_kwargs'])['cp_path']
+
+    # create env
+    env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
+    env.reset()
+
+    # step through the whole trajectory
+    done = False
+    while not done:
+        _, _, done, _ = env.step(None)
+
+    # generate emission file
+    emissions_path = traj_dir / f"emissions_{av_name.replace('/', '_')}.csv"
+    env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
+
+    # compute tsd
+    tsd_path = traj_dir / f"tsd_{av_name.replace('/', '_')}.png"
+    plot_time_space_diagram(emissions_path, save_path=tsd_path)
+    print('>', tsd_path)
+
+    # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
+    df = pd.read_csv(emissions_path)
+    timestep = 0.1
+
+    def extract_mpg(df):
+        meters_per_second_to_miles = lambda meters_per_second: meters_per_second / 1609.34 * timestep
+        gallons_per_hour_to_gallons = lambda gallons_per_hour: gallons_per_hour / 3600.0 * timestep
+
+        miles = meters_per_second_to_miles(df['speed'].sum())
+        gallons = gallons_per_hour_to_gallons(df['instant_energy_consumption'].sum())
+        mpg = miles / gallons if gallons > 0 else None
+
+        return mpg
+
+    def extract_mpg_metrics(df):
+        # system MPG: for all vehicles in the simulation
+        system_mpg = extract_mpg(df)
+
+        # AV MPG: for all AVs in the simulation
+        df_avs = df[df['id'].str.contains('av')]
+        avs_mpg = extract_mpg(df_avs)
+
+        # platoon MPG: for all AVs + up to 5 human followers for each AV
+        # TODO(nl): if incorporating lane-changing, this will need to be changed to 
+        # account for platoon changes (use the 'follower_id' at each time step)
+        platoon_ids = []
+        veh_ids = df['id'].unique()
+        for av_id in [vid for vid in veh_ids if 'av' in vid]:
+            platoon_ids.append(av_id)
+            av_num = av_id.split('_')[0]
+            for i in range(5):
+                follower_num = int(av_num) + 1 + i
+                follower_id = [vid for vid in veh_ids if vid.startswith(str(follower_num))][0]
+                platoon_ids.append(follower_id)
+        df_platoons = df[df['id'].isin(platoon_ids)]
+        platoons_mpg = extract_mpg(df_platoons)
+
+        return system_mpg, avs_mpg, platoons_mpg
+
+    mpgs = extract_mpg_metrics(df)
+
+    speed_threshold = 20  # threshold for low speeds/high speeds
+
+    low_speed_times = df[(df['id'].str.contains('trajectory')) & (df['speed'] < speed_threshold)]['time']
+    df_low_speeds = df[df['time'].isin(low_speed_times)]
+    mpgs_low_speeds = extract_mpg_metrics(df_low_speeds)
+
+    high_speed_times = df[(df['id'].str.contains('trajectory')) & (df['speed'] >= speed_threshold)]['time']
+    df_high_speeds = df[df['time'].isin(high_speed_times)]
+    mpgs_high_speeds = extract_mpg_metrics(df_high_speeds)
+
+    # delete emission file (heavy)
+    emissions_path.unlink()
+    
+    # return metrics
+    return (av_name, [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds])
+
+
 if __name__ == '__main__':
+    # TODO: remove from train set one we get synthetic trajectories merged
+    EVAL_TRAJECTORIES = map(Path, [
+        'dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
+    ])
+
     baseline_controller = 'idm'
 
     # parse args
@@ -79,92 +161,23 @@ if __name__ == '__main__':
         plot.get_figure().savefig(traj_fig_path)
         print('>', traj_fig_path)
         
-        # run RL and IDM 
-        for av_config in [
+        # run controllers
+        av_configs = [
             {'av_controller': baseline_controller, 'av_kwargs': f'dict(noise=0)'},
             *[{'av_controller': 'av', 'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")'}
               for (config_path, cp_path) in rl_paths],
-        ]:  
-            av_name = av_config['av_controller'] if av_config['av_controller'] != 'av' \
-                else eval(av_config['av_kwargs'])['cp_path']
-
-            # create particular env config
+        ] 
+        av_env_configs = []
+        for av_config in av_configs:
             env_config = copy.deepcopy(abstract_env_config)
             env_config.update(av_config)
+            av_env_configs.append(env_config)
 
-            # create env
-            env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
-            env.reset()
+        with multiprocessing.Pool(processes=args.n_cpus) as pool:
+            data = pool.starmap(run_eval, zip(av_env_configs, repeat(traj_dir)))
+            for av_name, av_metrics in data:
+                metrics[eval_traj][av_name] = av_metrics
 
-            # step through the whole trajectory
-            done = False
-            while not done:
-                _, _, done, _ = env.step(None)
-
-            # generate emission file
-            emissions_path = traj_dir / f"emissions_{av_name.replace('/', '_')}.csv"
-            env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
-
-            # compute tsd
-            tsd_path = traj_dir / f"tsd_{av_name.replace('/', '_')}.png"
-            plot_time_space_diagram(emissions_path, save_path=tsd_path)
-            print('>', tsd_path)
-
-            # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
-            df = pd.read_csv(emissions_path)
-            timestep = 0.1
-
-            def extract_mpg(df):
-                meters_per_second_to_miles = lambda meters_per_second: meters_per_second / 1609.34 * timestep
-                gallons_per_hour_to_gallons = lambda gallons_per_hour: gallons_per_hour / 3600.0 * timestep
-
-                miles = meters_per_second_to_miles(df['speed'].sum())
-                gallons = gallons_per_hour_to_gallons(df['instant_energy_consumption'].sum())
-                mpg = miles / gallons if gallons > 0 else None
-
-                return mpg
-
-            def extract_mpg_metrics(df):
-                # system MPG: for all vehicles in the simulation
-                system_mpg = extract_mpg(df)
-
-                # AV MPG: for all AVs in the simulation
-                df_avs = df[df['id'].str.contains('av')]
-                avs_mpg = extract_mpg(df_avs)
-
-                # platoon MPG: for all AVs + up to 5 human followers for each AV
-                # TODO(nl): if incorporating lane-changing, this will need to be changed to 
-                # account for platoon changes (use the 'follower_id' at each time step)
-                platoon_ids = []
-                veh_ids = df['id'].unique()
-                for av_id in [vid for vid in veh_ids if 'av' in vid]:
-                    platoon_ids.append(av_id)
-                    av_num = av_id.split('_')[0]
-                    for i in range(5):
-                        follower_num = int(av_num) + 1 + i
-                        follower_id = [vid for vid in veh_ids if vid.startswith(str(follower_num))][0]
-                        platoon_ids.append(follower_id)
-                df_platoons = df[df['id'].isin(platoon_ids)]
-                platoons_mpg = extract_mpg(df_platoons)
-
-                return system_mpg, avs_mpg, platoons_mpg
-
-            mpgs = extract_mpg_metrics(df)
-
-            speed_threshold = 20  # threshold for low speeds/high speeds
-
-            low_speed_times = df[(df['id'].str.contains('trajectory')) & (df['speed'] < speed_threshold)]['time']
-            df_low_speeds = df[df['time'].isin(low_speed_times)]
-            mpgs_low_speeds = extract_mpg_metrics(df_low_speeds)
-
-            high_speed_times = df[(df['id'].str.contains('trajectory')) & (df['speed'] >= speed_threshold)]['time']
-            df_high_speeds = df[df['time'].isin(high_speed_times)]
-            mpgs_high_speeds = extract_mpg_metrics(df_high_speeds)
-
-            metrics[eval_traj][av_name] = [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds]
-
-            # delete emission file (heavy)
-            emissions_path.unlink()
 
     field_names = [
         'System MPG', 'AVs MPG', 'Platoons MPG',
