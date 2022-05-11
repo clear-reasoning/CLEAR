@@ -15,7 +15,6 @@ import telegram  # TODO(nl)
 # TODO: remove from train set one we get synthetic trajectories merged
 EVAL_TRAJECTORIES = map(Path, [
     'dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
-    'dataset/data_v2_preprocessed_west/2021-04-12-21-34-57_2T3MWRFVXLW056972_masterArray_1_4436/trajectory.csv',
 ])
 
 def parse_args():
