@@ -51,10 +51,13 @@ def run_eval(env_config, traj_dir):
     df = pd.read_csv(emissions_path)
     timestep = 0.1
 
-    def extract_mpg(df):
-        meters_per_second_to_miles = lambda meters_per_second: meters_per_second / 1609.34 * timestep
-        gallons_per_hour_to_gallons = lambda gallons_per_hour: gallons_per_hour / 3600.0 * timestep
+    def meters_per_second_to_miles(meters_per_second):
+        return meters_per_second / 1609.34 * timestep
 
+    def gallons_per_hour_to_gallons(gallons_per_hour):
+        return gallons_per_hour / 3600.0 * timestep
+
+    def extract_mpg(df):
         miles = meters_per_second_to_miles(df['speed'].sum())
         gallons = gallons_per_hour_to_gallons(df['instant_energy_consumption'].sum())
         mpg = miles / gallons if gallons > 0 else None
@@ -70,7 +73,7 @@ def run_eval(env_config, traj_dir):
         avs_mpg = extract_mpg(df_avs)
 
         # platoon MPG: for all AVs + up to 5 human followers for each AV
-        # TODO(nl): if incorporating lane-changing, this will need to be changed to 
+        # TODO(nl): if incorporating lane-changing, this will need to be changed to
         # account for platoon changes (use the 'follower_id' at each time step)
         platoon_ids = []
         veh_ids = df['id'].unique()
@@ -100,7 +103,7 @@ def run_eval(env_config, traj_dir):
 
     # delete emission file (heavy)
     emissions_path.unlink()
-    
+
     # return metrics
     return (av_name, [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds])
 
@@ -153,20 +156,20 @@ if __name__ == '__main__':
         traj_dir = eval_dir / traj_name
         traj_dir.mkdir()
         print('>', traj_dir)
-        
+
         # plot velocity of trajectory
         df = pd.read_csv(eval_traj)
         traj_fig_path = traj_dir / 'trajectory.png'
         plot = df.plot(x="Time", y=["Velocity"])
         plot.get_figure().savefig(traj_fig_path)
         print('>', traj_fig_path)
-        
+
         # run controllers
         av_configs = [
-            {'av_controller': baseline_controller, 'av_kwargs': f'dict(noise=0)'},
+            {'av_controller': baseline_controller, 'av_kwargs': 'dict(noise=0)'},
             *[{'av_controller': 'av', 'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")'}
               for (config_path, cp_path) in rl_paths],
-        ] 
+        ]
         av_env_configs = []
         for av_config in av_configs:
             env_config = copy.deepcopy(abstract_env_config)
@@ -177,7 +180,6 @@ if __name__ == '__main__':
             data = pool.starmap(run_eval, zip(av_env_configs, repeat(traj_dir)))
             for av_name, av_metrics in data:
                 metrics[eval_traj][av_name] = av_metrics
-
 
     field_names = [
         'System MPG', 'AVs MPG', 'Platoons MPG',
@@ -193,11 +195,11 @@ if __name__ == '__main__':
         return f'{mpg:.2f} ({"+" if improvement >= 0 else ""}{improvement:.2f}%)'
 
     tables = []
-    metrics_sum_count = defaultdict(lambda: [(0,0)] * 9)
+    metrics_sum_count = defaultdict(lambda: [(0, 0)] * 9)
     for traj in metrics:
         x = prettytable.PrettyTable()
         x.field_names = field_names
-        
+
         for controller in metrics[traj]:
             mpg_metrics = list(map(parse_mpg, metrics[traj][controller], metrics[traj][baseline_controller]))
             x.add_row([*mpg_metrics, controller])
