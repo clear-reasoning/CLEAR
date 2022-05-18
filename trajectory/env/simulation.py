@@ -2,7 +2,8 @@ import json
 import os
 import bisect
 from collections import defaultdict
-from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, RLVehicle, TrajectoryVehicle
+from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, \
+    RLVehicle, TrajectoryVehicle, AvVehicle
 from trajectory.env.energy_models import PFM2019RAV4
 from trajectory.env.utils import get_last_or
 import random
@@ -133,6 +134,7 @@ class Simulation(object):
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
             'rl_fs': FSWrappedRLVehicle,
+            'av': AvVehicle,
         }
 
         if controller not in vehicle_classes.keys():

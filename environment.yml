@@ -22,3 +22,5 @@ dependencies:
           - luigi==3.0.3
           - mysql-connector-python==8.0.27
           - mysql-connector-python-rf==2.2.2
+          - telegram==0.0.1
+          - prettytable==3.3.0

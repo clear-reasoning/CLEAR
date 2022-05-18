@@ -303,3 +303,94 @@ class FSWrappedRLVehicle(Vehicle):
 
     def set_vdes(self, vdes):
         self.fs.v_des = vdes
+
+
+class AvVehicle(Vehicle):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # import libs
+        import json
+        import re
+        import importlib
+
+        # load kwargs
+        config_path = kwargs['config_path']
+        cp_path = kwargs['cp_path']
+
+        # load configs.json
+        with open(config_path, 'r') as fp:
+            self.config = json.load(fp)
+
+        if self.config['env_config']['discrete']:
+            raise NotImplementedError
+
+        self.max_headway = self.config['env_config']['max_headway']
+        self.num_concat_states = self.config['env_config']['num_concat_states']
+        self.num_concat_states_large = self.config['env_config']['num_concat_states_large']
+        self.augment_vf = self.config['env_config']['augment_vf']
+        self.n_base_states = len(self.get_base_state())
+        n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
+        self.states = np.zeros(n_states) 
+        self.step_counter = 0
+
+        # retrieve algorithm
+        alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", self.config['algorithm']).group(1, 2)
+        assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
+        algorithm = getattr(importlib.import_module(alg_module), alg_class)
+
+        # load checkpoint into model
+        self.model = algorithm.load(cp_path)
+
+    def get_action(self, state):
+        return self.model.predict(state, deterministic=True)[0][0]
+
+    def apply_failsafe(self, accel):
+        # TODO hardcoded max decel to be conservative
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
+        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        v_next = self.speed + accel * self.dt
+        if v_next > v_safe:
+            safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
+        else:
+            safe_accel = accel
+        return safe_accel
+
+    def get_base_state(self):
+        return [
+            self.speed / 40.0,
+            self.leader.speed / 40.0,
+            self.get_headway() / 100.0,
+        ]
+
+    def get_state(self):
+        new_state = self.get_base_state()
+
+        # roll short-term memory and preprend new state
+        index = self.num_concat_states * self.n_base_states
+        self.states[:index] = np.roll(self.states[:index], self.n_base_states)
+        self.states[:self.n_base_states] = new_state
+
+        if self.num_concat_states_large > 0:
+            # roll long-term memory and preprend new state every second
+            index2 = index + self.num_concat_states_large * self.n_base_states
+            if self.step_counter % 10 == 0:
+                self.states[index:index2] = np.roll(self.states[index:index2], self.n_base_states)
+                self.states[index:index+self.n_base_states] = new_state
+
+        return self.states
+
+    def step(self, accel=None, ballistic=False, tse=None):
+        self.step_counter += 1
+
+        # get action from model
+        accel = self.get_action(self.get_state())
+
+        # hardcoded gap closing
+        if self.get_headway() > self.max_headway:
+            accel = 0.4
+
+        # failsafe
+        accel = self.apply_failsafe(accel)
+
+        return super().step(accel=accel, ballistic=True, tse=tse)
