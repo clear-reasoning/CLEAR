@@ -263,10 +263,11 @@ class RLVehicle(Vehicle):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel, large_gap_threshold=120):
-        # hardcoded gap closing (linearly increasing from 0.1 to 0.5 up to 100m)
+        # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
         if self.get_headway() >= large_gap_threshold:
-            gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
-            accel_gap_closing = 0.5 * gap_over_threshold / 100.0
+            # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
+            # accel_gap_closing = 0.5 * gap_over_threshold / 100.0
+            accel_gap_closing = 1.0
             # maxed with controller accel (can go faster than hardcoded)
             accel = max(accel, accel_gap_closing)
 
