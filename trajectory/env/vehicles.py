@@ -263,9 +263,13 @@ class RLVehicle(Vehicle):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel, large_gap_threshold=120):
-        # hardcode gap closing
-        if self.get_headway() > large_gap_threshold:
-            accel = 0.4
+        # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
+        if self.get_headway() >= large_gap_threshold:
+            # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
+            # accel_gap_closing = 0.5 * gap_over_threshold / 100.0
+            accel_gap_closing = 1.0
+            # maxed with controller accel (can go faster than hardcoded)
+            accel = max(accel, accel_gap_closing)
 
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = accel
@@ -331,7 +335,7 @@ class AvVehicle(Vehicle):
         self.augment_vf = self.config['env_config']['augment_vf']
         self.n_base_states = len(self.get_base_state())
         n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
-        self.states = np.zeros(n_states) 
+        self.states = np.zeros(n_states)
         self.step_counter = 0
 
         # retrieve algorithm
