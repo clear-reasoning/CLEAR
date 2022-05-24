@@ -387,7 +387,7 @@ class TelegramCallback(BaseCallback):
                             self.last_update_time = update.message.date
                             self.send_message(f'Update: iteration {self.iter} for {self.gs_path} after {self.total_time_human_readable()}.')
             except telegram.error.TimedOut:
-                pass 
+                pass
 
     def _on_training_end(self):
         self.send_message(f'Training ended for {self.gs_path} after {self.total_time_human_readable()}. '
