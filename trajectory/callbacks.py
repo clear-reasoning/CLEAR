@@ -379,12 +379,15 @@ class TelegramCallback(BaseCallback):
             self.last_update_time = datetime.now(tz=pytz.UTC)
         else:
             import telegram
-            bot = telegram.Bot(token=self.bot_token)
-            for update in bot.get_updates(offset=-100):
-                if update.message is not None and update.message.chat.id == int(self.chat_id):
-                    if update.message.date.replace(tzinfo=pytz.UTC) > self.last_update_time.replace(tzinfo=pytz.UTC):
-                        self.last_update_time = update.message.date
-                        self.send_message(f'Update: iteration {self.iter} for {self.gs_path} after {self.total_time_human_readable()}.')
+            try:
+                bot = telegram.Bot(token=self.bot_token)
+                for update in bot.get_updates(offset=-10, timeout=60, read_latency=60):
+                    if update.message is not None and update.message.chat.id == int(self.chat_id):
+                        if update.message.date.replace(tzinfo=pytz.UTC) > self.last_update_time.replace(tzinfo=pytz.UTC):
+                            self.last_update_time = update.message.date
+                            self.send_message(f'Update: iteration {self.iter} for {self.gs_path} after {self.total_time_human_readable()}.')
+            except telegram.error.TimedOut:
+                pass 
 
     def _on_training_end(self):
         self.send_message(f'Training ended for {self.gs_path} after {self.total_time_human_readable()}. '
