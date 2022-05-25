@@ -392,7 +392,7 @@ class AvVehicle(Vehicle):
 
         # hardcoded gap closing
         if self.get_headway() > self.max_headway:
-            accel = 0.4
+            accel = 1.0
 
         # failsafe
         accel = self.apply_failsafe(accel)
