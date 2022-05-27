@@ -90,7 +90,7 @@ class TensorboardCallback(BaseCallback):
                     plotter.save(f'{base_name}/{base_name}_{group}')
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
-        av_mpg = rollout_dict['sim_data_av']['avg_mpg'][-1]
+        av_mpg = rollout_dict['sim_data_avs']['avg_mpg'][-1]
         system_mpg = rollout_dict['system']['avg_mpg'][-1]
         system_speed = rollout_dict['system']['speed'][-1]
         self.logger.record(f'{base_name}/{base_name}_episode_reward', episode_reward)
@@ -147,11 +147,10 @@ class TensorboardCallback(BaseCallback):
         for veh in env.sim.vehicles:
             if veh.kind == 'av':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
-                    rollout_dict['sim_data_last_av'][k] = v
+                    rollout_dict['sim_data_av'][k] = v
             if veh.kind == 'av':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     if k == 'avg_mpg':
-                        print(k, v, veh.name)
                         rollout_dict['sim_data_avs'][k].append(v[-1])
             if veh.kind == 'leader':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
