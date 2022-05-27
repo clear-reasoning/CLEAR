@@ -54,11 +54,19 @@ def run_eval(env_config, traj_dir):
     def meters_per_second_to_miles(meters_per_second):
         return meters_per_second / 1609.34 * timestep
 
+    def meters_to_miles(meters):
+        return meters / 1609.34
+
     def gallons_per_hour_to_gallons(gallons_per_hour):
         return gallons_per_hour / 3600.0 * timestep
 
     def extract_mpg(df):
-        miles = meters_per_second_to_miles(df['speed'].sum())
+        # miles = meters_per_second_to_miles(df['speed'].sum())
+        meters = 0
+        for vid in df['id'].unique():
+            df_vid = df[df['id'] == vid]
+            meters += df_vid['position'].iloc[-1] - df_vid['position'].iloc[0]
+        miles = meters_to_miles(meters)
         gallons = gallons_per_hour_to_gallons(df['instant_energy_consumption'].sum())
         mpg = miles / gallons if gallons > 0 else None
 

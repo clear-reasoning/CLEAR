@@ -147,7 +147,12 @@ class TensorboardCallback(BaseCallback):
         for veh in env.sim.vehicles:
             if veh.kind == 'av':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
-                    rollout_dict['sim_data_av'][k] = v
+                    rollout_dict['sim_data_last_av'][k] = v
+            if veh.kind == 'av':
+                for k, v in env.sim.data_by_vehicle[veh.name].items():
+                    if k == 'avg_mpg':
+                        print(k, v, veh.name)
+                        rollout_dict['sim_data_avs'][k].append(v[-1])
             if veh.kind == 'leader':
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     if k == 'speed':

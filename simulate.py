@@ -325,7 +325,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
         # accumulate metrics
         exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])
         exp_metrics['system_speed'].append(rollout_dict['system']['speed'][-1])
-        exp_metrics['av_mpg'].append(rollout_dict['sim_data_av']['avg_mpg'][-1])
+        exp_metrics['avs_mpg'].append(np.mean(rollout_dict['sim_data_avs']['avg_mpg']))
         for j in range(len(test_env.avs)):
             exp_metrics[f'platoon_{j}_mpg'].append(rollout_dict[f'platoon_{j}']['platoon_mpg'][-1])
 
@@ -335,15 +335,15 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
 
         stat_fns = [('mean', np.mean), ('std', np.std), ('min', np.min), ('max', np.max)]
         for (name, array) in [
-            ('av_headway', rollout_dict['sim_data_av']['headway']),
+            ('av_headway', rollout_dict['sim_data_last_av']['headway']),
             ('av_speed', rollout_dict['base_state']['speed'])
         ] \
             + [(f'platoon_{j}_speed', rollout_dict[f'platoon_{j}']['platoon_speed']) for j in
                range(len(test_env.avs))] \
             + [
-            ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
+            ('av_leader_speed_difference', rollout_dict['sim_data_last_av']['speed_difference']),
             ('instant_energy_consumption',
-             rollout_dict['sim_data_av']['instant_energy_consumption']),
+             rollout_dict['sim_data_last_av']['instant_energy_consumption']),
             ('rl_reward', rollout_dict['training']['rewards']),
         ]:
             for fn_name, fn in stat_fns:
@@ -375,7 +375,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
     else:
         print_and_log(f'Metrics aggregated over {args.n_runs} runs:\n')
         for k, v in exp_metrics.items():
-            print_and_log(f'{k}: {np.mean(v):.2f} ± {np.std(v):.2f} (min = {np.min(v):.2f}, max = {np.max(v):.2f})')
+            print_and_log(f'{k}: {np.mean(v)} ± {np.std(v):.2f} (min = {np.min(v):.2f}, max = {np.max(v):.2f})')
         save_logs(exp_dir)
 
 
