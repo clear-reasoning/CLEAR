@@ -331,7 +331,7 @@ class AvVehicle(Vehicle):
         self.augment_vf = self.config['env_config']['augment_vf']
         self.n_base_states = len(self.get_base_state())
         n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
-        self.states = np.zeros(n_states) 
+        self.states = np.zeros(n_states)
         self.step_counter = 0
 
         # retrieve algorithm
