@@ -67,6 +67,7 @@ def run_eval(env_config, traj_dir):
     def extract_mpg_metrics(df):
         # system MPG: for all vehicles in the simulation
         system_mpg = extract_mpg(df)
+        print('SYSTEM MPG', av_name, system_mpg)
 
         # AV MPG: for all AVs in the simulation
         df_avs = df[df['id'].str.contains('av')]
