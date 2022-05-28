@@ -59,7 +59,13 @@ class TensorboardCallback(BaseCallback):
                         'leader': rollout_dict['sim_data_av']['leader_speed'],
                         'trajectory': rollout_dict['sim_data_leader']['speed'],
                     },
-                    'headway': rollout_dict['sim_data_av']['headway'],
+                    'headway': {
+                        'av_gap': rollout_dict['sim_data_av']['headway'],
+                        'gap_closing_threshold': [120] * len(rollout_dict['sim_data_av']['headway']),
+                        'failsafe_threshold': [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
+                                               for this_vel, lead_vel in zip(rollout_dict['sim_data_av']['speed'],
+                                                                             rollout_dict['sim_data_leader']['speed'])],
+                    },
                     'gaps (max 10 for readability)': {
                         'time_gap': [min(x, 10) for x in rollout_dict['sim_data_av']['time_gap']],
                         'time_to_collision': [min(x, 10) for x in rollout_dict['sim_data_av']['time_to_collision']],
