@@ -24,6 +24,8 @@ DEFAULT_ENV_CONFIG = {
     'whole_trajectory': False,
     'discrete': False,
     'num_actions': 7,
+    'min_accel': -3.0,
+    'max_accel': 1.5,
     'use_fs': False,
     # extra observations for the value function
     'augment_vf': True,
@@ -104,8 +106,8 @@ class TrajectoryEnv(gym.Env):
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
         # define action space
-        a_min = -3.0
-        a_max = 1.5
+        a_min = self.min_accel
+        a_max = self.max_accel
         if self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)

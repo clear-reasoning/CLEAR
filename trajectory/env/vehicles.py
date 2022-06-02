@@ -1,5 +1,7 @@
+from gym.spaces import Discrete
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
+from trajectory.env.utils import get_first_element
 import numpy as np
 import bisect
 
@@ -327,7 +329,16 @@ class AvVehicle(Vehicle):
             self.config = json.load(fp)
 
         if self.config['env_config']['discrete']:
-            raise NotImplementedError
+            try:
+                a_min = self.config['env_config']['min_accel']
+                a_max = self.config['env_config']['max_accel']
+            except KeyError:
+                # config.json does not specify a_min and/or a_max, setting to defaults for backward compatibility
+                a_min = -3.0
+                a_max = 1.5
+
+            self.action_space = Discrete(self.config['env_config']['num_actions'])
+            self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
 
         self.max_headway = self.config['env_config']['max_headway']
         self.num_concat_states = self.config['env_config']['num_concat_states']
@@ -347,7 +358,7 @@ class AvVehicle(Vehicle):
         self.model = algorithm.load(cp_path)
 
     def get_action(self, state):
-        return self.model.predict(state, deterministic=True)[0][0]
+        return get_first_element(self.model.predict(state, deterministic=True))
 
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
@@ -388,7 +399,8 @@ class AvVehicle(Vehicle):
         self.step_counter += 1
 
         # get action from model
-        accel = self.get_action(self.get_state())
+        action = self.get_action(self.get_state())
+        accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
 
         # hardcoded gap closing
         if self.get_headway() > self.max_headway:

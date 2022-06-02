@@ -102,7 +102,11 @@ def parse_args_train():
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_actions', type=int, default=50, nargs='+',
-                        help='If discrete is set, the action space is discretized by 1 and -1 with this many actions')
+                        help='If discrete is set, the action space is discretized with this many actions')
+    parser.add_argument('--env_min_accel', type=int, default=-3.0, nargs='+',
+                        help='Lowest allowed acceleration')
+    parser.add_argument('--env_max_accel', type=int, default=1.5, nargs='+',
+                        help='Highest allowed acceleration')
     parser.add_argument('--use_fs', type=int, default=0, nargs='+',
                         help='If true, use a FollowerStopper wrapper.')
     parser.add_argument('--env_include_idm_mpg', type=int, default=0, nargs='+',
@@ -145,6 +149,8 @@ def run_experiment(config):
         'max_headway': config['env_max_headway'],
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
+        'min_accel': config['env_min_accel'],
+        'max_accel': config['env_max_accel'],
         'use_fs': config['use_fs'],
         'augment_vf': config['augment_vf'],
         'minimal_time_headway': config['env_minimal_time_headway'],
