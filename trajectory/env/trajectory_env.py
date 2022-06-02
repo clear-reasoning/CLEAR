@@ -33,6 +33,7 @@ DEFAULT_ENV_CONFIG = {
     # if we get closer then this time headway we are forced to break with maximum decel
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
+    'accel_penalty': 0.2,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
@@ -54,6 +55,10 @@ DEFAULT_ENV_CONFIG = {
     'road_grade': '',
     # set size of platoon for observation
     'platoon_size': 5,
+    # whether to add downstream speeds to state / use them
+    'downstream': False,
+    # how many segments of downstream info to add to state
+    'downstream_num_segments': 10
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -155,6 +160,29 @@ class TrajectoryEnv(gym.Env):
             'headway': (av.get_headway(), 100.0),
         }
 
+        if self.downstream:
+            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments)
+            downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+
+            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+            if downstream_speeds and downstream_distances:
+                downstream_speeds = downstream_speeds[1]
+                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+            # for the segments that TSE info is available
+            for i in range(downstream_obs):
+                state.update({
+                    f"seg_{i}_speed": (downstream_speeds[i], 40.0),
+                    f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+                })
+
+            # for segments where TSE info is not available
+            for i in range(downstream_obs, self.downstream_num_segments):
+                state.update({
+                    f"seg_{i}_speed": (-1.0, 1.0),
+                    f"seg_{i}_dist": (-1.0, 1.0)
+                })
+
         return state
 
     def get_base_additional_vf_state(self):
@@ -233,7 +261,7 @@ class TrajectoryEnv(gym.Env):
                            for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
-        reward -= 0.2 * abs(action)
+        reward -= self.accel_penalty * abs(action)
 
         return reward
 

@@ -121,6 +121,8 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
                         help='Sets the time to collision below which we get penalized.')
+    parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
+                        help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
 
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
@@ -128,6 +130,10 @@ def parse_args_train():
                              'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
+    parser.add_argument('--env_downstream', default=False, action='store_true',
+                        help='If set, adds downstream speed information to the base state.')
+    parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
+                        help='If downstream is set, average speed and distance to this many segments is added to state.')
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
@@ -158,15 +164,18 @@ def run_experiment(config):
         'augment_vf': config['augment_vf'],
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
+        'accel_penalty': config['env_accel_penalty'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
         'num_concat_states_large': config['env_num_concat_states_large'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
+        'downstream': config['env_downstream'],
+        'downstream_num_segments': config['env_downstream_num_segments'],
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
-        'fixed_traj_path': config['traj_path'],
+        'fixed_traj_path': config['traj_path']
     })
 
     # create env
