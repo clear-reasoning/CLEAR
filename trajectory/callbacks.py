@@ -1,3 +1,4 @@
+"""Callbacks."""
 from trajectory.visualize.plotter import TensorboardPlotter
 from trajectory.env.utils import duration_to_str, get_first_element
 from trajectory.env.trajectory_env import TrajectoryEnv
@@ -50,6 +51,7 @@ class TensorboardCallback(BaseCallback):
         self.rollout += 1
 
     def log_rollout_dict(self, base_name, rollout_dict, plot_images=True, custom_plot=False):
+        """Log rollout dict."""
         if plot_images:
             plotter = TensorboardPlotter(self.logger)
             if custom_plot:
@@ -126,6 +128,7 @@ class TensorboardCallback(BaseCallback):
             self.logger.record(f'{base_name}/{base_name}_mean_{name}', np.mean(array))
 
     def get_rollout_dict(self, env):
+        """Get rollout dict."""
         collected_rollout = env.get_collected_rollout()
 
         rollout_dict = defaultdict(lambda: defaultdict(list))
@@ -175,6 +178,7 @@ class TensorboardCallback(BaseCallback):
         return rollout_dict
 
     def run_eval(self, av_controller):
+        """Run evaluation."""
         # set seed so that the different evaluated controllers use the same trajectory
         random.seed(self.rollout)
         np.random.seed(self.rollout)
@@ -236,6 +240,7 @@ class CheckpointCallback(BaseCallback):
             self.write_checkpoint()
 
     def write_checkpoint(self):
+        """Write checkpoint."""
         path = self.save_path / str(self.iter)
         self.model.save(path)
         print(f'Saved model checkpoint to {path}.zip')
@@ -319,6 +324,7 @@ class LoggingCallback(BaseCallback):
             self.print_metrics()
 
     def print_metrics(self):
+        """Print metrics."""
         metrics = self.logger.get_log_dict()
         gs_str = ', '.join([f'{k} = {v}' for k, v in self.grid_search_config.items()])
         print(f'\nEnd of rollout for grid search: {gs_str}')

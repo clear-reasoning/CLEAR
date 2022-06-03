@@ -1,3 +1,4 @@
+"""Quick run."""
 import numpy as np
 import onnx  # pip install onnx
 import onnxruntime as ort  # pip install onnxruntime
@@ -11,8 +12,12 @@ ort_session = ort.InferenceSession(CONTROLLER_PATH)
 
 
 def get_accel(state):
-    # state is [av speed, leader speed, headway] (no normalization needed)
-    # output is instant acceleration to apply to the AV
+    """
+    Get requested acceleration.
+
+    state is [av speed, leader speed, headway] (no normalization needed)
+    output is instant acceleration to apply to the AV
+    """
     data = np.array([state]).astype(np.float32)
     outputs = ort_session.run(None, {ort_session.get_inputs()[0].name: data})
     return outputs[0][0][0]

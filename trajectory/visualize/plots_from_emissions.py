@@ -1,4 +1,5 @@
-"""
+"""Generate plots from emissions file.
+
 Generate emissions for all trajectories with IDM
 
     python simulate.py --av_controller idm --av_kwargs "dict(noise=0)" --all_trajectories --gen_emissions

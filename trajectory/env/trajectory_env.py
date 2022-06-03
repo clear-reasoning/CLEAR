@@ -1,3 +1,4 @@
+"""Trajectory environment."""
 from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
@@ -67,6 +68,8 @@ PLATOON_PRESETS = {
 
 
 class TrajectoryEnv(gym.Env):
+    """Trajectory Environment."""
+
     def __init__(self, config, _simulate=False, _verbose=True):
         super().__init__()
 
@@ -141,7 +144,10 @@ class TrajectoryEnv(gym.Env):
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
 
     def get_base_state(self, av_idx=None):
-        """Dict of state_name: (state_value, state_normalization_scale)"""
+        """Get base state.
+
+        Dict of state_name: (state_value, state_normalization_scale)
+        """
         av = self.avs[av_idx if av_idx is not None else 0]
         state = {
             'speed': (av.speed, 40.0),
@@ -152,8 +158,11 @@ class TrajectoryEnv(gym.Env):
         return state
 
     def get_base_additional_vf_state(self):
-        """Dict of state_name: (state_value, state_normalization_scale)
-        This state will only be used if augment_vf is set"""
+        """Get base additional vf state.
+
+        Dict of state_name: (state_value, state_normalization_scale)
+        This state will only be used if augment_vf is set
+        """
         vf_state = {
             'time': (self.sim.step_counter, self.horizon),
             'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
@@ -163,7 +172,7 @@ class TrajectoryEnv(gym.Env):
         return vf_state
 
     def get_platoon_state(self, veh):
-        """ Return the platoon state of veh."""
+        """Return the platoon state of veh."""
         platoon = self.sim.get_platoon(veh, self.platoon_size)
 
         state = {
@@ -174,6 +183,7 @@ class TrajectoryEnv(gym.Env):
         return state
 
     def get_state(self, av_idx=None):
+        """Get state."""
         # during training (always single-agent), this is called with av_idx=None
         # av_idx is set from simulate.py when evaluating with several AVs
         if av_idx is None:
@@ -228,6 +238,7 @@ class TrajectoryEnv(gym.Env):
         return reward
 
     def create_simulation(self):
+        """Create simulation."""
         # collect the next trajectory
         self.traj = next(self.trajectories)
         self.horizon = len(self.traj['positions'])
@@ -288,6 +299,7 @@ class TrajectoryEnv(gym.Env):
         self.sim.collect_data()
 
     def reset(self):
+        """Reset."""
         self.create_simulation()
         # reset memory
         self.past_states = {
@@ -297,6 +309,7 @@ class TrajectoryEnv(gym.Env):
         return self.get_state() if not self.simulate else None  # don't stack memory here during eval
 
     def step(self, actions):
+        """Step forward."""
         # additional trajectory data that will be plotted in tensorboard
         metrics = {}
 
@@ -369,16 +382,20 @@ class TrajectoryEnv(gym.Env):
         return next_state, reward, done, infos
 
     def start_collecting_rollout(self):
+        """Start collecting rollout."""
         self.collected_rollout = defaultdict(list)
         self.collect_rollout = True
 
     def stop_collecting_rollout(self):
+        """Stop collecting rollout."""
         self.collot_rollout = False
 
     def get_collected_rollout(self):
+        """Get collected rollout."""
         return self.collected_rollout
 
     def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False, additional_metadata={}):
+        """Generate emissions output."""
         # create emissions dir if it doesn't exist
         if emissions_path is None:
             emissions_path = 'emissions'

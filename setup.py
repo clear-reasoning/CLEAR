@@ -1,3 +1,4 @@
+"""Set up trajectory_training."""
 from setuptools import setup
 
 setup(

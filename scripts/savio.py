@@ -1,3 +1,4 @@
+"""Prepare to run on Savio."""
 import argparse
 import subprocess
 import os
@@ -6,6 +7,7 @@ from datetime import datetime as dt
 
 
 def parse_args_savio():
+    """Parse args on savio."""
     parser = argparse.ArgumentParser(
         description='Run an experiment on Savio.',
         epilog='Example usage: python savio.py --jobname test --mail user@coolmail.com "echo hello world"')

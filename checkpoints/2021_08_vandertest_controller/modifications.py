@@ -1,7 +1,13 @@
+"""Modifications."""
 import torch
 
 
-def forward(self, in_vector):  # in_vector (non-normalized) : [av_speed, leader_speed, headway]
+def forward(self, in_vector):
+    """
+    Modify action.
+
+    in_vector (non-normalized) : [av_speed, leader_speed, headway]
+    """
     # normalize input
     x = torch.div(in_vector, self.normalization_tensor)
 

@@ -20,6 +20,12 @@ conda env create -f environment.yml
 conda activate trajectory
 ```
 
+## Dataset
+
+The whole dataset released in the [Vandertest 2021 ICRA work](https://github.com/nathanlct/trajectory-training-icra/) can be found at: https://vanderbilt.app.box.com/s/z3nignz1cgm16dy56r1mqg9ycds40tkz
+
+If you use the trajectory dataset in your published works please cite from this DOI: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6366761.svg)](https://doi.org/10.5281/zenodo.6366761)
+
 # Train a controller
 
 ```

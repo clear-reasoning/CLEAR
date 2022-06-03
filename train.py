@@ -1,3 +1,4 @@
+"""Train a policy."""
 import argparse
 from datetime import datetime
 import itertools
@@ -26,6 +27,7 @@ register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
 
 def parse_args_train():
+    """Parse arguments for training."""
     parser = argparse.ArgumentParser(description='Train on the trajectory env.')
 
     # exp params
@@ -138,6 +140,7 @@ def parse_args_train():
 
 
 def run_experiment(config):
+    """Run experiment."""
     # create exp logdir
     gs_logdir = config['gs_logdir']
     gs_logdir.mkdir(parents=True, exist_ok=True)

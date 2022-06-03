@@ -1,3 +1,4 @@
+"""Augmented On-Policy Algorithm."""
 import time
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -127,7 +128,8 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
     def collect_rollouts(
         self, env: VecEnv, callback: BaseCallback, rollout_buffer: RolloutBuffer, n_rollout_steps: int
     ) -> bool:
-        """
+        """Collect rollouts.
+
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
         The term rollout here refers to the model-free notion and should not
         be used with the concept of rollout used in model-based RL or planning.
@@ -198,7 +200,8 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
         return True
 
     def train(self) -> None:
-        """
+        """Train.
+
         Consume current rollout data and update policy parameters.
         Implemented by individual algorithms.
         """
@@ -216,6 +219,7 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
     ):
+        """Learn."""
         iteration = 0
 
         total_timesteps, callback = self._setup_learn(

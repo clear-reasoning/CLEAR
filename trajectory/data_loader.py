@@ -1,3 +1,4 @@
+"""Data loader."""
 import itertools
 import numpy as np
 import pandas as pd
@@ -20,6 +21,8 @@ DT = 0.1
 
 
 class DataLoader(object):
+    """Data loader."""
+
     def __init__(self, positions_from_speeds=True):
         self.trajectories = []
         for fp, data in self.get_raw_data():
@@ -46,6 +49,7 @@ class DataLoader(object):
             })
 
     def get_raw_data(self):
+        """Get raw data."""
         # Add eastbound and westbound I-24 trajectories.
         file_paths = \
             list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
@@ -59,10 +63,12 @@ class DataLoader(object):
         return zip(file_paths, data)
 
     def get_all_trajectories(self):
+        """Get all trajectories."""
         random.shuffle(self.trajectories)
         return iter(self.trajectories)
 
     def get_trajectories(self, chunk_size=None, count=None, fixed_traj_path=None):
+        """Get trajectories."""
         available_trajectories = self.trajectories
         if fixed_traj_path is not None:
             available_trajectories = [
@@ -91,6 +97,7 @@ class DataLoader(object):
 ###################################################################################################
 
 def smooth_data(target, n, mu=0.5):
+    """Smooth data."""
     for i in range(n):
         target = mu / 2 * np.append(target[0], target[:-1]) + (1 - mu) * target + \
             mu / 2 * np.append(target[1:], target[-1])

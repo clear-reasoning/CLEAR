@@ -1,3 +1,4 @@
+"""Plot platoon mpg."""
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -5,6 +6,7 @@ import sys
 
 
 def plot_platoon_mpg(emissions_path, save_path):
+    """Plot platoon mpg."""
     df = pd.read_csv(emissions_path)
 
     id_dict = {int(veh_id.split('_')[0]): {'veh_id': veh_id} for veh_id in df['id'].unique()}

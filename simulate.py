@@ -1,3 +1,4 @@
+"""Run a forward-simulation."""
 import argparse
 import traceback
 from collections import defaultdict
@@ -23,7 +24,7 @@ from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 
 def parse_args_simulate(return_defaults=False):
-    """Parse arguments to simulate.py
+    """Parse arguments to simulate.py.
     return_defaults -- If enabled, return the default values rather than parsing from command line
     """
     parser = argparse.ArgumentParser(description='Simulate a trained controller or baselines on the trajectory env.')
@@ -99,6 +100,7 @@ logs_str = ''
 
 
 def print_and_log(*args, output=True):
+    """Print and log."""
     global logs_str
     for string in args:
         logs_str += string
@@ -158,6 +160,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                           f'\n\n{model.policy}')
 
         def get_action(state):
+            """Get the requested action from the model."""
             return model.predict(state, deterministic=True)[0]
 
     env_config.update({
@@ -254,10 +257,6 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                                            large_tsd=args.large_tsd, additional_metadata=metadata)
             else:
                 test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
-                tsd_path = exp_dir / "figs/tsd.png"
-                tsd_path.parent.mkdir(parents=True, exist_ok=True)
-                plot_time_space_diagram(emissions_path, save_path=tsd_path)
-                print("Wrote", tsd_path)
 
         # gen metrics
         tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
@@ -321,6 +320,17 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                     plotter.save(fig_name, log=False, figsize=figsize, legend_pos='auto')
                 if args.n_runs == 1:
                     print_and_log(f'Wrote {exp_dir / "figs" / fig_name}.png')
+
+        # Plot TSD
+        if not args.fast:
+            output_tsd_path = exp_dir / f'figs/time_space_diagram_{i+1}.png'
+            if (traj_path.parents[0] / "speed.csv").is_file():
+                inrix_path = traj_path.parents[0]
+            else:
+                inrix_path = None
+            plot_time_space_diagram(emissions_path, output_tsd_path, inrix_path)
+            if args.n_runs == 1:
+                print_and_log(f'Wrote {output_tsd_path}\n')
 
         # accumulate metrics
         exp_metrics['system_mpg'].append(rollout_dict['system']['avg_mpg'][-1])

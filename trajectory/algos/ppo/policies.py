@@ -1,3 +1,4 @@
+"""Policies."""
 from itertools import zip_longest
 from typing import Dict, List, Tuple, Type, Union
 
@@ -28,7 +29,8 @@ from stable_baselines3.common.policies import (
 
 
 class PopArtActorCriticPolicy(ActorCriticPolicy):
-    """
+    """Pop Art Actor Critic Policy.
+
     Policy class for actor-critic algorithms (has both policy and value prediction).
     Used by A2C, PPO and the likes.
 
@@ -112,7 +114,8 @@ class PopArtActorCriticPolicy(ActorCriticPolicy):
 
 
 class SplitActorCriticPolicy(ActorCriticPolicy):
-    """
+    """Split Actor-Critic Policy.
+
     Policy class for actor-critic algorithms (has both policy and value prediction but value function
     and actor are separate).
     Used by A2C, PPO and the likes.
@@ -147,8 +150,8 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
     """
 
     def _build_mlp_extractor(self) -> None:
-        """
-        Create the policy and value networks.
+        """Create the policy and value networks.
+
         Part of the layers can be shared.
         """
         # Note: If net_arch is None and some features extractor is used,
@@ -215,8 +218,8 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
     def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
-        """
-        Forward pass in all the networks (actor and critic)
+        """Forward pass in all the networks (actor and critic).
+
         :param obs: Observation. Second obs is the extra information for the vf function.
         :param deterministic: Whether to sample or use deterministic actions
         :return: action, value and log probability of the action
@@ -263,8 +266,7 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
 
     def _get_latent(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
-        Get the latent code (i.e., activations of the last layer of each network)
-        for the different networks.
+        Get the latent code (i.e., activations of the last layer of each network) for the different networks.
 
         :param obs: Observation
         :return: Latent codes
@@ -283,9 +285,7 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
 
     def evaluate_actions(self, obs: th.Tensor,
                          actions: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
-        """
-        Evaluate actions according to the current policy,
-        given the observations.
+        """Evaluate actions according to the current policy, given the observations.
 
         :param obs:
         :param actions:
@@ -301,7 +301,8 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
 
 
 class SingleMlpExtractor(nn.Module):
-    """
+    """Single MLP Extractor.
+
     Constructs an MLP that receives observations as an input and outputs a latent representation
     The ``net_arch`` parameter allows to specify the amount and size of the hidden layers and how many
     of them are shared between the policy network and the value network. It is assumed to be a list with the following
@@ -364,7 +365,8 @@ class SingleMlpExtractor(nn.Module):
         self.policy_net = nn.Sequential(*policy_net).to(device)
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-        """
+        """Forward pass.
+
         :return: latent_policy, latent_value of the specified network.
             If all layers are shared, then ``latent_policy == latent_value``
         """

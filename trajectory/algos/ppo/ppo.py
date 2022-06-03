@@ -1,3 +1,4 @@
+"""PPO."""
 import warnings
 from typing import Any, Dict, Optional, Type, Union
 
@@ -15,7 +16,8 @@ from trajectory.algos.ppo.augmentedOnPolicyAlgorithm import AugmentedOnPolicyAlg
 
 
 class PPO(AugmentedOnPolicyAlgorithm):
-    """
+    """PPO Algorithm.
+
     Proximal Policy Optimization algorithm (PPO) (clip version)
     Paper: https://arxiv.org/abs/1707.06347
     Code: This implementation borrows code from OpenAI Spinning Up (https://github.com/openai/spinningup/)
@@ -162,9 +164,7 @@ class PPO(AugmentedOnPolicyAlgorithm):
             self.clip_range_vf = get_schedule_fn(self.clip_range_vf)
 
     def train(self) -> None:
-        """
-        Update policy using the currently gathered rollout buffer.
-        """
+        """Update policy using the currently gathered rollout buffer."""
         # Update optimizer learning rate
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
@@ -294,7 +294,7 @@ class PPO(AugmentedOnPolicyAlgorithm):
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
     ) -> "PPO":
-
+        """Learn."""
         return super(PPO, self).learn(
             total_timesteps=total_timesteps,
             callback=callback,

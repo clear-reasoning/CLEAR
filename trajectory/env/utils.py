@@ -1,3 +1,4 @@
+"""Utils."""
 import itertools
 import json
 from math import atan2, cos, radians, sin, sqrt
@@ -5,7 +6,7 @@ import numpy as np
 
 
 def lat_long_distance(pos1, pos2):
-    """Returns distance in meters between two (latitude, longitude) points (Haversine formula)"""
+    """Return distance in meters between two (latitude, longitude) points using Haversine formula."""
     (lat1, long1), (lat2, long2) = pos1, pos2
     R = 6371e3  # radius of the Earth in meters
     dlat = radians(lat2 - lat1)
@@ -17,6 +18,7 @@ def lat_long_distance(pos1, pos2):
 
 
 def get_bearing(lat1, lon1, lat2, lon2):
+    """Get bearing."""
     dLon = lon2 - lon1
     x = np.cos(lat2) * np.sin(dLon)
     y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dLon)
@@ -27,6 +29,7 @@ def get_bearing(lat1, lon1, lat2, lon2):
 
 
 def get_driving_direction(bearing):
+    """Get driving direction."""
     if(bearing > 270 and bearing < 360):
         return 'West'
     elif(bearing > 90 and bearing < 190):
@@ -36,6 +39,7 @@ def get_driving_direction(bearing):
 
 
 def get_valid_lat_long(lat, long):
+    """Get valid lat long."""
     is_valid = False
     if long < -86.58 and long > -86.685 and lat > 35.98 and lat < 36.07:
         is_valid = True
@@ -52,19 +56,25 @@ def pairwise(iterable):
 
 
 def partition(iterable, pred):
-    "Use a predicate to partition entries into false entries and true entries"
+    """Use a predicate to partition entries into false entries and true entries."""
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
     return itertools.filterfalse(pred, t1), filter(pred, t2)
 
 
 def moving_sum(array, chunk_size):
-    """Moving sum. Returns an array of size len(array) - chunk_size + 1."""
+    """Compute the moving sum.
+
+    Returns an array of size len(array) - chunk_size + 1.
+    """
     return np.convolve(array, np.ones(chunk_size), 'valid')
 
 
 def moving_average(array, chunk_size):
-    """Moving average. Returns an array of size len(array) - chunk_size + 1."""
+    """Compute the moving average.
+
+    Returns an array of size len(array) - chunk_size + 1.
+    """
     return np.convolve(array, np.ones(chunk_size), 'valid') / chunk_size
 
 
@@ -111,7 +121,7 @@ def get_last_or(arr, default=None):
 
 
 def get_first_element(arr):
-    """Returns arr[0]...[0]."""
+    """Return arr[0]...[0]."""
     val = arr
     try:
         while True:

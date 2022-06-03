@@ -1,3 +1,4 @@
+"""Plot RL vs IDM."""
 import pandas as pd
 from plotter import Plotter
 import time

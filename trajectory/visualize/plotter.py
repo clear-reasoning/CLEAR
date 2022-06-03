@@ -1,3 +1,4 @@
+"""Plotter."""
 from stable_baselines3.common.logger import Figure
 from pathlib import Path  # needed?
 import numpy as np
@@ -8,6 +9,8 @@ matplotlib.use('agg')
 
 
 class Plotter(object):
+    """Plotter."""
+
     def __init__(self, *save_dir):
         self.save_dir = Path(*save_dir)
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -17,6 +20,7 @@ class Plotter(object):
         self.subplots = False
 
     def subplot(self, title=None, xlabel=None, ylabel=None, grid=False, legend=False):
+        """Subplot."""
         self.subplots = True
         self.plot_data.append({
             'title': title,
@@ -29,13 +33,16 @@ class Plotter(object):
         return self
 
     def __enter__(self):
+        """Enter."""
         pass
 
     def __exit__(self, exc_type, exc_value, tb):
+        """Exit."""
         self.subplots = False
 
     def plot(self, x, y=None, label=None, title=None, xlabel=None,
              ylabel=None, grid=False, legend=False, linewidth=1.0):
+        """Generate plot."""
         if y is None:
             x, y = list(range(len(x))), x
         if self.subplots:
@@ -62,6 +69,7 @@ class Plotter(object):
 
     def heatmap(self, array, xlabel='', ylabel='', xticks=None, yticks=None, xticklabels=None, yticklabels=None,
                 title=None, file_name='heatmap', cbarlabel=None, cbar_kw={}):
+        """Generate heatmap."""
         # Integrate it in with plot_data
         fig, ax = plt.subplots()
         im = ax.imshow(array)
@@ -91,6 +99,7 @@ class Plotter(object):
         plt.savefig(save_path)
 
     def makefig(self, dpi=100, figsize=None, legend_pos='manual'):
+        """Make figure."""
         # figsize in inches, dpi = dots (pixels) per inches
         figsize = figsize if figsize is not None else (15, 2 * len(self.plot_data))
         fig, axes = plt.subplots(len(self.plot_data), figsize=figsize, dpi=dpi)
@@ -117,6 +126,7 @@ class Plotter(object):
         return fig
 
     def save(self, file_name, log=None, figsize=None, legend_pos='manual', save_path=None):
+        """Save fig."""
         fig = self.makefig(figsize=figsize, legend_pos=legend_pos)
         if save_path is None:
             save_path = self.save_dir / (file_name + '.png')
@@ -129,12 +139,15 @@ class Plotter(object):
 
 
 class TensorboardPlotter(Plotter):
+    """Tensorboard Plotter."""
+
     def __init__(self, logger):
         self.logger = logger
         self.plot_data = []
         self.subplots = False
 
     def save(self, log_name):
+        """Save tensorboard."""
         fig = self.makefig(dpi=100)
         self.logger.record(log_name, Figure(fig, close=True), exclude=('stdout', 'log', 'json', 'csv'))
         plt.close(fig)
@@ -142,6 +155,8 @@ class TensorboardPlotter(Plotter):
 
 
 class BarPlot(object):
+    """Bar Plot."""
+
     def __init__(self):
         self.plot_data = defaultdict(lambda: defaultdict(dict))
         self.labels = set()
@@ -149,17 +164,20 @@ class BarPlot(object):
         self.subplot_metadata = dict()
 
     def add(self, top, bottom=0, group='group', label='label', subplot=0):
+        """Add plot."""
         self.plot_data[subplot][group][label] = (round(top - bottom, 2), round(bottom, 2))
         self.groups.add(group)
         self.labels.add(label)
 
     def configure_subplot(self, subplot, title, ylabel):
+        """Configure subplot."""
         self.subplot_metadata[subplot] = {
             'title': title,
             'ylabel': ylabel,
         }
 
     def save(self, *save_path):
+        """Save figure."""
         fig, axes = plt.subplots(len(self.plot_data), figsize=(len(list(self.groups)), 6 * len(self.plot_data)))
         if not isinstance(axes, np.ndarray):
             axes = [axes]

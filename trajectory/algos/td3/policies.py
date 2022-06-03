@@ -1,3 +1,4 @@
+"""Policies."""
 from typing import Any, Dict, List, Optional, Type, Union
 
 import gym
@@ -31,9 +32,11 @@ class FirstHalfFeatureExtractor(BaseFeaturesExtractor):
 
     @property
     def features_dim(self) -> int:
+        """Return features dim."""
         return self._features_dim
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
+        """Forward pass."""
         first_half, _ = th.split(observations, self._features_dim, dim=1)
         return first_half
 
@@ -41,6 +44,7 @@ class FirstHalfFeatureExtractor(BaseFeaturesExtractor):
 class CustomTD3Policy(BasePolicy):
     """
     Policy class (with both actor and critic) for TD3.
+
     :param observation_space: Observation space
     :param action_space: Action space
     :param lr_schedule: Learning rate schedule (could be constant)
@@ -158,14 +162,17 @@ class CustomTD3Policy(BasePolicy):
         return data
 
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> Actor:
+        """Make actor."""
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         return Actor(**actor_kwargs).to(self.device)
 
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> ContinuousCritic:
+        """Make critic."""
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         return ContinuousCritic(**critic_kwargs).to(self.device)
 
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+        """Forward pass."""
         return self._predict(observation, deterministic=deterministic)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:

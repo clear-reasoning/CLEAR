@@ -1,3 +1,4 @@
+"""Convert torch to tensorflow."""
 import argparse
 import json
 import os
@@ -31,6 +32,8 @@ if config['algorithm'] == '<class \'algos.ppo.ppo.PPO\'>':
     # now we need to pull the model out of stable baselines so that we can actually use it
 
     class Policy(nn.Module):
+        """Policy."""
+
         def __init__(self, baselines_model):
             super(Policy, self).__init__()
 
@@ -38,6 +41,7 @@ if config['algorithm'] == '<class \'algos.ppo.ppo.PPO\'>':
             self.action_net = baselines_model.policy.action_net
 
         def forward(self, in_vector):
+            """Forward."""
             # x : [av_speed, leader_speed, headway]
             x = torch.div(in_vector, torch.tensor([40.0, 40.0, 100.0]))
             x = self.mlp_extractor(x)

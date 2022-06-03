@@ -1,3 +1,4 @@
+"""Run controller on dataset."""
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -13,6 +14,8 @@ CONTROLLER_PATH = "./vandertest_controller.onnx"
 
 
 class DataLoader(object):
+    """Load data."""
+
     def __init__(self):
         self.trajectories = []
         for fp, data in self.get_raw_data():
@@ -31,15 +34,18 @@ class DataLoader(object):
             })
 
     def get_raw_data(self):
+        """Get raw data."""
         file_paths = list(Path(os.path.join(DATA_PATH)).glob('**/*.csv'))
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
 
     def get_all_trajectories(self):
+        """Get all trajectories."""
         random.shuffle(self.trajectories)
         return iter(self.trajectories)
 
     def get_trajectories(self, chunk_size=None, count=None):
+        """Get trajectories."""
         for _ in counter(count):
             traj = random.sample(self.trajectories, k=1)[0]
             if chunk_size is None:
@@ -71,8 +77,12 @@ ort_session = ort.InferenceSession(CONTROLLER_PATH)
 
 
 def get_accel(state):
-    # state is [av speed, leader speed, headway] (no normalization needed)
-    # output is instant acceleration to apply to the AV
+    """
+    Get requested acceleration.
+
+    state is [av speed, leader speed, headway] (no normalization needed)
+    output is instant acceleration to apply to the AV
+    """
     data = np.array([state]).astype(np.float32)
     outputs = ort_session.run(None, {ort_session.get_inputs()[0].name: data})
     return outputs[0][0][0]

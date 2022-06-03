@@ -1,8 +1,11 @@
+"""Acceleration-based controllers."""
 import numpy as np
 from trajectory.env.failsafes import safe_velocity
 
 
 class IDMController(object):
+    """IDM Controller."""
+
     def __init__(self, v0=45, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3):
         self.v0 = v0
         self.T = T
@@ -35,8 +38,8 @@ class IDMController(object):
         return accel
 
     def get_accel_without_noise(self):
-        """
-        Return the accel without applying any noise.
+        """Return the accel without applying any noise.
+
         Must be called after get_accel to updated result.
         """
         return self.accel_without_noise
@@ -82,7 +85,6 @@ class TimeHeadwayFollowerStopper(object):
 
     def get_accel(self, this_vel, lead_vel, headway, time_step):
         """See parent class."""
-
         dx = headway
         dv_minus = min(lead_vel - this_vel, 0)
 
@@ -112,8 +114,8 @@ class TimeHeadwayFollowerStopper(object):
         return self.accel
 
     def get_accel_without_noise(self):
-        """
-        Return the accel without applying any noise.
+        """Return the accel without applying any noise.
+
         Must be called after get_accel to updated result.
         """
         return self.accel

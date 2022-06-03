@@ -1,3 +1,4 @@
+"""Renderer."""
 import pygame
 import pandas as pd
 import time
@@ -5,6 +6,8 @@ import sys
 
 
 class Renderer:
+    """Renderer class."""
+
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode([1500, 500])
@@ -22,6 +25,7 @@ class Renderer:
         self.t0 = None
 
     def handle_events(self):
+        """Handle events."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -63,6 +67,7 @@ class Renderer:
                     pass
 
     def step(self, t, car_types, car_positions, car_speeds):
+        """Step forward."""
         self.time = t
         self.car_types = car_types
         self.car_positions = car_positions
@@ -74,6 +79,7 @@ class Renderer:
         self.handle_events()
 
     def render(self):
+        """Render."""
         self.screen.fill((255, 255, 255))
 
         img = self.font.render(f'Timestep: {round(self.timestep, 1)}s (commands: Left / Right) (0 = real time)', True, (0, 0, 0))

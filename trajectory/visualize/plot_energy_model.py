@@ -1,3 +1,4 @@
+"""Plot energy model."""
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -5,6 +6,7 @@ from trajectory.env.energy_models import PFM2019RAV4
 
 
 def main():
+    """Plot energy model."""
     speeds = np.arange(0, 30, 0.1)
     accels = np.arange(-3, 1.5, 0.05)
 

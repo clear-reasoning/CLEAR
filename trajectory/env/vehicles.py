@@ -1,3 +1,4 @@
+"""Vehicles."""
 from gym.spaces import Discrete
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
@@ -7,6 +8,8 @@ import bisect
 
 
 class Vehicle(object):
+    """Vehicle object."""
+
     def __init__(self, vid, controller, kind=None, tags=None,
                  pos=0, speed=0, accel=0,
                  length=5.0, max_accel=1.5, max_decel=3.0,
@@ -51,6 +54,7 @@ class Vehicle(object):
         assert (timestep is not None)
 
     def step(self, accel=None, ballistic=False, tse=None):
+        """Step forward."""
         if accel is not None:
             self.accel = accel
 
@@ -73,31 +77,37 @@ class Vehicle(object):
         return True
 
     def get_headway(self):
+        """Get headway."""
         if self.leader is None:
             return None
         return self.leader.pos - self.pos - self.length
 
     def get_time_headway(self):
+        """Get time headway."""
         if self.leader is None:
             return None
         return np.inf if self.speed == 0 else self.get_headway() / self.speed
 
     def get_leader_speed(self):
+        """Get leader speed."""
         if self.leader is None:
             return None
         return self.leader.speed
 
     def get_speed_difference(self):
+        """Get speed difference."""
         if self.leader is None:
             return None
         return self.speed - self.leader.speed
 
     def get_time_to_collision(self):
+        """Get time to collision."""
         if self.leader is None:
             return None
         return np.inf if self.get_speed_difference() <= 0 else self.get_headway() / self.get_speed_difference()
 
     def apply_failsafe(self, accel):
+        """Apply failsafe."""
         # TODO hardcoded max decel to be conservative
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
         v_next = self.speed + accel * self.dt
@@ -140,6 +150,31 @@ class Vehicle(object):
         index = bisect.bisect(self.get_segments(), self.pos)
 
         return self.get_segments()[index] - self.pos
+
+    def get_distance_to_next_segments(self, k=1):
+        """Return the distance to the next k segments."""
+        if self.get_segments() is None or k < 0:
+            return None
+
+        index = bisect.bisect(self.get_segments(), self.pos)
+        index = np.arange(index, min(len(self.get_segments()), index+k))
+        dists = [self.get_segments()[index[i]] - self.pos for i in range(len(index))]
+
+        return dists
+
+    def get_distance_to_previous_segments(self, k=1):
+        """Return the distance to the start of previous k segments.
+
+        Doesn't include current segment.
+        """
+        if self.get_segments() is None or k < 0:
+            return None
+
+        index = bisect.bisect(self.get_segments(), self.pos) - 1
+        index = np.arange(max(0, index-k), index)
+        dists = [self.get_segments()[index[i]] - self.pos for i in range(len(index))]
+
+        return dists
 
     def get_upstream_avg_speed(self, k=10):
         """Return traffic-state info of the k closest upstream segments.
@@ -206,12 +241,15 @@ class Vehicle(object):
 
 
 class IDMVehicle(Vehicle):
+    """IDM Vehicle."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.idm = IDMController(**self.controller_args)
 
     def step(self, accel=None, ballistic=False, tse=None):
+        """See parent."""
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
@@ -222,12 +260,15 @@ class IDMVehicle(Vehicle):
 
 
 class FSVehicle(Vehicle):
+    """Follower-Stopper Vehicle."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
 
     def step(self, accel=None, ballistic=False, tse=None):
+        """See parent."""
         self.fs.v_des = self.get_leader_speed()
 
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
@@ -240,6 +281,8 @@ class FSVehicle(Vehicle):
 
 
 class TrajectoryVehicle(Vehicle):
+    """Trajectory Vehicle."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -247,6 +290,7 @@ class TrajectoryVehicle(Vehicle):
         self.step()
 
     def step(self, accel=None, ballistic=False, tse=None):
+        """See parent."""
         traj_data = next(self.trajectory, None)
         if traj_data is None:
             return False
@@ -258,6 +302,8 @@ class TrajectoryVehicle(Vehicle):
 
 
 class RLVehicle(Vehicle):
+    """RL Vehicle."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -265,6 +311,7 @@ class RLVehicle(Vehicle):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel, large_gap_threshold=120):
+        """Set acceleration."""
         # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
         if self.get_headway() >= large_gap_threshold:
             # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
@@ -292,6 +339,8 @@ class RLVehicle(Vehicle):
 
 
 class FSWrappedRLVehicle(Vehicle):
+    """Follower-Stopper-wrapped RL Vehicle."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -299,6 +348,7 @@ class FSWrappedRLVehicle(Vehicle):
         self.fs.v_des = self.speed
 
     def step(self, accel=None, ballistic=False, tse=None):
+        """See parent."""
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = self.fs.get_accel_without_noise()
@@ -308,6 +358,7 @@ class FSWrappedRLVehicle(Vehicle):
         return super().step(accel=accel, ballistic=True, tse=tse)
 
     def set_vdes(self, vdes):
+        """Set v-des."""
         self.fs.v_des = vdes
 
 

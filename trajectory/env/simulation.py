@@ -1,3 +1,4 @@
+"""Simulation."""
 import json
 import os
 import bisect
@@ -15,12 +16,14 @@ import pandas as pd
 
 
 class Simulation(object):
+    """Simulation object."""
+
     def __init__(self,
                  timestep,
                  enable_lane_changing=True,
                  road_grade=None,
                  downstream_path=None):
-        """Simulation object
+        """Initialize simulation object.
 
         timestep: dt in seconds
         trajectory: ITERATOR yielding triples (position, speed, accel)
@@ -56,6 +59,7 @@ class Simulation(object):
         self.setup_grade_and_altitude_map(network=road_grade)
 
     def setup_grade_and_altitude_map(self, network='i24'):
+        """Set up grade and altitude map."""
         if network not in ['i24', 'i680']:
             if network is not None:
                 print(f"Network '{network}' does not exist. Setting all road grades to 0.")
@@ -84,27 +88,28 @@ class Simulation(object):
             self.altitude_bounds = altitude['bounds']
 
     def get_road_grade(self, veh):
-        # Return road grade in degrees
+        """Return road grade in degrees."""
         pos = self.get_data(veh, 'position')[-1]
         if pos < self.grade_bounds[0] or pos > self.grade_bounds[1]:
             return None
         return self.road_grade_map(pos)
 
     def get_altitude(self, veh):
-        # Return altitude in m
+        """Return altitude in m."""
         pos = self.get_data(veh, 'position')[-1]
         if pos < self.altitude_bounds[0] or pos > self.altitude_bounds[1]:
             return None
         return self.altitude_map(pos) / 3.2808
 
     def get_vehicles(self, controller=None):
+        """Get list of vehicles."""
         if controller is None:
             return self.vehicles
         else:
             return list(filter(lambda veh: veh.controller == controller, self.vehicles))
 
     def get_platoon(self, veh, k=5):
-        # Return the k vehicles behind veh or max num vehicles behind veh
+        """Return the k vehicles behind veh or max num vehicles behind veh."""
         platoon = []
         for _ in range(k):
             if (follower := veh.follower) is not None and follower.kind != 'av':
@@ -191,7 +196,7 @@ class Simulation(object):
         return veh
 
     def remove_vehicle(self, idx):
-        # update leader and follower pointers
+        """Update leader and follower pointers."""
         if idx > 0:
             self.vehicles[idx - 1].follower = self.vehicles[idx + 1] if idx + 1 < len(self.vehicles) else None
         if idx + 1 < len(self.vehicles):
@@ -201,6 +206,7 @@ class Simulation(object):
         self.vehicles.pop(idx)
 
     def run(self, num_steps=None):
+        """Run simulation."""
         running = True
         i = 0
         while running:
@@ -210,6 +216,7 @@ class Simulation(object):
                 running = False
 
     def handle_lane_changes(self):
+        """Handle lane changes."""
         # cut-in and cut-out probabilities (between 0 and 1) per 0.1s timestep
         def cutin_proba_fn(space_gap, leader_speed): return \
             (1.9e-2 + -8.975e-4 * space_gap + 1.002e-4 * space_gap * space_gap) / 100.0 if leader_speed <= 25.0 \
@@ -360,6 +367,7 @@ class Simulation(object):
         }
 
     def step(self, env):
+        """Step forward in time."""
         self.step_counter += 1
         self.time_counter += self.timestep
 
@@ -389,13 +397,16 @@ class Simulation(object):
         return return_status
 
     def add_data(self, veh, key, value):
+        """Add data."""
         self.data_by_vehicle[veh.name][key].append(value)
         # TODO(nl) add data by time as well
 
     def get_data(self, veh, key):
+        """Get data."""
         return self.data_by_vehicle[veh.name][key]
 
     def collect_data(self, vehicles=None):
+        """Collect data."""
         if vehicles is None:
             vehicles = self.vehicles
         for veh in vehicles:

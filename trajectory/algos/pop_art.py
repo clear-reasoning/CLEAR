@@ -1,3 +1,4 @@
+"""Pop art."""
 import math
 import numpy as np
 import torch
@@ -6,6 +7,7 @@ import torch.nn.functional as F
 
 
 class PopArt(torch.nn.Module):
+    """Pop Art."""
 
     def __init__(self, input_shape, output_shape, norm_axes=1, beta=0.99999, epsilon=1e-5, device=torch.device("cpu")):
 
@@ -30,6 +32,7 @@ class PopArt(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
+        """Reset parameters."""
         torch.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
             fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(self.weight)
@@ -40,6 +43,7 @@ class PopArt(torch.nn.Module):
         self.debiasing_term.zero_()
 
     def forward(self, input_vector):
+        """Forward."""
         if isinstance(input_vector, np.ndarray):
             input_vector = torch.from_numpy(input_vector)
         input_vector = input_vector.to(**self.tpdv)
@@ -48,6 +52,7 @@ class PopArt(torch.nn.Module):
 
     @torch.no_grad()
     def update(self, input_vector):
+        """Update."""
         if isinstance(input_vector, np.ndarray):
             input_vector = torch.from_numpy(input_vector)
         input_vector = input_vector.to(**self.tpdv)
@@ -67,12 +72,14 @@ class PopArt(torch.nn.Module):
         self.bias = (old_stddev * self.bias + old_mean - self.mean) / self.stddev
 
     def debiased_mean_var(self):
+        """Return debiased mean variance."""
         debiased_mean = self.mean / self.debiasing_term.clamp(min=self.epsilon)
         debiased_mean_sq = self.mean_sq / self.debiasing_term.clamp(min=self.epsilon)
         debiased_var = (debiased_mean_sq - debiased_mean ** 2).clamp(min=1e-2)
         return debiased_mean, debiased_var
 
     def normalize(self, input_vector):
+        """Normalize."""
         if isinstance(input_vector, np.ndarray):
             input_vector = torch.from_numpy(input_vector)
         input_vector = input_vector.to(**self.tpdv)
@@ -83,6 +90,7 @@ class PopArt(torch.nn.Module):
         return out
 
     def denormalize(self, input_vector):
+        """Denormalize."""
         if isinstance(input_vector, np.ndarray):
             input_vector = torch.from_numpy(input_vector)
         input_vector = input_vector.to(**self.tpdv)

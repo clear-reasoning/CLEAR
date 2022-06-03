@@ -1,3 +1,4 @@
+"""Failsafes."""
 import math
 import numpy as np
 
@@ -65,7 +66,6 @@ def valid_brake_distance(speed, max_deaccel, sim_step):
     float
         the distance required to stop
     """
-
     # how much we can reduce the speed in each timestep
     speedReduction = max_deaccel * sim_step
     # how many steps to get the speed to zero

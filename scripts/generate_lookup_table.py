@@ -1,4 +1,5 @@
-"""
+"""Generate lookup table.
+
 Instructions:
 
 Setup the 9 parameters below (bounds and discretization steps)
@@ -77,7 +78,7 @@ if True:
 
 
 def get_accel(ego_speed, leader_speed, space_gap):
-    # return the acceleration output of your controller
+    """Return the acceleration output of your controller."""
     # the following code is for the RL controller
     state = np.array([ego_speed / 40.0, leader_speed / 40.0, space_gap / 100.0] + ([0] * n_vf_states))
     return model.predict(state, deterministic=True)[0][0]
