@@ -34,6 +34,7 @@ DEFAULT_ENV_CONFIG = {
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
     'accel_penalty': 0.2,
+    'penalize_energy': 1,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
@@ -257,7 +258,8 @@ class TrajectoryEnv(gym.Env):
             reward -= 50
 
         # penalize instant energy consumption for the AV or AV + platoon
-        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+        if self.penalize_energy:
+            reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
                            for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
