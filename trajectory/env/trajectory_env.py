@@ -251,7 +251,8 @@ class TrajectoryEnv(gym.Env):
 
     def reward_function(self, av, action):
         # reward should be positive, otherwise controller would learn to crash
-        reward = 1
+        # reward = 1
+        reward = 0
 
         # crash penalty
         if av.get_headway() < 0:
@@ -263,7 +264,7 @@ class TrajectoryEnv(gym.Env):
                            for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
-        reward -= self.accel_penalty * abs(action)
+        reward -= self.accel_penalty * (action ** 2)
 
         return reward
 
