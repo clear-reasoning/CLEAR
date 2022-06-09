@@ -34,6 +34,7 @@ DEFAULT_ENV_CONFIG = {
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
     'accel_penalty': 0.2,
+    'intervention_penalty': 0,
     'penalize_energy': 1,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
@@ -265,6 +266,11 @@ class TrajectoryEnv(gym.Env):
 
         # penalize acceleration amplitude
         reward -= self.accel_penalty * (action ** 2)
+
+        gap_closing = av.get_headway() > self.max_headway
+        failsafe = av.accel_no_noise_no_failsafe != av.accel_no_noise_with_failsafe
+        if gap_closing or failsafe:
+            reward -= self.accel_penalty * self.intervention_penalty
 
         return reward
 

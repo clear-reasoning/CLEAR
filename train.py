@@ -123,6 +123,9 @@ def parse_args_train():
                         help='Sets the time to collision below which we get penalized.')
     parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
                         help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
+    parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
+                        help='Factor to multiply accel_penalty to determine gap closing / failsafe penalty to'
+                             'discourages use of these interventions')
     parser.add_argument('--env_penalize_energy', type=int, default=1, nargs='+',
                         help='If true, penalize energy in the reward function')
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
@@ -166,6 +169,7 @@ def run_experiment(config):
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
         'accel_penalty': config['env_accel_penalty'],
+        'intervention_penalty': config['env_intervention_penalty'],
         'penalize_energy': config['env_penalize_energy'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
