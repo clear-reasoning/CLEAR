@@ -79,7 +79,7 @@ def run_eval(env_config, traj_dir):
         platoon_ids = []
         veh_ids = df['id'].unique()
         for av_id in [vid for vid in veh_ids if 'av' in vid]:
-            platoon_ids.append(av_id)
+            #platoon_ids.append(av_id)
             av_num = av_id.split('_')[0]
             for i in range(5):
                 follower_num = int(av_num) + 1 + i
