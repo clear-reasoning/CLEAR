@@ -22,6 +22,7 @@ from trajectory.algos.td3.policies import CustomTD3Policy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
+import wandb
 
 register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
@@ -42,6 +43,8 @@ def parse_args_train():
     parser.add_argument('--s3', default=False, action='store_true',
                         help='If set, experiment data will be uploaded to s3://trajectory.env/. '
                              'AWS credentials must have been set in ~/.aws in order to use this.')
+    parser.add_argument('--wandb', default=False, action='store_true',
+                        help='If set, log experiment data in WandB')
 
     parser.add_argument('--iters', type=int, default=1, nargs='+',
                         help='Number of iterations (rollouts) to train for.'
@@ -263,7 +266,7 @@ def run_experiment(config):
         'env': multi_env,
         'tensorboard_log': gs_logdir,
         'verbose': 0,  # 0 no output, 1 info, 2 debug
-        'seed': None,  # only concerns PPO and not the environment
+        # 'seed': None,  # only concerns PPO and not the environment
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
         'policy': policy,
     })
@@ -283,9 +286,21 @@ def run_experiment(config):
     }
     dict_to_json(configs, gs_logdir / 'configs.json')
 
+    if config['wandb']:
+        run = wandb.init(
+            config=configs,
+            group=config['exp_logdir'].name,
+            reinit=True,
+            sync_tensorboard=True,
+            project="TrajectoryTraining"
+        )
+
     # create model and start training
     model = algorithm(**train_config)
     model.learn(**learn_config)
+
+    if config['wandb']:
+        run.finish()
 
 
 if __name__ == '__main__':
@@ -374,6 +389,10 @@ if __name__ == '__main__':
         # cf. https://discuss.pytorch.org/t/running-pytorch-models-in-different-processes/21638/2
         os.environ['OMP_NUM_THREADS'] = '1'
         os.environ['MKL_NUM_THREADS'] = '1'
+
+        if configs[0]['wandb']:
+            wandb.require("service")
+            wandb.setup()
 
         # run experiments in independent processes
         with multiprocessing.Pool(processes=(n := fixed_config['n_processes'])) as pool:
