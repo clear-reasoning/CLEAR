@@ -395,6 +395,7 @@ if __name__ == '__main__':
         os.environ['MKL_NUM_THREADS'] = '1'
 
         if configs[0]['wandb']:
+            # Let wandb know that it is running in multiple processes to avoid errors
             wandb.require("service")
             wandb.setup()
 
