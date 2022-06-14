@@ -119,7 +119,7 @@ class Vehicle(object):
 
     def get_segments(self):
         """Return the starting position of every segment whose macroscopic state is approximated."""
-        return self._tse["segments"]
+        return self._tse["segments"] if self._tse else None
 
     def get_avg_speed(self):
         """Return a tuple of traffic state estimation data.
