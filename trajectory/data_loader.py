@@ -23,9 +23,9 @@ DT = 0.1
 class DataLoader(object):
     """Data loader."""
 
-    def __init__(self, positions_from_speeds=True):
+    def __init__(self, positions_from_speeds=True, traj_dir=None):
         self.trajectories = []
-        for fp, data in self.get_raw_data():
+        for fp, data in self.get_raw_data(traj_dir):
             # Values for the I-680 are in m/s, while those for the I-24 appear
             # to be in km/hr.
             scale = 1. if "i680" in str(fp) else 3.6
@@ -48,16 +48,20 @@ class DataLoader(object):
                 'accelerations': np.array(data['Acceleration'])
             })
 
-    def get_raw_data(self):
+    def get_raw_data(self, traj_dir):
         """Get raw data."""
-        # Add eastbound and westbound I-24 trajectories.
-        file_paths = \
-            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
-            list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))
+        if traj_dir:
+            # Add trajectories from specified directory
+            file_paths = list(Path(opj(tc.PROJECT_PATH, traj_dir)).glob('*/trajectory.csv'))
+        else:
+            # Add eastbound and westbound I-24 trajectories.
+            file_paths = \
+                list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_west')).glob('*/trajectory.csv')) + \
+                list(Path(opj(tc.PROJECT_PATH, 'dataset/data_v2_preprocessed_east')).glob('*/trajectory.csv'))
 
-        # Add I-680 trajectories (if available).
-        if os.path.isdir(opj(tc.PROJECT_PATH, 'dataset/i680')):
-            file_paths += list(Path(opj(tc.PROJECT_PATH, 'dataset/i680')).glob('*/trajectory.csv'))
+            # Add I-680 trajectories (if available).
+            if os.path.isdir(opj(tc.PROJECT_PATH, 'dataset/i680')):
+                file_paths += list(Path(opj(tc.PROJECT_PATH, 'dataset/i680')).glob('*/trajectory.csv'))
 
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)

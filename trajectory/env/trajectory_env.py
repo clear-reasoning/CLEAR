@@ -51,6 +51,8 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
     # set to use one specific trajectory
     'fixed_traj_path': None,
+    # set to use one specific set of trajectories
+    'traj_dir': None,
     # enable lane changing
     'lane_changing': True,
     # enable road grade in energy function
@@ -95,7 +97,7 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         # instantiate generator of dataset trajectories
-        self.data_loader = DataLoader()
+        self.data_loader = DataLoader(traj_dir=self.traj_dir)
 
         chunk_size = None if self.whole_trajectory else self.horizon
         self.trajectories = self.data_loader.get_trajectories(
