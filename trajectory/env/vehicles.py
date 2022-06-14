@@ -423,11 +423,33 @@ class AvVehicle(Vehicle):
         return safe_accel
 
     def get_base_state(self):
-        return [
+        state = [
             self.speed / 40.0,
             self.leader.speed / 40.0,
             self.get_headway() / 100.0,
         ]
+
+        if self.config['env_config']['downstream']:
+            num_segments = self.config['env_config']['downstream_num_segments']
+            downstream_speeds = self.get_downstream_avg_speed(k=num_segments)
+            downstream_distances = self.get_distance_to_next_segments(k=num_segments)
+
+            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+            if downstream_speeds and downstream_distances:
+                downstream_speeds = downstream_speeds[1]
+                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+            # for the segments that TSE info is available
+            for i in range(downstream_obs):
+                state.append(downstream_speeds[i] / 40.0)
+                state.append(downstream_distances[i] / 5000.0)
+
+            # for segments where TSE info is not available
+            for i in range(downstream_obs, num_segments):
+                state.append(-1.0)
+                state.append(-1.0)
+
+        return state
 
     def get_state(self):
         new_state = self.get_base_state()

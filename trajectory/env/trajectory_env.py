@@ -16,7 +16,6 @@ from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
-
 # env params that will be used except for params explicitly set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
@@ -33,6 +32,9 @@ DEFAULT_ENV_CONFIG = {
     # if we get closer then this time headway we are forced to break with maximum decel
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
+    'accel_penalty': 0.2,
+    'intervention_penalty': 0,
+    'penalize_energy': 1,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
     'num_concat_states': 1,
@@ -48,12 +50,18 @@ DEFAULT_ENV_CONFIG = {
     'human_kwargs': '{}',
     # set to use one specific trajectory
     'fixed_traj_path': None,
+    # set to use one specific set of trajectories
+    'traj_dir': None,
     # enable lane changing
     'lane_changing': True,
     # enable road grade in energy function
     'road_grade': '',
     # set size of platoon for observation
     'platoon_size': 5,
+    # whether to add downstream speeds to state / use them
+    'downstream': False,
+    # how many segments of downstream info to add to state
+    'downstream_num_segments': 10
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -88,7 +96,7 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         # instantiate generator of dataset trajectories
-        self.data_loader = DataLoader()
+        self.data_loader = DataLoader(traj_dir=self.traj_dir)
 
         chunk_size = None if self.whole_trajectory else self.horizon
         self.trajectories = self.data_loader.get_trajectories(
@@ -155,6 +163,29 @@ class TrajectoryEnv(gym.Env):
             'headway': (av.get_headway(), 100.0),
         }
 
+        if self.downstream:
+            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments)
+            downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+
+            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+            if downstream_speeds and downstream_distances:
+                downstream_speeds = downstream_speeds[1]
+                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+            # for the segments that TSE info is available
+            for i in range(downstream_obs):
+                state.update({
+                    f"seg_{i}_speed": (downstream_speeds[i], 40.0),
+                    f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+                })
+
+            # for segments where TSE info is not available
+            for i in range(downstream_obs, self.downstream_num_segments):
+                state.update({
+                    f"seg_{i}_speed": (-1.0, 1.0),
+                    f"seg_{i}_dist": (-1.0, 1.0)
+                })
+
         return state
 
     def get_base_additional_vf_state(self):
@@ -166,7 +197,8 @@ class TrajectoryEnv(gym.Env):
         vf_state = {
             'time': (self.sim.step_counter, self.horizon),
             'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
-            'avg_gallons': (np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
+            'avg_gallons': (
+                np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
         }
 
         return vf_state
@@ -177,8 +209,9 @@ class TrajectoryEnv(gym.Env):
 
         state = {
             'platoon_speed': np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in platoon]),
-            'platoon_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1] for veh in platoon]) /
-            np.sum([self.sim.get_data(veh, 'total_gallons')[-1] for veh in platoon])
+            'platoon_mpg':
+                np.sum([self.sim.get_data(veh, 'total_miles')[-1] for veh in platoon]) /
+                np.sum([self.sim.get_data(veh, 'total_gallons')[-1] for veh in platoon])
         }
         return state
 
@@ -222,18 +255,25 @@ class TrajectoryEnv(gym.Env):
 
     def reward_function(self, av, action):
         # reward should be positive, otherwise controller would learn to crash
-        reward = 1
+        # reward = 1
+        reward = 0
 
         # crash penalty
         if av.get_headway() < 0:
             reward -= 50
 
         # penalize instant energy consumption for the AV or AV + platoon
-        reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
-                           for veh in self.mpg_cars]) / 10.0
+        if self.penalize_energy:
+            reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+                               for veh in self.mpg_cars]) / 10.0
 
         # penalize acceleration amplitude
-        reward -= 0.2 * abs(action)
+        reward -= self.accel_penalty * (action ** 2)
+
+        gap_closing = av.get_headway() > self.max_headway
+        failsafe = av.accel_no_noise_no_failsafe != av.accel_no_noise_with_failsafe
+        if gap_closing or failsafe:
+            reward -= self.accel_penalty * self.intervention_penalty
 
         return reward
 
@@ -267,7 +307,9 @@ class TrajectoryEnv(gym.Env):
             self.platoon = PLATOON_PRESETS[self.platoon]
 
         # replace (subplatoon)*n into subplatoon ... subplatoon (n times)
-        def replace1(match): return ' '.join([match.group(1)] * int(match.group(2)))
+        def replace1(match):
+            return ' '.join([match.group(1)] * int(match.group(2)))
+
         self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
         # parse veh#tag1...#tagk*n into (veh, [tag1, ..., tagk], n)
         self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
@@ -321,7 +363,8 @@ class TrajectoryEnv(gym.Env):
             for av, action in zip(self.avs, actions):
                 accel = self.action_set[action] if self.discrete else float(action)
                 metrics['rl_controller_accel'] = accel
-                accel = av.set_accel(accel, large_gap_threshold=self.max_headway)  # returns accel with gap-closing and failsafe applied
+                accel = av.set_accel(accel,
+                                     large_gap_threshold=self.max_headway)  # returns accel with gap-closing and failsafe applied
                 metrics['rl_processed_accel'] = accel
         elif self.av_controller == 'rl_fs':
             # RL with FS wrapper
@@ -365,12 +408,12 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
-            self.collected_rollout['system'].append({'avg_mpg': np.sum([self.sim.get_data(veh, 'total_miles')[-1]
-                                                                        for veh in self.sim.vehicles]) /
-                                                     np.sum([self.sim.get_data(veh, 'total_gallons')[-1]
-                                                             for veh in self.sim.vehicles]),
-                                                     'speed': np.mean([self.sim.get_data(veh, 'speed')[-1]
-                                                                      for veh in self.sim.vehicles])})
+            self.collected_rollout['system'].append({
+                'avg_mpg':
+                    np.sum([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.sim.vehicles]) /
+                    np.sum([self.sim.get_data(veh, 'total_gallons')[-1] for veh in self.sim.vehicles]),
+                'speed':
+                    np.mean([self.sim.get_data(veh, 'speed')[-1] for veh in self.sim.vehicles])})
             self.collected_rollout['lane_changes'].append({
                 'n_cutins': self.sim.n_cutins,
                 'n_cutouts': self.sim.n_cutouts,
@@ -394,7 +437,8 @@ class TrajectoryEnv(gym.Env):
         """Get collected rollout."""
         return self.collected_rollout
 
-    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False, additional_metadata={}):
+    def gen_emissions(self, emissions_path='emissions', upload_to_leaderboard=True, large_tsd=False,
+                      additional_metadata={}):
         """Generate emissions output."""
         # create emissions dir if it doesn't exist
         if emissions_path is None:
@@ -484,8 +528,10 @@ class TrajectoryEnv(gym.Env):
             self.emissions['realized_accel'] = self.emissions['realized_accel']
             self.emissions['target_accel_with_noise_with_failsafe'] = self.emissions['accel']
             self.emissions['target_accel_no_noise_no_failsafe'] = self.emissions['target_accel_no_noise_no_failsafe']
-            self.emissions['target_accel_with_noise_no_failsafe'] = self.emissions['target_accel_with_noise_no_failsafe']
-            self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions['target_accel_no_noise_with_failsafe']
+            self.emissions['target_accel_with_noise_no_failsafe'] = self.emissions[
+                'target_accel_with_noise_no_failsafe']
+            self.emissions['target_accel_no_noise_with_failsafe'] = self.emissions[
+                'target_accel_no_noise_with_failsafe']
             self.emissions['source_id'] = [source_id] * len(self.emissions['x'])
             self.emissions['run_id'] = ['run_0'] * len(self.emissions['x'])
             self.emissions['submission_date'] = [date_now] * len(self.emissions['x'])

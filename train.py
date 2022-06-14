@@ -22,6 +22,7 @@ from trajectory.algos.td3.policies import CustomTD3Policy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
+import wandb
 
 register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
@@ -42,6 +43,8 @@ def parse_args_train():
     parser.add_argument('--s3', default=False, action='store_true',
                         help='If set, experiment data will be uploaded to s3://trajectory.env/. '
                              'AWS credentials must have been set in ~/.aws in order to use this.')
+    parser.add_argument('--wandb', default=False, action='store_true',
+                        help='If set, log experiment data in WandB')
 
     parser.add_argument('--iters', type=int, default=1, nargs='+',
                         help='Number of iterations (rollouts) to train for.'
@@ -87,7 +90,8 @@ def parse_args_train():
                         help='Discount factor.')
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
                         help='Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
-
+    parser.add_argument('--seed', type=int, default=None, nargs='+',
+                        help='PPO seed, random if not specified')
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
                         help='If true, the value function will be augmented with some additional states.')
 
@@ -95,6 +99,9 @@ def parse_args_train():
     parser.add_argument('--traj_path', type=str,
                         default=None,
                         help='Set to train on a specific trajectory (eg dataset/data_v2_preprocessed_west/path/traj.csv).')
+    parser.add_argument('--traj_dir', type=str,
+                        default=None,
+                        help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                              'This works only for the base states and not for the additional vf states.')
@@ -121,13 +128,23 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
                         help='Sets the time to collision below which we get penalized.')
-
+    parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
+                        help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
+    parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
+                        help='Factor to multiply accel_penalty to determine gap closing / failsafe penalty to'
+                             'discourages use of these interventions')
+    parser.add_argument('--env_penalize_energy', type=int, default=1, nargs='+',
+                        help='If true, penalize energy in the reward function')
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
                              '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
                              'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
+    parser.add_argument('--env_downstream', default=False, action='store_true',
+                        help='If set, adds downstream speed information to the base state.')
+    parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
+                        help='If downstream is set, average speed and distance to this many segments is added to state.')
     parser.add_argument('--no_lc', default=False, action='store_true',
                         help='If set, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
@@ -158,15 +175,21 @@ def run_experiment(config):
         'augment_vf': config['augment_vf'],
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
+        'accel_penalty': config['env_accel_penalty'],
+        'intervention_penalty': config['env_intervention_penalty'],
+        'penalize_energy': config['env_penalize_energy'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
         'num_concat_states_large': config['env_num_concat_states_large'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
+        'downstream': config['env_downstream'],
+        'downstream_num_segments': config['env_downstream_num_segments'],
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
         'fixed_traj_path': config['traj_path'],
+        'traj_dir': config['traj_dir']
     })
 
     # create env
@@ -215,6 +238,7 @@ def run_experiment(config):
             'n_epochs': config['n_epochs'],
             'gamma': config['gamma'],
             'gae_lambda': config['gae_lambda'],
+            'seed': config['seed'],
             'clip_range': 0.2,
             'clip_range_vf': 50,
             'ent_coef': 0.0,
@@ -246,7 +270,7 @@ def run_experiment(config):
         'env': multi_env,
         'tensorboard_log': gs_logdir,
         'verbose': 0,  # 0 no output, 1 info, 2 debug
-        'seed': None,  # only concerns PPO and not the environment
+        # 'seed': None,  # only concerns PPO and not the environment
         'device': 'cpu',  # 'cpu', 'cuda', 'auto'
         'policy': policy,
     })
@@ -266,9 +290,21 @@ def run_experiment(config):
     }
     dict_to_json(configs, gs_logdir / 'configs.json')
 
+    if config['wandb']:
+        run = wandb.init(
+            config=configs,
+            group=config['exp_logdir'].name,
+            reinit=True,
+            sync_tensorboard=True,
+            project="TrajectoryTraining"
+        )
+
     # create model and start training
     model = algorithm(**train_config)
     model.learn(**learn_config)
+
+    if config['wandb']:
+        run.finish()
 
 
 if __name__ == '__main__':
@@ -357,6 +393,11 @@ if __name__ == '__main__':
         # cf. https://discuss.pytorch.org/t/running-pytorch-models-in-different-processes/21638/2
         os.environ['OMP_NUM_THREADS'] = '1'
         os.environ['MKL_NUM_THREADS'] = '1'
+
+        if configs[0]['wandb']:
+            # Let wandb know that it is running in multiple processes to avoid errors
+            wandb.require("service")
+            wandb.setup()
 
         # run experiments in independent processes
         with multiprocessing.Pool(processes=(n := fixed_config['n_processes'])) as pool:

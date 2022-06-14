@@ -120,7 +120,7 @@ def save_logs(exp_dir):
 
 def simulate(args, cp_path=None, select_policy=False, df=None):
     assert args.human_controller in ['idm', 'fs']
-    assert args.av_controller in ['rl', 'idm', 'fs']
+    assert args.av_controller in ['rl', 'idm', 'fs', 'av']
 
     assert args.data_pipeline is None or args.n_runs == 1
 
