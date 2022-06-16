@@ -125,6 +125,7 @@ if __name__ == '__main__':
     # parse args
     args = parse_args()
     logdir = Path(args.logdir)
+    print("Evaluating all checkpoints in", logdir)
 
     # If running eval on all sweeps of a run
     if (logdir / "params.json").exists():
@@ -155,7 +156,6 @@ if __name__ == '__main__':
         latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
         rl_paths.append((config_path, latest_cp_path))
 
-    print("Evaluating the following checkpoints", rl_paths)
     metrics = defaultdict(dict)
 
     EVAL_TRAJECTORIES = []
