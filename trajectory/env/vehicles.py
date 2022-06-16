@@ -481,7 +481,7 @@ class AvVehicle(Vehicle):
         self.step_counter += 1
 
         # Only use RL after pos is 0, use IDM before
-        if self.pos > 0:
+        if self.pos >= 0:
             # get action from model
             action = self.get_action(self.get_state())
             accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
