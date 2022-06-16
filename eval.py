@@ -19,7 +19,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate controllers in an experiment logdir.')
 
     parser.add_argument('--logdir', type=str, required=True,
-                        help='Experiment logdir (eg. log/09May22/test_18h42m04s)')
+                        help='Experiment logdir (eg. log/09May22/test_18h42m0gamma4s) OR '
+                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/')
     parser.add_argument('--n_cpus', type=int, default=1,
                         help='Set to the number of parallel processes you wish to run.')
 
@@ -123,12 +124,39 @@ if __name__ == '__main__':
 
     # parse args
     args = parse_args()
-    exp_dir = Path(args.logdir)
+    logdir = Path(args.logdir)
 
-    # create an eval folder within the exp logdir
-    eval_dir = exp_dir / 'eval'
-    eval_dir.mkdir()
+    # If running eval on all sweeps of a run
+    if (logdir / "params.json").exists():
+        exp_dir = logdir
+        # create an eval folder within the exp logdir
+        eval_dir = exp_dir / 'eval'
+        eval_dir.mkdir()
+        config_paths = exp_dir.rglob('configs.json')
+    # If running eval on a specific sweep
+    elif (logdir / "configs.json").exists():
+        exp_dir = logdir.parent
+        # create an eval folder within the sweep logdir
+        eval_dir = logdir / 'eval'
+        eval_dir.mkdir()
+        config_paths = [logdir / "configs.json"]
+    else:
+        raise ValueError("Invalid logdir", logdir)
+
     print('>', eval_dir)
+
+    rl_paths = []
+    # get all grid searches
+    for config_path in config_paths:
+        # find latest checkpoint
+        checkpoints_path = config_path.parent / 'checkpoints'
+        cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
+        latest_cp_number = sorted(cp_numbers)[-1]
+        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        rl_paths.append((config_path, latest_cp_path))
+
+    print("Evaluating the following checkpoints", rl_paths)
+    metrics = defaultdict(dict)
 
     EVAL_TRAJECTORIES = []
     if args.trajectories == 'one_traj':
@@ -144,18 +172,6 @@ if __name__ == '__main__':
         print("Evaluating on trajectories in the following directories:", paths[args.trajectories])
         for path in paths[args.trajectories]:
             EVAL_TRAJECTORIES += list(Path(opj(tc.PROJECT_PATH, path)).glob('*/trajectory.csv'))
-
-    # get all grid searches
-    rl_paths = []
-    for config_path in exp_dir.rglob('configs.json'):
-        # find latest checkpoint
-        checkpoints_path = config_path.parent / 'checkpoints'
-        cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
-        latest_cp_number = sorted(cp_numbers)[-1]
-        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
-        rl_paths.append((config_path, latest_cp_path))
-
-    metrics = defaultdict(dict)
 
     # for each eval trajectory
     for eval_traj in EVAL_TRAJECTORIES:
