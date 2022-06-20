@@ -145,8 +145,8 @@ def parse_args_train():
                         help='If set, adds downstream speed information to the base state.')
     parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
-    parser.add_argument('--no_lc', default=False, action='store_true',
-                        help='If set, disables the lane-changing model.')
+    parser.add_argument('--no_lc', type=int, default=0, nargs='+',
+                        help='If set to 1, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
                         help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
     parser.add_argument('--platoon_size', type=int, default=5,
