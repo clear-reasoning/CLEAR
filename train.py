@@ -122,8 +122,11 @@ def parse_args_train():
                         help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
     parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
                         help='Sets the training horizon.')
+    # Effective max headway is the higher value of max_headway and leader.speed * max_time_headway
     parser.add_argument('--env_max_headway', type=int, default=120, nargs='+',
-                        help='Sets the headway above which we get penalized.')
+                        help='Sets the maximum permitted headway')
+    parser.add_argument('--env_max_time_headway', type=int, default=0, nargs='+',
+                        help='Sets the maximum permitted time headway')
     parser.add_argument('--env_minimal_time_headway', type=float, default=1.0, nargs='+',
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
@@ -167,6 +170,7 @@ def run_experiment(config):
     env_config.update({
         'horizon': config['env_horizon'],
         'max_headway': config['env_max_headway'],
+        'max_time_headway': config['env_max_time_headway'],
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
         'min_accel': config['env_min_accel'],

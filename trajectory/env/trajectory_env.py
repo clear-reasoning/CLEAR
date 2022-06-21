@@ -21,6 +21,7 @@ DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
     'min_headway': 10.0,
     'max_headway': 120.0,
+    'max_time_headway': 0.0,
     'whole_trajectory': False,
     'discrete': False,
     'num_actions': 7,
@@ -270,7 +271,7 @@ class TrajectoryEnv(gym.Env):
         # penalize acceleration amplitude
         reward -= self.accel_penalty * (action ** 2)
 
-        gap_closing = av.get_headway() > self.max_headway
+        gap_closing = av.get_headway() > max(self.max_headway, self.max_time_headway * av.leader.speed)
         failsafe = av.accel_no_noise_no_failsafe != av.accel_no_noise_with_failsafe
         if gap_closing or failsafe:
             reward -= self.accel_penalty * self.intervention_penalty
@@ -363,8 +364,8 @@ class TrajectoryEnv(gym.Env):
             for av, action in zip(self.avs, actions):
                 accel = self.action_set[action] if self.discrete else float(action)
                 metrics['rl_controller_accel'] = accel
-                accel = av.set_accel(accel,
-                                     large_gap_threshold=self.max_headway)  # returns accel with gap-closing and failsafe applied
+                accel = av.set_accel(accel, large_gap_threshold=max(self.max_headway,
+                                                                    self.max_time_headway * av.leader.speed))
                 metrics['rl_processed_accel'] = accel
         elif self.av_controller == 'rl_fs':
             # RL with FS wrapper
