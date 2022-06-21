@@ -119,7 +119,7 @@ class Vehicle(object):
 
     def get_segments(self):
         """Return the starting position of every segment whose macroscopic state is approximated."""
-        return self._tse["segments"]
+        return self._tse["segments"] if self._tse else None
 
     def get_avg_speed(self):
         """Return a tuple of traffic state estimation data.
@@ -306,24 +306,32 @@ class RLVehicle(Vehicle):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.idm = IDMController()
 
     def step(self, accel=None, ballistic=False, tse=None):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel, large_gap_threshold=120):
         """Set acceleration."""
-        # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
-        if self.get_headway() >= large_gap_threshold:
-            # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
-            # accel_gap_closing = 0.5 * gap_over_threshold / 100.0
-            accel_gap_closing = 1.0
-            # maxed with controller accel (can go faster than hardcoded)
-            accel = max(accel, accel_gap_closing)
+        # If position < 0, use IDM instead of RL accel
+        if self.pos < 0:
+            self.accel_with_noise_no_failsafe = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+            self.accel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
+            self.accel_no_noise_with_failsafe = IDMVehicle.apply_failsafe(self, self.accel_no_noise_no_failsafe)
+            self.accel = self.accel_no_noise_with_failsafe
+        else:
+            # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
+            if self.get_headway() >= large_gap_threshold:
+                # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
+                # accel_gap_closing = 0.5 * gap_over_threshold / 100.0
+                accel_gap_closing = 1.0
+                # maxed with controller accel (can go faster than hardcoded)
+                accel = max(accel, accel_gap_closing)
 
-        self.accel_with_noise_no_failsafe = accel
-        self.accel_no_noise_no_failsafe = accel
-        self.accel = self.apply_failsafe(accel)
-        self.accel_no_noise_with_failsafe = self.accel
+            self.accel_with_noise_no_failsafe = accel
+            self.accel_no_noise_no_failsafe = accel
+            self.accel = self.apply_failsafe(accel)
+            self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
     def apply_failsafe(self, accel):
@@ -399,6 +407,7 @@ class AvVehicle(Vehicle):
         n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
         self.states = np.zeros(n_states)
         self.step_counter = 0
+        self.idm = IDMController()  # Instantiate IDM controller for use when self.pos < 0
 
         # retrieve algorithm
         alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", self.config['algorithm']).group(1, 2)
@@ -464,22 +473,27 @@ class AvVehicle(Vehicle):
             index2 = index + self.num_concat_states_large * self.n_base_states
             if self.step_counter % 10 == 0:
                 self.states[index:index2] = np.roll(self.states[index:index2], self.n_base_states)
-                self.states[index:index+self.n_base_states] = new_state
+                self.states[index:index + self.n_base_states] = new_state
 
         return self.states
 
     def step(self, accel=None, ballistic=False, tse=None):
         self.step_counter += 1
 
-        # get action from model
-        action = self.get_action(self.get_state())
-        accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
+        # Only use RL after pos is 0, use IDM before
+        if self.pos >= 0:
+            # get action from model
+            action = self.get_action(self.get_state())
+            accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
 
-        # hardcoded gap closing
-        if self.get_headway() > self.max_headway:
-            accel = 1.0
+            # hardcoded gap closing
+            if self.get_headway() > self.max_headway:
+                accel = 1.0
 
-        # failsafe
-        accel = self.apply_failsafe(accel)
+            # failsafe
+            accel = self.apply_failsafe(accel)
+        else:
+            accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+            accel = IDMVehicle.apply_failsafe(self, accel)
 
         return super().step(accel=accel, ballistic=True, tse=tse)

@@ -11,15 +11,26 @@ from collections import defaultdict
 import prettytable
 import multiprocessing
 from itertools import repeat
+from os.path import join as opj
+import trajectory.config as tc
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate controllers in an experiment logdir.')
 
     parser.add_argument('--logdir', type=str, required=True,
-                        help='Experiment logdir (eg. log/09May22/test_18h42m04s)')
+                        help='Experiment logdir (eg. log/09May22/test_18h42m0gamma4s) OR '
+                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/')
     parser.add_argument('--n_cpus', type=int, default=1,
                         help='Set to the number of parallel processes you wish to run.')
+
+    # If no paths specified, will evaluate on the 7050 trajectory only
+    parser.add_argument('--trajectories', default='one_traj', type=str, nargs='?',
+                        choices=['one_traj', 'low_speed', 'west', 'east', 'all'],
+                        help='Which set of trajectories to evaluate on')
+    parser.add_argument('--traj_path', default='dataset/data_v2_preprocessed_west/'
+                                               '2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
+                        help="if --trajectories is 'one_traj', which trajectory to evaluate on")
 
     args = parser.parse_args()
     return args
@@ -109,25 +120,35 @@ def run_eval(env_config, traj_dir):
 
 
 if __name__ == '__main__':
-    # TODO: remove from train set one we get synthetic trajectories merged
-    EVAL_TRAJECTORIES = map(Path, [
-        'dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
-    ])
-
     baseline_controller = 'idm'
 
     # parse args
     args = parse_args()
-    exp_dir = Path(args.logdir)
+    logdir = Path(args.logdir)
+    print("Evaluating all checkpoints in", logdir)
 
-    # create an eval folder within the exp logdir
-    eval_dir = exp_dir / 'eval'
-    eval_dir.mkdir()
+    # If running eval on all sweeps of a run
+    if (logdir / "params.json").exists():
+        exp_dir = logdir
+        # create an eval folder within the exp logdir
+        eval_dir = exp_dir / 'eval'
+        eval_dir.mkdir()
+        config_paths = exp_dir.rglob('configs.json')
+    # If running eval on a specific sweep
+    elif (logdir / "configs.json").exists():
+        exp_dir = logdir.parent
+        # create an eval folder within the sweep logdir
+        eval_dir = logdir / 'eval'
+        eval_dir.mkdir()
+        config_paths = [logdir / "configs.json"]
+    else:
+        raise ValueError("Invalid logdir", logdir)
+
     print('>', eval_dir)
 
-    # get all grid searches
     rl_paths = []
-    for config_path in exp_dir.rglob('configs.json'):
+    # get all grid searches
+    for config_path in config_paths:
         # find latest checkpoint
         checkpoints_path = config_path.parent / 'checkpoints'
         cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
@@ -136,6 +157,21 @@ if __name__ == '__main__':
         rl_paths.append((config_path, latest_cp_path))
 
     metrics = defaultdict(dict)
+
+    EVAL_TRAJECTORIES = []
+    if args.trajectories == 'one_traj':
+        EVAL_TRAJECTORIES = [Path(args.traj_path)]
+        print(f"Evaluating on {args.traj_path}")
+    else:
+        paths = {
+            'low_speed': ['dataset/data_v2_preprocessed_west_low_speed/'],
+            'west': ['dataset/data_v2_preprocessed_west/'],
+            'east': ['dataset/data_v2_preprocessed_east/'],
+            'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/']
+        }
+        print("Evaluating on trajectories in the following directories:", paths[args.trajectories])
+        for path in paths[args.trajectories]:
+            EVAL_TRAJECTORIES += list(Path(opj(tc.PROJECT_PATH, path)).glob('*/trajectory.csv'))
 
     # for each eval trajectory
     for eval_traj in EVAL_TRAJECTORIES:

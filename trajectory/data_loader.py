@@ -48,7 +48,7 @@ class DataLoader(object):
                 'accelerations': np.array(data['Acceleration'])
             })
 
-    def get_raw_data(self, traj_dir):
+    def get_raw_data(self, traj_dir=None):
         """Get raw data."""
         if traj_dir:
             # Add trajectories from specified directory
