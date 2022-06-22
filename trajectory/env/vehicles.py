@@ -400,7 +400,7 @@ class AvVehicle(Vehicle):
             self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
 
         self.max_headway = self.config['env_config']['max_headway']
-        self.max_headway = self.config['env_config']['max_time_headway']
+        self.max_time_headway = self.config['env_config']['max_time_headway']
         self.num_concat_states = self.config['env_config']['num_concat_states']
         self.num_concat_states_large = self.config['env_config']['num_concat_states_large']
         self.augment_vf = self.config['env_config']['augment_vf']
