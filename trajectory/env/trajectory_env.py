@@ -62,7 +62,9 @@ DEFAULT_ENV_CONFIG = {
     # whether to add downstream speeds to state / use them
     'downstream': False,
     # how many segments of downstream info to add to state
-    'downstream_num_segments': 10
+    'downstream_num_segments': 10,
+    # whether to include INRIX data for local segment (only applies if downstream is set)
+    'include_local_segment': 0
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -165,13 +167,26 @@ class TrajectoryEnv(gym.Env):
         }
 
         if self.downstream:
-            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments)
+            # Get extra speed because 0th speed is the local speed
+            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments+1)
             downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
 
             downstream_obs = 0  # Number of non-null downstream datapoints in tse info
-            if downstream_speeds and downstream_distances:
-                downstream_speeds = downstream_speeds[1]
+            local_speed = -1
+            if downstream_speeds:
+                local_speed = downstream_speeds[1][0]  # Extract local segment speed
+                downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
                 downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+            if self.include_local_segment:
+                if local_speed > -1:
+                    state.update({
+                        f"local_speed": (local_speed, 40.0),
+                    })
+                else:
+                    state.update({
+                        f"local_speed": (-1.0, 1.0),
+                    })
 
             # for the segments that TSE info is available
             for i in range(downstream_obs):

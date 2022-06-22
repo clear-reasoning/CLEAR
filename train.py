@@ -148,6 +148,8 @@ def parse_args_train():
                         help='If set, adds downstream speed information to the base state.')
     parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
+    parser.add_argument('--env_include_local_segment', default=False, action='store_true',
+                        help='If downstream is set and this arg is set to 1, includes the local segment in state.')
     parser.add_argument('--no_lc', type=int, default=0, nargs='+',
                         help='If set to 1, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
@@ -189,6 +191,7 @@ def run_experiment(config):
         'human_kwargs': config['env_human_kwargs'],
         'downstream': config['env_downstream'],
         'downstream_num_segments': config['env_downstream_num_segments'],
+        'include_local_segment': config['env_include_local_segment'],
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],

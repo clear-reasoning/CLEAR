@@ -441,13 +441,22 @@ class AvVehicle(Vehicle):
 
         if self.config['env_config']['downstream']:
             num_segments = self.config['env_config']['downstream_num_segments']
-            downstream_speeds = self.get_downstream_avg_speed(k=num_segments)
+            # Get extra speed because 0th speed is the local speed
+            downstream_speeds = self.get_downstream_avg_speed(k=num_segments+1)
             downstream_distances = self.get_distance_to_next_segments(k=num_segments)
 
             downstream_obs = 0  # Number of non-null downstream datapoints in tse info
-            if downstream_speeds and downstream_distances:
-                downstream_speeds = downstream_speeds[1]
+            local_speed = -1
+            if downstream_speeds:
+                local_speed = downstream_speeds[1][0]  # Extract local segment speed
+                downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
                 downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+            if self.config['env_config']['include_local_segment']:
+                if local_speed > -1:
+                    state.append(local_speed / 40.0)
+                else:
+                    state.append(-1)
 
             # for the segments that TSE info is available
             for i in range(downstream_obs):
