@@ -285,19 +285,24 @@ class TrajectoryEnv(gym.Env):
             reward -= 50
 
         # penalize instant energy consumption for the AV or AV + platoon
+        energy_reward = 0
         if self.penalize_energy:
-            reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+            energy_reward = -np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
                                for veh in self.mpg_cars]) / 10.0
+            reward += energy_reward
 
         # penalize acceleration amplitude
-        reward -= self.accel_penalty * (action ** 2)
+        accel_reward = -self.accel_penalty * (action ** 2)
+        reward += accel_reward
 
         gap_closing = av.get_headway() > self.gap_closing_threshold(av)
         failsafe = av.get_headway() < av.failsafe_threshold()
+        intervention_reward = 0
         if gap_closing or failsafe:
-            reward -= self.accel_penalty * self.intervention_penalty
+            intervention_reward = -self.accel_penalty * self.intervention_penalty
+            reward += intervention_reward
 
-        return reward
+        return reward, energy_reward, accel_reward, intervention_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -402,7 +407,8 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # compute reward
-        reward = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
+        reward, energy_reward, accel_reward, intervention_reward \
+            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
@@ -430,6 +436,9 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['base_states'].append(self.get_base_state())
             self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
             self.collected_rollout['rewards'].append(reward)
+            self.collected_rollout['energy_rewards'].append(energy_reward)
+            self.collected_rollout['accel_rewards'].append(accel_reward)
+            self.collected_rollout['intervention_rewards'].append(intervention_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({

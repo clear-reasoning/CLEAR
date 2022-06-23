@@ -99,10 +99,16 @@ class TensorboardCallback(BaseCallback):
                     plotter.save(f'{base_name}/{base_name}_{group}')
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
+        episode_energy_reward = np.sum(rollout_dict['training']['energy_rewards'])
+        episode_accel_reward = np.sum(rollout_dict['training']['accel_rewards'])
+        episode_intervention_reward = np.sum(rollout_dict['training']['intervention_rewards'])
         av_mpg = rollout_dict['sim_data_avs']['avg_mpg'][-1]
         system_mpg = rollout_dict['system']['avg_mpg'][-1]
         system_speed = rollout_dict['system']['speed'][-1]
         self.logger.record(f'{base_name}/{base_name}_episode_reward', episode_reward)
+        self.logger.record(f'{base_name}/{base_name}_episode_energy_reward', episode_energy_reward)
+        self.logger.record(f'{base_name}/{base_name}_episode_accel_reward', episode_accel_reward)
+        self.logger.record(f'{base_name}/{base_name}_episode_intervention_reward', episode_intervention_reward)
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_mpg', system_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_speed', system_speed)
@@ -135,6 +141,7 @@ class TensorboardCallback(BaseCallback):
         rollout_dict = defaultdict(lambda: defaultdict(list))
 
         rollout_dict['training']['rewards'] = collected_rollout['rewards']
+        rollout_dict['training']['reward_components'] = collected_rollout['reward_components']
         rollout_dict['training']['dones'] = collected_rollout['dones']
         rollout_dict['training']['actions'] = collected_rollout['actions']
 
