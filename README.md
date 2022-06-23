@@ -5,7 +5,7 @@ python train.py --logdir ./exp_logs --iters 1000 \
 --network_depth 2 --hidden_layer_size 64 --env_horizon 500 \
 --lr 3e-4 --gamma 0.997 --gae_lambda 0.99 \
 --augment_vf 1 --env_num_concat_states 10 --algorithm PPO \
---expname {expname} --env_speed_rwd_coef 0.2 0.5 0.8 1.0 1.3 1.6 2.0 2.5 3.0
+--expname {expname}
 ```
 
 
