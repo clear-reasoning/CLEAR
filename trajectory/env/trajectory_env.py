@@ -166,6 +166,12 @@ class TrajectoryEnv(gym.Env):
             'headway': (av.get_headway(), 100.0),
         }
 
+        if self.include_thresholds:
+            state.update({
+                'gap_closing': (self.gap_closing_threshold(av), 100.0),
+                'failsafe': (av.failsafe_threshold(), 100.0)
+            })
+
         if self.downstream:
             # Get extra speed because 0th speed is the local speed
             downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments+1)
@@ -286,12 +292,15 @@ class TrajectoryEnv(gym.Env):
         # penalize acceleration amplitude
         reward -= self.accel_penalty * (action ** 2)
 
-        gap_closing = av.get_headway() > max(self.max_headway, self.max_time_headway * av.leader.speed)
-        failsafe = av.accel_no_noise_no_failsafe != av.accel_no_noise_with_failsafe
+        gap_closing = av.get_headway() > self.gap_closing_threshold(av)
+        failsafe = av.get_headway() < av.failsafe_threshold()
         if gap_closing or failsafe:
             reward -= self.accel_penalty * self.intervention_penalty
 
         return reward
+
+    def gap_closing_threshold(self, av):
+        return max(self.max_headway, self.max_time_headway * av.speed)
 
     def create_simulation(self):
         """Create simulation."""
@@ -379,8 +388,7 @@ class TrajectoryEnv(gym.Env):
             for av, action in zip(self.avs, actions):
                 accel = self.action_set[action] if self.discrete else float(action)
                 metrics['rl_controller_accel'] = accel
-                accel = av.set_accel(accel, large_gap_threshold=max(self.max_headway,
-                                                                    self.max_time_headway * av.leader.speed))
+                accel = av.set_accel(accel, large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_processed_accel'] = accel
         elif self.av_controller == 'rl_fs':
             # RL with FS wrapper

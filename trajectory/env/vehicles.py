@@ -334,10 +334,14 @@ class RLVehicle(Vehicle):
             self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
-    def apply_failsafe(self, accel):
-        # TODO hardcoded max decel to be conservative
+    def failsafe_threshold(self):
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
         v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        return v_safe
+
+    def apply_failsafe(self, accel):
+        # TODO hardcoded max decel to be conservative
+        v_safe = self.failsafe_threshold()
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
@@ -421,10 +425,17 @@ class AvVehicle(Vehicle):
     def get_action(self, state):
         return get_first_element(self.model.predict(state, deterministic=True))
 
-    def apply_failsafe(self, accel):
-        # TODO hardcoded max decel to be conservative
+    def gap_closing_threshold(self):
+        return max(self.max_headway, self.max_time_headway * self.speed)
+
+    def failsafe_threshold(self):
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
         v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        return v_safe
+
+    def apply_failsafe(self, accel):
+        # TODO hardcoded max decel to be conservative
+        v_safe = self.failsafe_threshold()
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
@@ -438,6 +449,10 @@ class AvVehicle(Vehicle):
             self.leader.speed / 40.0,
             self.get_headway() / 100.0,
         ]
+
+        if self.config['env_config']['include_thresholds']:
+            state.append(self.gap_closing_threshold() / 100.0)
+            state.append(self.failsafe_threshold() / 100.0)
 
         if self.config['env_config']['downstream']:
             num_segments = self.config['env_config']['downstream_num_segments']
@@ -497,7 +512,7 @@ class AvVehicle(Vehicle):
             accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
 
             # hardcoded gap closing
-            if self.get_headway() > max(self.max_headway, self.max_time_headway * self.leader.speed):
+            if self.get_headway() > self.gap_closing_threshold():
                 accel = 1.0
 
             # failsafe
