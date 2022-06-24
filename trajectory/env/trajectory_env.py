@@ -290,7 +290,7 @@ class TrajectoryEnv(gym.Env):
         energy_reward = 0
         if self.penalize_energy:
             energy_reward = -np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
-                               for veh in self.mpg_cars]) / 10.0
+                                      for veh in self.mpg_cars]) / 10.0
             reward += energy_reward
 
         # penalize acceleration amplitude
@@ -410,7 +410,7 @@ class TrajectoryEnv(gym.Env):
 
         # compute reward
         reward, energy_reward, accel_reward, intervention_reward \
-            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
+            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0)
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
