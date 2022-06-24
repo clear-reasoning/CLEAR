@@ -187,6 +187,8 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
     for traj in metrics:
         x = prettytable.PrettyTable()
         x.field_names = field_names
+        x.sortby = "System MPG"
+        x.reversesort = True
 
         for controller in metrics[traj]:
             mpg_metrics = list(map(parse_mpg, metrics[traj][controller], metrics[traj][baseline_controller]))
@@ -201,6 +203,8 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
     avg_metrics_path = eval_dir / 'metrics.txt'
     x = prettytable.PrettyTable()
     x.field_names = field_names
+    x.sortby = "System MPG"
+    x.reversesort = True
     metrics_avg_baseline = [s / c if c > 0 else None for s, c in metrics_sum_count[baseline_controller]]
     for controller in metrics_sum_count:
         metrics_avg = [s / c if c > 0 else None for s, c in metrics_sum_count[controller]]
