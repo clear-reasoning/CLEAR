@@ -87,18 +87,18 @@ def run_eval(env_config, traj_dir):
         # platoon MPG: for all AVs + up to 5 human followers for each AV
         # TODO(nl): if incorporating lane-changing, this will need to be changed to
         # account for platoon changes (use the 'follower_id' at each time step)
-        platoon_ids = []
-        veh_ids = df['id'].unique()
-        for av_id in [vid for vid in veh_ids if 'av' in vid]:
-            av_num = av_id.split('_')[0]
-            for i in range(5):
-                follower_num = int(av_num) + 1 + i
-                follower_id = [vid for vid in veh_ids if vid.startswith(str(follower_num))][0]
-                platoon_ids.append(follower_id)
-        df_platoons = df[df['id'].isin(platoon_ids)]
-        platoons_mpg = extract_mpg(df_platoons)
-
-        return system_mpg, avs_mpg, platoons_mpg
+        # platoon_ids = []
+        # veh_ids = df['id'].unique()
+        # for av_id in [vid for vid in veh_ids if 'av' in vid]:
+        #     av_num = av_id.split('_')[0]
+        #     for i in range(5):
+        #         follower_num = int(av_num) + 1 + i
+        #         follower_id = [vid for vid in veh_ids if vid.startswith(str(follower_num))][0]
+        #         platoon_ids.append(follower_id)
+        # df_platoons = df[df['id'].isin(platoon_ids)]
+        # platoons_mpg = extract_mpg(df_platoons)
+        # platoons_mpg = None
+        return system_mpg, avs_mpg  # , platoons_mpg
 
     mpgs = extract_mpg_metrics(df)
 
@@ -118,63 +118,14 @@ def run_eval(env_config, traj_dir):
     # return metrics
     return (av_name, [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds])
 
+def generate_metrics(eval_dir, lane_changing, eval_trajectories):
 
-if __name__ == '__main__':
-    baseline_controller = 'idm'
-
-    # parse args
-    args = parse_args()
-    logdir = Path(args.logdir)
-    print("Evaluating all checkpoints in", logdir)
-
-    # If running eval on all sweeps of a run
-    if (logdir / "params.json").exists():
-        exp_dir = logdir
-        # create an eval folder within the exp logdir
-        eval_dir = exp_dir / 'eval'
-        eval_dir.mkdir()
-        config_paths = exp_dir.rglob('configs.json')
-    # If running eval on a specific sweep
-    elif (logdir / "configs.json").exists():
-        exp_dir = logdir.parent
-        # create an eval folder within the sweep logdir
-        eval_dir = logdir / 'eval'
-        eval_dir.mkdir()
-        config_paths = [logdir / "configs.json"]
-    else:
-        raise ValueError("Invalid logdir", logdir)
-
+    eval_dir.mkdir()
     print('>', eval_dir)
 
-    rl_paths = []
-    # get all grid searches
-    for config_path in config_paths:
-        # find latest checkpoint
-        checkpoints_path = config_path.parent / 'checkpoints'
-        cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
-        latest_cp_number = sorted(cp_numbers)[-1]
-        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
-        rl_paths.append((config_path, latest_cp_path))
-
     metrics = defaultdict(dict)
-
-    EVAL_TRAJECTORIES = []
-    if args.trajectories == 'one_traj':
-        EVAL_TRAJECTORIES = [Path(args.traj_path)]
-        print(f"Evaluating on {args.traj_path}")
-    else:
-        paths = {
-            'low_speed': ['dataset/data_v2_preprocessed_west_low_speed/'],
-            'west': ['dataset/data_v2_preprocessed_west/'],
-            'east': ['dataset/data_v2_preprocessed_east/'],
-            'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/']
-        }
-        print("Evaluating on trajectories in the following directories:", paths[args.trajectories])
-        for path in paths[args.trajectories]:
-            EVAL_TRAJECTORIES += list(Path(opj(tc.PROJECT_PATH, path)).glob('*/trajectory.csv'))
-
     # for each eval trajectory
-    for eval_traj in EVAL_TRAJECTORIES:
+    for eval_traj in eval_trajectories:
         # create env config
         abstract_env_config = DEFAULT_ENV_CONFIG
         abstract_env_config.update({
@@ -183,7 +134,7 @@ if __name__ == '__main__':
             'fixed_traj_path': str(eval_traj),
             'human_controller': 'idm',
             'human_kwargs': 'dict()',
-            'lane_changing': False,
+            'lane_changing': lane_changing,
             'road_grade': None,
         })
 
@@ -213,14 +164,15 @@ if __name__ == '__main__':
             av_env_configs.append(env_config)
 
         with multiprocessing.Pool(processes=args.n_cpus) as pool:
-            data = pool.starmap(run_eval, zip(av_env_configs, repeat(traj_dir)))
+            iterable = zip(av_env_configs, repeat(traj_dir))
+            data = pool.starmap(run_eval, iterable)
             for av_name, av_metrics in data:
                 metrics[eval_traj][av_name] = av_metrics
 
     field_names = [
-        'System MPG', 'AVs MPG', 'Platoons MPG',
-        'System MPG (LS)', 'AVs MPG (LS)', 'Platoons MPG (LS)',
-        'System MPG (HS)', 'AVs MPG (HS)', 'Platoons MPG (HS)',
+        'System MPG', 'AVs MPG',  # 'Platoons MPG',
+        'System MPG (LS)', 'AVs MPG (LS)',  # 'Platoons MPG (LS)',
+        'System MPG (HS)', 'AVs MPG (HS)',  # 'Platoons MPG (HS)',
         'AV controller',
     ]
 
@@ -231,7 +183,7 @@ if __name__ == '__main__':
         return f'{mpg:.2f} ({"+" if improvement >= 0 else ""}{improvement:.2f}%)'
 
     tables = []
-    metrics_sum_count = defaultdict(lambda: [(0, 0)] * 9)
+    metrics_sum_count = defaultdict(lambda: [(0, 0)] * 6)
     for traj in metrics:
         x = prettytable.PrettyTable()
         x.field_names = field_names
@@ -261,3 +213,60 @@ if __name__ == '__main__':
         for traj, x_traj in tables:
             fp.write('\n\n' + str(traj) + '\n' + str(x_traj))
     print('>', avg_metrics_path)
+
+if __name__ == '__main__':
+    baseline_controller = 'idm'
+
+    # parse args
+    args = parse_args()
+    logdir = Path(args.logdir)
+    print("Evaluating all checkpoints in", logdir)
+
+    # If running eval on all sweeps of a run
+    if (logdir / "params.json").exists():
+        exp_dir = logdir
+        # create an eval folder within the exp logdir
+        eval_root = exp_dir / 'eval'
+        eval_root.mkdir()
+        config_paths = exp_dir.rglob('configs.json')
+    # If running eval on a specific sweep
+    elif (logdir / "configs.json").exists():
+        exp_dir = logdir.parent
+        # create an eval folder within the sweep logdir
+        eval_root = logdir / 'eval'
+        eval_root.mkdir()
+        config_paths = [logdir / "configs.json"]
+    else:
+        raise ValueError("Invalid logdir", logdir)
+
+    print('>', eval_root)
+
+    rl_paths = []
+    # get all grid searches
+    for config_path in config_paths:
+        # find latest checkpoint
+        checkpoints_path = config_path.parent / 'checkpoints'
+        cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
+        latest_cp_number = sorted(cp_numbers)[-1]
+        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        rl_paths.append((config_path, latest_cp_path))
+
+    EVAL_TRAJECTORIES = []
+    if args.trajectories == 'one_traj':
+        EVAL_TRAJECTORIES = [Path(args.traj_path)]
+        print(f"Evaluating on {args.traj_path}")
+    else:
+        paths = {
+            'low_speed': ['dataset/data_v2_preprocessed_west_low_speed/'],
+            'west': ['dataset/data_v2_preprocessed_west/'],
+            'east': ['dataset/data_v2_preprocessed_east/'],
+            'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/']
+        }
+        print("Evaluating on trajectories in the following directories:", paths[args.trajectories])
+        for path in paths[args.trajectories]:
+            EVAL_TRAJECTORIES += list(Path(opj(tc.PROJECT_PATH, path)).glob('*/trajectory.csv'))
+
+    lc_dir = eval_root / "lc"
+    no_lc_dir = eval_root / "no_lc"
+    generate_metrics(eval_dir=lc_dir, lane_changing=True, eval_trajectories=EVAL_TRAJECTORIES)
+    generate_metrics(eval_dir=no_lc_dir, lane_changing=False, eval_trajectories=EVAL_TRAJECTORIES)
