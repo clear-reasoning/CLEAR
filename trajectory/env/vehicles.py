@@ -335,13 +335,11 @@ class RLVehicle(Vehicle):
         return self.accel
 
     def failsafe_threshold(self):
-        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
-        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
-        return v_safe
+        return 6 * ((self.speed + 1 + self.speed * 4 / 30) - self.leader.speed)
 
     def apply_failsafe(self, accel):
-        # TODO hardcoded max decel to be conservative
-        v_safe = self.failsafe_threshold()
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
+        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
@@ -429,13 +427,12 @@ class AvVehicle(Vehicle):
         return max(self.max_headway, self.max_time_headway * self.speed)
 
     def failsafe_threshold(self):
-        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
-        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
-        return v_safe
+        return 6 * ((self.speed + 1 + self.speed * 4 / 30) - self.leader.speed)
 
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
-        v_safe = self.failsafe_threshold()
+        v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
+        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
