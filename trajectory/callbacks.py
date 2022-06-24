@@ -141,7 +141,9 @@ class TensorboardCallback(BaseCallback):
         rollout_dict = defaultdict(lambda: defaultdict(list))
 
         rollout_dict['training']['rewards'] = collected_rollout['rewards']
-        rollout_dict['training']['reward_components'] = collected_rollout['reward_components']
+        rollout_dict['training']['energy_rewards'] = collected_rollout['energy_rewards']
+        rollout_dict['training']['accel_rewards'] = collected_rollout['accel_rewards']
+        rollout_dict['training']['intervention_rewards'] = collected_rollout['intervention_rewards']
         rollout_dict['training']['dones'] = collected_rollout['dones']
         rollout_dict['training']['actions'] = collected_rollout['actions']
 
