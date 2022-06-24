@@ -64,7 +64,9 @@ DEFAULT_ENV_CONFIG = {
     # how many segments of downstream info to add to state
     'downstream_num_segments': 10,
     # whether to include INRIX data for local segment (only applies if downstream is set)
-    'include_local_segment': 0
+    'include_local_segment': 0,
+    # whether to include thresholds for downstream and gap-closing in state
+    'include_thresholds': False
 }
 
 # platoon presets that can be passed to the "platoon" env param
