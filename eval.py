@@ -26,7 +26,7 @@ def parse_args():
 
     # If no paths specified, will evaluate on the 7050 trajectory only
     parser.add_argument('--trajectories', default='one_traj', type=str, nargs='?',
-                        choices=['one_traj', 'low_speed', 'west', 'east', 'all'],
+                        choices=['one_traj', 'low_speed', 'high_speed', 'west', 'east', 'all'],
                         help='Which set of trajectories to evaluate on')
     parser.add_argument('--traj_path', default='dataset/data_v2_preprocessed_west/'
                                                '2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
@@ -226,18 +226,20 @@ if __name__ == '__main__':
     logdir = Path(args.logdir)
     print("Evaluating all checkpoints in", logdir)
 
+    eval_name = "eval_" + args.trajectories
+
     # If running eval on all sweeps of a run
     if (logdir / "params.json").exists():
         exp_dir = logdir
         # create an eval folder within the exp logdir
-        eval_root = exp_dir / 'eval'
+        eval_root = exp_dir / eval_name
         eval_root.mkdir()
         config_paths = exp_dir.rglob('configs.json')
     # If running eval on a specific sweep
     elif (logdir / "configs.json").exists():
         exp_dir = logdir.parent
         # create an eval folder within the sweep logdir
-        eval_root = logdir / 'eval'
+        eval_root = logdir / eval_name
         eval_root.mkdir()
         config_paths = [logdir / "configs.json"]
     else:
@@ -262,6 +264,7 @@ if __name__ == '__main__':
     else:
         paths = {
             'low_speed': ['dataset/data_v2_preprocessed_west_low_speed/'],
+            'high_speed': ['dataset/data_v2_preprocessed_west_high_speed/'],
             'west': ['dataset/data_v2_preprocessed_west/'],
             'east': ['dataset/data_v2_preprocessed_east/'],
             'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/']
