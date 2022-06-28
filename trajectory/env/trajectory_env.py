@@ -153,7 +153,7 @@ class TrajectoryEnv(gym.Env):
         }
 
         # Additional state that is not included in past states (so not set to self.n_states)
-        if not self.inrix_mem:
+        if self.downstream and not self.inrix_mem:
             n_states += len(self.get_downstream_state())
 
         # define observation space
