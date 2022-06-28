@@ -392,14 +392,8 @@ class AvVehicle(Vehicle):
             self.config = json.load(fp)
 
         if self.config['env_config']['discrete']:
-            try:
-                a_min = self.config['env_config']['min_accel']
-                a_max = self.config['env_config']['max_accel']
-            except KeyError:
-                # config.json does not specify a_min and/or a_max, setting to defaults for backward compatibility
-                a_min = -3.0
-                a_max = 1.5
-
+            a_min = self.config['env_config']['min_accel']
+            a_max = self.config['env_config']['max_accel']
             self.action_space = Discrete(self.config['env_config']['num_actions'])
             self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
 
