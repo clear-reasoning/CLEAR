@@ -66,7 +66,9 @@ DEFAULT_ENV_CONFIG = {
     # whether to include INRIX data for local segment (only applies if downstream is set)
     'include_local_segment': 0,
     # whether to include thresholds for downstream and gap-closing in state
-    'include_thresholds': False
+    'include_thresholds': False,
+    # whether inrix portion of state is included in memory (if set to 1, included)
+    'inrix_mem': 1,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -150,6 +152,10 @@ class TrajectoryEnv(gym.Env):
             for i in range(len(self.avs))
         }
 
+        # Additional state that is not included in past states (so not set to self.n_states)
+        if not self.inrix_mem:
+            n_states += len(self.get_downstream_state())
+
         # define observation space
         n_obs = n_states
         if self.augment_vf:
@@ -174,42 +180,51 @@ class TrajectoryEnv(gym.Env):
                 'failsafe': (av.failsafe_threshold(), 100.0)
             })
 
-        if self.downstream:
-            # Get extra speed because 0th speed is the local speed
-            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments+1)
-            downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+        # Add inrix data to base state if downstream set and including in memory
+        if self.downstream and self.inrix_mem:
+            state.update(self.get_downstream_state(av_idx))
 
-            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
-            local_speed = -1
-            if downstream_speeds:
-                local_speed = downstream_speeds[1][0]  # Extract local segment speed
-                downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
-                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+        return state
 
-            if self.include_local_segment:
-                if local_speed > -1:
-                    state.update({
-                        f"local_speed": (local_speed, 40.0),
-                    })
-                else:
-                    state.update({
-                        f"local_speed": (-1.0, 1.0),
-                    })
+    def get_downstream_state(self, av_idx=0):
+        av = self.avs[av_idx if av_idx is not None else 0]
 
-            # for the segments that TSE info is available
-            for i in range(downstream_obs):
+        """Get downstream state."""
+        state = {}
+        # Get extra speed because 0th speed is the local speed
+        downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments + 1)
+        downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+
+        downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+        local_speed = -1
+        if downstream_speeds:
+            local_speed = downstream_speeds[1][0]  # Extract local segment speed
+            downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
+            downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+        if self.include_local_segment:
+            if local_speed > -1:
                 state.update({
-                    f"seg_{i}_speed": (downstream_speeds[i], 40.0),
-                    f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+                    f"local_speed": (local_speed, 40.0),
+                })
+            else:
+                state.update({
+                    f"local_speed": (-1.0, 1.0),
                 })
 
-            # for segments where TSE info is not available
-            for i in range(downstream_obs, self.downstream_num_segments):
-                state.update({
-                    f"seg_{i}_speed": (-1.0, 1.0),
-                    f"seg_{i}_dist": (-1.0, 1.0)
-                })
+        # for the segments that TSE info is available
+        for i in range(downstream_obs):
+            state.update({
+                f"seg_{i}_speed": (downstream_speeds[i], 40.0),
+                f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+            })
 
+        # for segments where TSE info is not available
+        for i in range(downstream_obs, self.downstream_num_segments):
+            state.update({
+                f"seg_{i}_speed": (-1.0, 1.0),
+                f"seg_{i}_dist": (-1.0, 1.0)
+            })
         return state
 
     def get_base_additional_vf_state(self):
@@ -266,6 +281,11 @@ class TrajectoryEnv(gym.Env):
 
         # use past states (including current state) as state
         state = self.past_states[av_idx]
+
+        # If not storing inrix data in memory, add after concatenating states
+        if self.downstream and not self.inrix_mem:
+            downstream_state = [value / scale for value, scale in self.get_downstream_state(av_idx).values()]
+            state = np.concatenate((state, downstream_state))
 
         if self.augment_vf:
             # add value function augmentation to states

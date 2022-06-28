@@ -152,6 +152,8 @@ def parse_args_train():
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
     parser.add_argument('--env_include_local_segment', default=False, action='store_true',
                         help='If downstream is set and this arg is set to 1, includes the local segment in state.')
+    parser.add_argument('--env_inrix_mem', type=int, default=0, nargs='+',
+                        help='If set to 1, inrix data will be included in memory.')
     parser.add_argument('--no_lc', type=int, default=0, nargs='+',
                         help='If set to 1, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
@@ -195,6 +197,7 @@ def run_experiment(config):
         'downstream': config['env_downstream'],
         'downstream_num_segments': config['env_downstream_num_segments'],
         'include_local_segment': config['env_include_local_segment'],
+        'inrix_mem': config['env_inrix_mem'],
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
