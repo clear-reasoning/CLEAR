@@ -118,6 +118,7 @@ def run_eval(env_config, traj_dir):
     # return metrics
     return (av_name, [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds])
 
+
 def generate_metrics(eval_dir, lane_changing, eval_trajectories):
 
     eval_dir.mkdir()
@@ -217,6 +218,7 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
         for traj, x_traj in tables:
             fp.write('\n\n' + str(traj) + '\n' + str(x_traj))
     print('>', avg_metrics_path)
+
 
 if __name__ == '__main__':
     baseline_controller = 'idm'

@@ -205,11 +205,11 @@ class TrajectoryEnv(gym.Env):
         if self.include_local_segment:
             if local_speed > -1:
                 state.update({
-                    f"local_speed": (local_speed, 40.0),
+                    "local_speed": (local_speed, 40.0),
                 })
             else:
                 state.update({
-                    f"local_speed": (-1.0, 1.0),
+                    "local_speed": (-1.0, 1.0),
                 })
 
         # for the segments that TSE info is available
