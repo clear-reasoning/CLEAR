@@ -50,12 +50,16 @@ def run_eval(env_config, traj_dir):
     while not done:
         _, _, done, _ = env.step(None)
 
+    # create controller dir
+    controller_dir = traj_dir / av_name.replace('/', '_')
+    controller_dir.mkdir(exist_ok=True)
+
     # generate emission file
-    emissions_path = traj_dir / f"emissions_{av_name.replace('/', '_')}.csv"
+    emissions_path = controller_dir / 'emissions.csv'
     env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
     # compute tsd
-    tsd_path = traj_dir / f"tsd_{av_name.replace('/', '_')}.png"
+    tsd_path = controller_dir / 'tsd.png'
     plot_time_space_diagram(emissions_path, save_path=tsd_path)
     print('>', tsd_path)
 
