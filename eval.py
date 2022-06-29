@@ -9,6 +9,7 @@ import pandas as pd
 import copy
 from collections import defaultdict
 import prettytable
+import matplotlib.pyplot as plt
 import multiprocessing
 from itertools import repeat
 from os.path import join as opj
@@ -63,8 +64,63 @@ def run_eval(env_config, traj_dir):
     plot_time_space_diagram(emissions_path, save_path=tsd_path)
     print('>', tsd_path)
 
-    # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
+    # load emissions data
     df = pd.read_csv(emissions_path)
+
+    # compute trajectory plots
+    traj_leader_id = [vid for vid in df['id'].unique() if 'leader' in vid][0]
+    av_ids = [vid for vid in df['id'].unique() if 'av' in vid]
+
+    # plot speed of leader and all avs
+    plt.figure()
+    for veh_id in [traj_leader_id] + av_ids:
+        df_av = df[df['id'] == veh_id]
+        plt.plot(df_av['time'], df_av['speed'], label=veh_id, linewidth=2.0)
+    plt.title('platoon speeds')
+    plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+    plt.grid()
+    plt.xlim(0, df['time'].max())
+    fig_path = controller_dir / 'speed_avs_leader.png'
+    plt.savefig(fig_path)
+    print('>', fig_path)
+
+    # trajectory plots
+    # plot av speed+leader speed, av accel and av gap as a function of time in 3 separate subplots
+    for av_id in av_ids:
+        df_av = df[df['id'] == av_id]
+        plt.figure(figsize=(10, 6))
+        plt.subplot(311)
+        plt.plot(df_av['time'], df_av['speed'], label=av_id, linewidth=2.0)
+        plt.plot(df_av['time'], df_av['leader_speed'], label='leader', linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('speeds')
+        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.subplot(312)
+        plt.plot(df_av['time'], df_av['accel'], label=av_id, linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('accels')
+        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.subplot(313)
+        plt.plot(df_av['time'], df_av['headway'], label=av_id, linewidth=2.0)
+        gap_closing_threshold = [max(env.max_headway, env.max_time_headway * vel)
+                                 for vel in df_av['speed']]
+        failsafe_threshold = [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
+                                               for this_vel, lead_vel in zip(df_av['speed'],
+                                                                             df_av['leader_speed'])]   
+        plt.plot(df_av['time'], gap_closing_threshold, label='gap closing threshold', linewidth=2.0)
+        plt.plot(df_av['time'], failsafe_threshold, label='failsafe threshold', linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('headway')
+        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.tight_layout()
+        fig_path = controller_dir / f'traj_{av_id}.png'
+        plt.savefig(fig_path)
+        print('>', fig_path)
+
+    # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
     timestep = 0.1
 
     def meters_per_second_to_miles(meters_per_second):
