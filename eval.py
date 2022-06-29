@@ -20,7 +20,8 @@ def parse_args():
 
     parser.add_argument('--logdir', type=str, required=True,
                         help='Experiment logdir (eg. log/09May22/test_18h42m0gamma4s) OR '
-                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/')
+                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/ OR '
+                             'a folder containing one configs.json and one checkpoint.zip file.')
     parser.add_argument('--n_cpus', type=int, default=1,
                         help='Set to the number of parallel processes you wish to run.')
 
@@ -255,8 +256,16 @@ if __name__ == '__main__':
         # find latest checkpoint
         checkpoints_path = config_path.parent / 'checkpoints'
         cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
-        latest_cp_number = sorted(cp_numbers)[-1]
-        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        if len(cp_numbers) > 0:
+            # get the latest checkpoint
+            latest_cp_number = sorted(cp_numbers)[-1]
+            latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        elif (config_path.parent / 'checkpoint.zip').exists():
+            # if no checkpoints, but a checkpoint.zip exists, use that
+            latest_cp_path = config_path.parent / 'checkpoint.zip'
+        else:
+            # if no checkpoints, and no checkpoint.zip, skip this config
+            raise ValueError('No checkpoints found in', config_path.parent)
         rl_paths.append((config_path, latest_cp_path))
 
     EVAL_TRAJECTORIES = []
