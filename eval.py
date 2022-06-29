@@ -9,6 +9,7 @@ import pandas as pd
 import copy
 from collections import defaultdict
 import prettytable
+import matplotlib.pyplot as plt
 import multiprocessing
 from itertools import repeat
 from os.path import join as opj
@@ -20,7 +21,8 @@ def parse_args():
 
     parser.add_argument('--logdir', type=str, required=True,
                         help='Experiment logdir (eg. log/09May22/test_18h42m0gamma4s) OR '
-                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/')
+                             'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/ OR '
+                             'a folder containing one configs.json and one checkpoint.zip file.')
     parser.add_argument('--n_cpus', type=int, default=1,
                         help='Set to the number of parallel processes you wish to run.')
 
@@ -49,19 +51,86 @@ def run_eval(env_config, traj_dir):
     while not done:
         _, _, done, _ = env.step(None)
 
+    # create controller dir
+    controller_dir = traj_dir / av_name.replace('/', '_')
+    controller_dir.mkdir(exist_ok=True)
+
     # generate emission file
-    emissions_path = traj_dir / f"emissions_{av_name.replace('/', '_')}.csv"
+    emissions_path = controller_dir / 'emissions.csv'
     env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
     # compute tsd
-    tsd_path = traj_dir / f"tsd_{av_name.replace('/', '_')}.png"
+    tsd_path = controller_dir / 'tsd.png'
     plot_time_space_diagram(emissions_path, save_path=tsd_path)
     print('>', tsd_path)
 
-    # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
+    # load emissions data
     df = pd.read_csv(emissions_path)
     timestep = 0.1
 
+    # compute trajectory plots
+    traj_leader_id = [vid for vid in df['id'].unique() if 'leader' in vid][0]
+    av_ids = [vid for vid in df['id'].unique() if 'av' in vid]
+
+    # plot speed of leader and all avs
+    plt.figure(figsize=(15, 3))
+    for veh_id in [traj_leader_id] + av_ids:
+        # color red for leader and blue for AVs
+        if veh_id == traj_leader_id:
+            color = (0.8, 0.2, 0.2, 1.0)
+        else:
+            # hardcoded for a platoon of (av human*24)*8
+            av_number = int(veh_id.split('_')[0])
+            color = (0.2, 0.2, 0.8, 1.0) if av_number == 1 \
+                else (0.2, 0.8, 0.2, 1.0) if av_number == 176 \
+                else (0.2, 0.2, 1.0, 0.2)
+        df_av = df[df['id'] == veh_id]
+        plt.plot(df_av['time'] / timestep, df_av['speed'], label=veh_id, linewidth=2.0, color=color)
+    plt.title('platoon speeds')
+    plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
+    plt.grid()
+    plt.xlim(0, (df['time'] / timestep).max())
+    fig_path = controller_dir / 'speed_avs_leader.png'
+    plt.tight_layout()
+    plt.savefig(fig_path)
+    print('>', fig_path)
+
+    # trajectory plots
+    # plot av speed+leader speed, av accel and av gap as a function of time in 3 separate subplots
+    for av_id in av_ids:
+        df_av = df[df['id'] == av_id]
+        plt.figure(figsize=(12, 7))
+        plt.subplot(311)
+        plt.plot(df_av['time'], df_av['speed'], label=av_id, linewidth=2.0)
+        plt.plot(df_av['time'], df_av['leader_speed'], label='leader', linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('speeds')
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.subplot(312)
+        plt.plot(df_av['time'], df_av['accel'], label=av_id, linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('accels')
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.subplot(313)
+        plt.plot(df_av['time'], df_av['headway'], label=av_id, linewidth=2.0)
+        gap_closing_threshold = [max(env.max_headway, env.max_time_headway * vel)
+                                 for vel in df_av['speed']]
+        failsafe_threshold = [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
+                              for this_vel, lead_vel in zip(df_av['speed'], df_av['leader_speed'])]
+        plt.plot(df_av['time'], gap_closing_threshold, label='gap closing threshold', linewidth=2.0)
+        plt.plot(df_av['time'], failsafe_threshold, label='failsafe threshold', linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.title('headway')
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.tight_layout()
+        fig_path = controller_dir / f'traj_{av_id}.png'
+        plt.savefig(fig_path)
+        print('>', fig_path)
+
+    # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
     def meters_per_second_to_miles(meters_per_second):
         return meters_per_second / 1609.34 * timestep
 
@@ -120,8 +189,7 @@ def run_eval(env_config, traj_dir):
 
 
 def generate_metrics(eval_dir, lane_changing, eval_trajectories):
-
-    eval_dir.mkdir()
+    eval_dir.mkdir(exist_ok=True)
     print('>', eval_dir)
 
     metrics = defaultdict(dict)
@@ -142,7 +210,7 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
         # create trajectory logdir
         traj_name = eval_traj.parent.name
         traj_dir = eval_dir / traj_name
-        traj_dir.mkdir()
+        traj_dir.mkdir(exist_ok=True)
         print('>', traj_dir)
 
         # plot velocity of trajectory
@@ -235,14 +303,14 @@ if __name__ == '__main__':
         exp_dir = logdir
         # create an eval folder within the exp logdir
         eval_root = exp_dir / eval_name
-        eval_root.mkdir()
+        eval_root.mkdir(exist_ok=True)
         config_paths = exp_dir.rglob('configs.json')
     # If running eval on a specific sweep
     elif (logdir / "configs.json").exists():
         exp_dir = logdir.parent
         # create an eval folder within the sweep logdir
         eval_root = logdir / eval_name
-        eval_root.mkdir()
+        eval_root.mkdir(exist_ok=True)
         config_paths = [logdir / "configs.json"]
     else:
         raise ValueError("Invalid logdir", logdir)
@@ -255,8 +323,16 @@ if __name__ == '__main__':
         # find latest checkpoint
         checkpoints_path = config_path.parent / 'checkpoints'
         cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
-        latest_cp_number = sorted(cp_numbers)[-1]
-        latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        if len(cp_numbers) > 0:
+            # get the latest checkpoint
+            latest_cp_number = sorted(cp_numbers)[-1]
+            latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+        elif (config_path.parent / 'checkpoint.zip').exists():
+            # if no checkpoints, but a checkpoint.zip exists, use that
+            latest_cp_path = config_path.parent / 'checkpoint.zip'
+        else:
+            # if no checkpoints, and no checkpoint.zip, skip this config
+            raise ValueError('No checkpoints found in', config_path.parent)
         rl_paths.append((config_path, latest_cp_path))
 
     EVAL_TRAJECTORIES = []
