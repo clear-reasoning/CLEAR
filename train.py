@@ -122,8 +122,11 @@ def parse_args_train():
                         help='If true, the mpg is calculated averaged over the AV and the 5 IDMs behind.')
     parser.add_argument('--env_horizon', type=int, default=1000, nargs='+',
                         help='Sets the training horizon.')
+    # Effective max headway is the higher value of max_headway and leader.speed * max_time_headway
     parser.add_argument('--env_max_headway', type=int, default=120, nargs='+',
-                        help='Sets the headway above which we get penalized.')
+                        help='Sets the maximum permitted headway')
+    parser.add_argument('--env_max_time_headway', type=int, default=0, nargs='+',
+                        help='Sets the maximum permitted time headway')
     parser.add_argument('--env_minimal_time_headway', type=float, default=1.0, nargs='+',
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
@@ -133,6 +136,8 @@ def parse_args_train():
     parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
                         help='Factor to multiply accel_penalty to determine gap closing / failsafe penalty to'
                              'discourages use of these interventions')
+    parser.add_argument('--env_include_thresholds', default=False, action='store_true',
+                        help='If set, adds failsafe and gap-closing thresholds to base state.')
     parser.add_argument('--env_penalize_energy', type=int, default=1, nargs='+',
                         help='If true, penalize energy in the reward function')
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
@@ -145,6 +150,10 @@ def parse_args_train():
                         help='If set, adds downstream speed information to the base state.')
     parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
+    parser.add_argument('--env_include_local_segment', default=False, action='store_true',
+                        help='If downstream is set and this arg is set to 1, includes the local segment in state.')
+    parser.add_argument('--env_inrix_mem', type=int, default=0, nargs='+',
+                        help='If set to 1, inrix data will be included in memory.')
     parser.add_argument('--no_lc', type=int, default=0, nargs='+',
                         help='If set to 1, disables the lane-changing model.')
     parser.add_argument('--road_grade', type=str, default=None,
@@ -167,6 +176,7 @@ def run_experiment(config):
     env_config.update({
         'horizon': config['env_horizon'],
         'max_headway': config['env_max_headway'],
+        'max_time_headway': config['env_max_time_headway'],
         'discrete': config['env_discrete'],
         'num_actions': config['env_num_actions'],
         'min_accel': config['env_min_accel'],
@@ -177,6 +187,7 @@ def run_experiment(config):
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
         'accel_penalty': config['env_accel_penalty'],
         'intervention_penalty': config['env_intervention_penalty'],
+        'include_thresholds': config['env_include_thresholds'],
         'penalize_energy': config['env_penalize_energy'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
@@ -185,6 +196,8 @@ def run_experiment(config):
         'human_kwargs': config['env_human_kwargs'],
         'downstream': config['env_downstream'],
         'downstream_num_segments': config['env_downstream_num_segments'],
+        'include_local_segment': config['env_include_local_segment'],
+        'inrix_mem': config['env_inrix_mem'],
         'lane_changing': not config['no_lc'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],

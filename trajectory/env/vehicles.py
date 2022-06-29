@@ -157,7 +157,7 @@ class Vehicle(object):
             return None
 
         index = bisect.bisect(self.get_segments(), self.pos)
-        index = np.arange(index, min(len(self.get_segments()), index+k))
+        index = np.arange(index, min(len(self.get_segments()), index + k))
         dists = [self.get_segments()[index[i]] - self.pos for i in range(len(index))]
 
         return dists
@@ -171,7 +171,7 @@ class Vehicle(object):
             return None
 
         index = bisect.bisect(self.get_segments(), self.pos) - 1
-        index = np.arange(max(0, index-k), index)
+        index = np.arange(max(0, index - k), index)
         dists = [self.get_segments()[index[i]] - self.pos for i in range(len(index))]
 
         return dists
@@ -315,7 +315,8 @@ class RLVehicle(Vehicle):
         """Set acceleration."""
         # If position < 0, use IDM instead of RL accel
         if self.pos < 0:
-            self.accel_with_noise_no_failsafe = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
+            self.accel_with_noise_no_failsafe = self.idm.get_accel(self.speed, self.get_leader_speed(),
+                                                                   self.get_headway(), self.dt)
             self.accel_no_noise_no_failsafe = self.idm.get_accel_without_noise()
             self.accel_no_noise_with_failsafe = IDMVehicle.apply_failsafe(self, self.accel_no_noise_no_failsafe)
             self.accel = self.accel_no_noise_with_failsafe
@@ -334,10 +335,13 @@ class RLVehicle(Vehicle):
             self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
+    def failsafe_threshold(self):
+        return 6 * ((self.speed + 1 + self.speed * 4 / 30) - self.leader.speed)
+
     def apply_failsafe(self, accel):
-        # TODO hardcoded max decel to be conservative
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
-        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        v_safe = min(v_safe,
+                     safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
@@ -388,23 +392,25 @@ class AvVehicle(Vehicle):
             self.config = json.load(fp)
 
         if self.config['env_config']['discrete']:
-            try:
-                a_min = self.config['env_config']['min_accel']
-                a_max = self.config['env_config']['max_accel']
-            except KeyError:
-                # config.json does not specify a_min and/or a_max, setting to defaults for backward compatibility
-                a_min = -3.0
-                a_max = 1.5
-
+            a_min = self.config['env_config']['min_accel']
+            a_max = self.config['env_config']['max_accel']
             self.action_space = Discrete(self.config['env_config']['num_actions'])
             self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
 
         self.max_headway = self.config['env_config']['max_headway']
+        self.max_time_headway = self.config['env_config']['max_time_headway']
         self.num_concat_states = self.config['env_config']['num_concat_states']
         self.num_concat_states_large = self.config['env_config']['num_concat_states_large']
         self.augment_vf = self.config['env_config']['augment_vf']
+        self.downstream = self.config['env_config']['downstream']
+        self.downstream_num_segments = self.config['env_config']['downstream_num_segments']
+        self.include_thresholds = self.config['env_config']['include_thresholds']
+        self.inrix_mem = self.config['env_config'].get('inrix_mem', True)
+        self.include_local_segment = self.config['env_config']['include_local_segment']
         self.n_base_states = len(self.get_base_state())
-        n_states = self.n_base_states * (self.num_concat_states + self.num_concat_states_large) * (2 if self.augment_vf else 1)
+        self.n_downstream_states = len(self.get_downstream_state()) if (self.downstream and not self.inrix_mem) else 0
+        n_states = (self.n_base_states * (self.num_concat_states + self.num_concat_states_large)
+                    + self.n_downstream_states) * (2 if self.augment_vf else 1)
         self.states = np.zeros(n_states)
         self.step_counter = 0
         self.idm = IDMController()  # Instantiate IDM controller for use when self.pos < 0
@@ -420,10 +426,17 @@ class AvVehicle(Vehicle):
     def get_action(self, state):
         return get_first_element(self.model.predict(state, deterministic=True))
 
+    def gap_closing_threshold(self):
+        return max(self.max_headway, self.max_time_headway * self.speed)
+
+    def failsafe_threshold(self):
+        return 6 * ((self.speed + 1 + self.speed * 4 / 30) - self.leader.speed)
+
     def apply_failsafe(self, accel):
         # TODO hardcoded max decel to be conservative
         v_safe = safe_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt)
-        v_safe = min(v_safe, safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
+        v_safe = min(v_safe,
+                     safe_ttc_velocity(self.speed, self.leader.speed, self.get_headway(), self.max_decel, self.dt))
         v_next = self.speed + accel * self.dt
         if v_next > v_safe:
             safe_accel = np.clip((v_safe - self.speed) / self.dt, - np.abs(self.max_decel), self.max_accel)
@@ -438,25 +451,44 @@ class AvVehicle(Vehicle):
             self.get_headway() / 100.0,
         ]
 
-        if self.config['env_config']['downstream']:
-            num_segments = self.config['env_config']['downstream_num_segments']
-            downstream_speeds = self.get_downstream_avg_speed(k=num_segments)
-            downstream_distances = self.get_distance_to_next_segments(k=num_segments)
+        if self.include_thresholds:
+            state.append(self.gap_closing_threshold() / 100.0)
+            state.append(self.failsafe_threshold() / 100.0)
 
-            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
-            if downstream_speeds and downstream_distances:
-                downstream_speeds = downstream_speeds[1]
-                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+        if self.downstream and self.inrix_mem:
+            state.extend(self.get_downstream_state())
 
-            # for the segments that TSE info is available
-            for i in range(downstream_obs):
-                state.append(downstream_speeds[i] / 40.0)
-                state.append(downstream_distances[i] / 5000.0)
+        return state
 
-            # for segments where TSE info is not available
-            for i in range(downstream_obs, num_segments):
-                state.append(-1.0)
-                state.append(-1.0)
+    def get_downstream_state(self):
+        state = []
+        num_segments = self.downstream_num_segments
+        # Get extra speed because 0th speed is the local speed
+        downstream_speeds = self.get_downstream_avg_speed(k=num_segments + 1)
+        downstream_distances = self.get_distance_to_next_segments(k=num_segments)
+
+        downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+        local_speed = -1
+        if downstream_speeds:
+            local_speed = downstream_speeds[1][0]  # Extract local segment speed
+            downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
+            downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+        if self.include_local_segment:
+            if local_speed > -1:
+                state.append(local_speed / 40.0)
+            else:
+                state.append(-1)
+
+        # for the segments that TSE info is available
+        for i in range(downstream_obs):
+            state.append(downstream_speeds[i] / 40.0)
+            state.append(downstream_distances[i] / 5000.0)
+
+        # for segments where TSE info is not available
+        for i in range(downstream_obs, num_segments):
+            state.append(-1.0)
+            state.append(-1.0)
 
         return state
 
@@ -465,6 +497,7 @@ class AvVehicle(Vehicle):
 
         # roll short-term memory and preprend new state
         index = self.num_concat_states * self.n_base_states
+        end_index = index
         self.states[:index] = np.roll(self.states[:index], self.n_base_states)
         self.states[:self.n_base_states] = new_state
 
@@ -474,8 +507,15 @@ class AvVehicle(Vehicle):
             if self.step_counter % 10 == 0:
                 self.states[index:index2] = np.roll(self.states[index:index2], self.n_base_states)
                 self.states[index:index + self.n_base_states] = new_state
+            end_index = index2
 
-        return self.states
+        state = self.states
+
+        # if including inrix data outside of memory, add it to the state after stacking
+        if self.downstream and not self.inrix_mem:
+            state[end_index:end_index+self.n_downstream_states] = self.get_downstream_state()
+
+        return state
 
     def step(self, accel=None, ballistic=False, tse=None):
         self.step_counter += 1
@@ -487,7 +527,7 @@ class AvVehicle(Vehicle):
             accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
 
             # hardcoded gap closing
-            if self.get_headway() > self.max_headway:
+            if self.get_headway() > self.gap_closing_threshold():
                 accel = 1.0
 
             # failsafe

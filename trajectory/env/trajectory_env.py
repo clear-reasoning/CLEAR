@@ -21,6 +21,7 @@ DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
     'min_headway': 10.0,
     'max_headway': 120.0,
+    'max_time_headway': 0.0,
     'whole_trajectory': False,
     'discrete': False,
     'num_actions': 7,
@@ -61,7 +62,13 @@ DEFAULT_ENV_CONFIG = {
     # whether to add downstream speeds to state / use them
     'downstream': False,
     # how many segments of downstream info to add to state
-    'downstream_num_segments': 10
+    'downstream_num_segments': 10,
+    # whether to include INRIX data for local segment (only applies if downstream is set)
+    'include_local_segment': 0,
+    # whether to include thresholds for downstream and gap-closing in state
+    'include_thresholds': False,
+    # whether inrix portion of state is included in memory (if set to 1, included)
+    'inrix_mem': 1,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -145,6 +152,10 @@ class TrajectoryEnv(gym.Env):
             for i in range(len(self.avs))
         }
 
+        # Additional state that is not included in past states (so not set to self.n_states)
+        if self.downstream and not self.inrix_mem:
+            n_states += len(self.get_downstream_state())
+
         # define observation space
         n_obs = n_states
         if self.augment_vf:
@@ -163,29 +174,57 @@ class TrajectoryEnv(gym.Env):
             'headway': (av.get_headway(), 100.0),
         }
 
-        if self.downstream:
-            downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments)
-            downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+        if self.include_thresholds:
+            state.update({
+                'gap_closing': (self.gap_closing_threshold(av), 100.0),
+                'failsafe': (av.failsafe_threshold(), 100.0)
+            })
 
-            downstream_obs = 0  # Number of non-null downstream datapoints in tse info
-            if downstream_speeds and downstream_distances:
-                downstream_speeds = downstream_speeds[1]
-                downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+        # Add inrix data to base state if downstream set and including in memory
+        if self.downstream and self.inrix_mem:
+            state.update(self.get_downstream_state(av_idx))
 
-            # for the segments that TSE info is available
-            for i in range(downstream_obs):
+        return state
+
+    def get_downstream_state(self, av_idx=0):
+        av = self.avs[av_idx if av_idx is not None else 0]
+
+        """Get downstream state."""
+        state = {}
+        # Get extra speed because 0th speed is the local speed
+        downstream_speeds = av.get_downstream_avg_speed(k=self.downstream_num_segments + 1)
+        downstream_distances = av.get_distance_to_next_segments(k=self.downstream_num_segments)
+
+        downstream_obs = 0  # Number of non-null downstream datapoints in tse info
+        local_speed = -1
+        if downstream_speeds:
+            local_speed = downstream_speeds[1][0]  # Extract local segment speed
+            downstream_speeds = downstream_speeds[1][1:]  # Remove local segment to align speeds and distances
+            downstream_obs = min(len(downstream_speeds), len(downstream_distances))
+
+        if self.include_local_segment:
+            if local_speed > -1:
                 state.update({
-                    f"seg_{i}_speed": (downstream_speeds[i], 40.0),
-                    f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+                    "local_speed": (local_speed, 40.0),
+                })
+            else:
+                state.update({
+                    "local_speed": (-1.0, 1.0),
                 })
 
-            # for segments where TSE info is not available
-            for i in range(downstream_obs, self.downstream_num_segments):
-                state.update({
-                    f"seg_{i}_speed": (-1.0, 1.0),
-                    f"seg_{i}_dist": (-1.0, 1.0)
-                })
+        # for the segments that TSE info is available
+        for i in range(downstream_obs):
+            state.update({
+                f"seg_{i}_speed": (downstream_speeds[i], 40.0),
+                f"seg_{i}_dist": (downstream_distances[i], 5000.0)
+            })
 
+        # for segments where TSE info is not available
+        for i in range(downstream_obs, self.downstream_num_segments):
+            state.update({
+                f"seg_{i}_speed": (-1.0, 1.0),
+                f"seg_{i}_dist": (-1.0, 1.0)
+            })
         return state
 
     def get_base_additional_vf_state(self):
@@ -243,6 +282,11 @@ class TrajectoryEnv(gym.Env):
         # use past states (including current state) as state
         state = self.past_states[av_idx]
 
+        # If not storing inrix data in memory, add after concatenating states
+        if self.downstream and not self.inrix_mem:
+            downstream_state = [value / scale for value, scale in self.get_downstream_state(av_idx).values()]
+            state = np.concatenate((state, downstream_state))
+
         if self.augment_vf:
             # add value function augmentation to states
             additional_vf_state = [value / scale for value, scale in self.get_base_additional_vf_state().values()]
@@ -263,19 +307,27 @@ class TrajectoryEnv(gym.Env):
             reward -= 50
 
         # penalize instant energy consumption for the AV or AV + platoon
+        energy_reward = 0
         if self.penalize_energy:
-            reward -= np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
-                               for veh in self.mpg_cars]) / 10.0
+            energy_reward = -np.mean([max(self.sim.get_data(veh, 'instant_energy_consumption')[-1], 0)
+                                      for veh in self.mpg_cars]) / 10.0
+            reward += energy_reward
 
         # penalize acceleration amplitude
-        reward -= self.accel_penalty * (action ** 2)
+        accel_reward = -self.accel_penalty * (action ** 2)
+        reward += accel_reward
 
-        gap_closing = av.get_headway() > self.max_headway
-        failsafe = av.accel_no_noise_no_failsafe != av.accel_no_noise_with_failsafe
+        gap_closing = av.get_headway() > self.gap_closing_threshold(av)
+        failsafe = av.get_headway() < av.failsafe_threshold()
+        intervention_reward = 0
         if gap_closing or failsafe:
-            reward -= self.accel_penalty * self.intervention_penalty
+            intervention_reward = -self.accel_penalty * self.intervention_penalty
+            reward += intervention_reward
 
-        return reward
+        return reward, energy_reward, accel_reward, intervention_reward
+
+    def gap_closing_threshold(self, av):
+        return max(self.max_headway, self.max_time_headway * av.speed)
 
     def create_simulation(self):
         """Create simulation."""
@@ -363,8 +415,7 @@ class TrajectoryEnv(gym.Env):
             for av, action in zip(self.avs, actions):
                 accel = self.action_set[action] if self.discrete else float(action)
                 metrics['rl_controller_accel'] = accel
-                accel = av.set_accel(accel,
-                                     large_gap_threshold=self.max_headway)  # returns accel with gap-closing and failsafe applied
+                accel = av.set_accel(accel, large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_processed_accel'] = accel
         elif self.av_controller == 'rl_fs':
             # RL with FS wrapper
@@ -378,7 +429,8 @@ class TrajectoryEnv(gym.Env):
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
         # compute reward
-        reward = self.reward_function(av=self.avs[0], action=accel) if accel is not None else 0
+        reward, energy_reward, accel_reward, intervention_reward \
+            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0)
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
@@ -406,6 +458,9 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['base_states'].append(self.get_base_state())
             self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
             self.collected_rollout['rewards'].append(reward)
+            self.collected_rollout['energy_rewards'].append(energy_reward)
+            self.collected_rollout['accel_rewards'].append(accel_reward)
+            self.collected_rollout['intervention_rewards'].append(intervention_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({
