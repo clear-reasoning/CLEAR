@@ -121,8 +121,7 @@ def run_eval(env_config, traj_dir):
 
 
 def generate_metrics(eval_dir, lane_changing, eval_trajectories):
-
-    eval_dir.mkdir()
+    eval_dir.mkdir(exist_ok=True)
     print('>', eval_dir)
 
     metrics = defaultdict(dict)
@@ -143,7 +142,7 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
         # create trajectory logdir
         traj_name = eval_traj.parent.name
         traj_dir = eval_dir / traj_name
-        traj_dir.mkdir()
+        traj_dir.mkdir(exist_ok=True)
         print('>', traj_dir)
 
         # plot velocity of trajectory
@@ -236,14 +235,14 @@ if __name__ == '__main__':
         exp_dir = logdir
         # create an eval folder within the exp logdir
         eval_root = exp_dir / eval_name
-        eval_root.mkdir()
+        eval_root.mkdir(exist_ok=True)
         config_paths = exp_dir.rglob('configs.json')
     # If running eval on a specific sweep
     elif (logdir / "configs.json").exists():
         exp_dir = logdir.parent
         # create an eval folder within the sweep logdir
         eval_root = logdir / eval_name
-        eval_root.mkdir()
+        eval_root.mkdir(exist_ok=True)
         config_paths = [logdir / "configs.json"]
     else:
         raise ValueError("Invalid logdir", logdir)
