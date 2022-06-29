@@ -77,7 +77,7 @@ def run_eval(env_config, traj_dir):
     for veh_id in [traj_leader_id] + av_ids:
         # color red for leader and blue for AVs
         if veh_id == traj_leader_id:
-            color =  (0.8, 0.2, 0.2, 1.0)
+            color = (0.8, 0.2, 0.2, 1.0)
         else:
             # hardcoded for a platoon of (av human*24)*8
             av_number = int(veh_id.split('_')[0])
@@ -118,8 +118,7 @@ def run_eval(env_config, traj_dir):
         gap_closing_threshold = [max(env.max_headway, env.max_time_headway * vel)
                                  for vel in df_av['speed']]
         failsafe_threshold = [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
-                                               for this_vel, lead_vel in zip(df_av['speed'],
-                                                                             df_av['leader_speed'])]   
+                              for this_vel, lead_vel in zip(df_av['speed'], df_av['leader_speed'])]
         plt.plot(df_av['time'], gap_closing_threshold, label='gap closing threshold', linewidth=2.0)
         plt.plot(df_av['time'], failsafe_threshold, label='failsafe threshold', linewidth=2.0)
         plt.grid()
