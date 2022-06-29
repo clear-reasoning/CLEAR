@@ -66,21 +66,32 @@ def run_eval(env_config, traj_dir):
 
     # load emissions data
     df = pd.read_csv(emissions_path)
+    timestep = 0.1
 
     # compute trajectory plots
     traj_leader_id = [vid for vid in df['id'].unique() if 'leader' in vid][0]
     av_ids = [vid for vid in df['id'].unique() if 'av' in vid]
 
     # plot speed of leader and all avs
-    plt.figure()
+    plt.figure(figsize=(15, 3))
     for veh_id in [traj_leader_id] + av_ids:
+        # color red for leader and blue for AVs
+        if veh_id == traj_leader_id:
+            color =  (0.8, 0.2, 0.2, 1.0)
+        else:
+            # hardcoded for a platoon of (av human*24)*8
+            av_number = int(veh_id.split('_')[0])
+            color = (0.2, 0.2, 0.8, 1.0) if av_number == 1 \
+                else (0.2, 0.8, 0.2, 1.0) if av_number == 176 \
+                else (0.2, 0.2, 1.0, 0.2)
         df_av = df[df['id'] == veh_id]
-        plt.plot(df_av['time'], df_av['speed'], label=veh_id, linewidth=2.0)
+        plt.plot(df_av['time'] / timestep, df_av['speed'], label=veh_id, linewidth=2.0, color=color)
     plt.title('platoon speeds')
-    plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+    plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
     plt.grid()
-    plt.xlim(0, df['time'].max())
+    plt.xlim(0, (df['time'] / timestep).max())
     fig_path = controller_dir / 'speed_avs_leader.png'
+    plt.tight_layout()
     plt.savefig(fig_path)
     print('>', fig_path)
 
@@ -88,20 +99,20 @@ def run_eval(env_config, traj_dir):
     # plot av speed+leader speed, av accel and av gap as a function of time in 3 separate subplots
     for av_id in av_ids:
         df_av = df[df['id'] == av_id]
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 7))
         plt.subplot(311)
         plt.plot(df_av['time'], df_av['speed'], label=av_id, linewidth=2.0)
         plt.plot(df_av['time'], df_av['leader_speed'], label='leader', linewidth=2.0)
         plt.grid()
         plt.xlim(0, df_av['time'].max())
         plt.title('speeds')
-        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
         plt.subplot(312)
         plt.plot(df_av['time'], df_av['accel'], label=av_id, linewidth=2.0)
         plt.grid()
         plt.xlim(0, df_av['time'].max())
         plt.title('accels')
-        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
         plt.subplot(313)
         plt.plot(df_av['time'], df_av['headway'], label=av_id, linewidth=2.0)
         gap_closing_threshold = [max(env.max_headway, env.max_time_headway * vel)
@@ -114,15 +125,13 @@ def run_eval(env_config, traj_dir):
         plt.grid()
         plt.xlim(0, df_av['time'].max())
         plt.title('headway')
-        plt.legend(fontsize=6, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
         plt.tight_layout()
         fig_path = controller_dir / f'traj_{av_id}.png'
         plt.savefig(fig_path)
         print('>', fig_path)
 
     # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
-    timestep = 0.1
-
     def meters_per_second_to_miles(meters_per_second):
         return meters_per_second / 1609.34 * timestep
 
