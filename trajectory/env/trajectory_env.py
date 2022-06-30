@@ -53,7 +53,9 @@ DEFAULT_ENV_CONFIG = {
     'fixed_traj_path': None,
     # set to use one specific set of trajectories
     'traj_dir': None,
-    # gradually introduce a curriculum of trajectories
+    # Whether to gradually add trajectories to training
+    'traj_curriculum': 0,
+    # which set of trajectories to draw from for curriculum
     'traj_curriculum_dir': None,
     # frequency of introducing curriculum trajectories
     'traj_curriculum_freq': 100,
@@ -499,7 +501,7 @@ class TrajectoryEnv(gym.Env):
         self.step_count += 1
 
         # Update curriculum if applicable
-        if self.traj_curriculum_dir and self.step_count % self.traj_curriculum_freq == 0:
+        if self.traj_curriculum and self.step_count % self.traj_curriculum_freq == 0:
             self.data_loader.update_curriculum()
             self.trajectories = self.data_loader.get_trajectories(chunk_size=self.chunk_size)
 

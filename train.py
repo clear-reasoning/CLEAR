@@ -102,8 +102,10 @@ def parse_args_train():
     parser.add_argument('--traj_dir', type=str,
                         default=None,
                         help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
-    parser.add_argument('--traj_curriculum_dir', type=str, default=None,
-                        help='Set to gradually introduce trajectories into training every {traj_curriculum_freq} iterations.')
+    parser.add_argument('--traj_curriculum', type=int, default=0, nargs='+',
+                        help='If set to 1, introduce additional trajectories into training.')
+    parser.add_argument('--traj_curriculum_dir', type=str, default=None, nargs='+',
+                        help='If traj_curriculum, which set of trajectories to gradually introduce into training.')
     parser.add_argument('--traj_curriculum_freq', type=float, default=100,
                         help='Frequency at which to introduce trajectories into training.')
 
@@ -214,6 +216,7 @@ def run_experiment(config):
         'platoon_size': config['platoon_size'],
         'fixed_traj_path': config['traj_path'],
         'traj_dir': config['traj_dir'],
+        'traj_curriculum': config['traj_curriculum'],
         'traj_curriculum_dir': config['traj_curriculum_dir'],
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps']
