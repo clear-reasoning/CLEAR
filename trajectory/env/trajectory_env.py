@@ -59,6 +59,10 @@ DEFAULT_ENV_CONFIG = {
     'traj_curriculum_freq': 100,
     # enable lane changing
     'lane_changing': True,
+    # set probability of lane changing model enabled in a given rollout
+    'lc_prob': 0,
+    # set time step after which lane changing is enabled randomly
+    'lc_curriculum_steps': 0,
     # enable road grade in energy function
     'road_grade': '',
     # set size of platoon for observation
@@ -121,7 +125,7 @@ class TrajectoryEnv(gym.Env):
         self.traj = None
 
         # create simulation
-        self.create_simulation()
+        self.create_simulation(self.lane_changing)
 
         self._verbose = _verbose
         if self._verbose:
@@ -337,7 +341,7 @@ class TrajectoryEnv(gym.Env):
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
 
-    def create_simulation(self):
+    def create_simulation(self, lc):
         """Create simulation."""
         # collect the next trajectory
         self.traj = next(self.trajectories)
@@ -347,7 +351,7 @@ class TrajectoryEnv(gym.Env):
         self.time_step = self.traj['timestep']
         self.sim = Simulation(
             timestep=self.time_step,
-            enable_lane_changing=self.lane_changing,
+            enable_lane_changing=lc,
             road_grade=self.road_grade,
             downstream_path=os.path.dirname(self.traj["path"]),
         )
@@ -402,7 +406,13 @@ class TrajectoryEnv(gym.Env):
 
     def reset(self):
         """Reset."""
-        self.create_simulation()
+
+        # Create simulation with lc enabled with a probability of lc_prob (if lane changing is disabled overall)
+        lc = self.lane_changing
+        if not self.lane_changing and not self.simulate and self.step_count > self.lc_curriculum_steps:
+            lc = np.random.rand() < self.lc_prob
+        self.create_simulation(lc)
+
         # reset memory
         self.past_states = {
             i: np.zeros(self.n_states)
