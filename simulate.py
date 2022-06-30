@@ -167,6 +167,8 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
         'platoon': args.platoon,
         'whole_trajectory': True,
         'fixed_traj_path': (os.path.join(tc.PROJECT_PATH, args.traj_path) if args.traj_path != 'None' else None),
+        'traj_dir': None,
+        'traj_curriculum_dir': None,
         'av_controller': args.av_controller,
         'av_kwargs': args.av_kwargs,
         'human_controller': args.human_controller,

@@ -102,6 +102,11 @@ def parse_args_train():
     parser.add_argument('--traj_dir', type=str,
                         default=None,
                         help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
+    parser.add_argument('--traj_curriculum_dir', type=str, default=None,
+                        help='Set to gradually introduce trajectories into training every {traj_curriculum_freq} iterations.')
+    parser.add_argument('--traj_curriculum_freq', type=float, default=100,
+                        help='Frequency at which to introduce trajectories into training.')
+
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                              'This works only for the base states and not for the additional vf states.')
@@ -202,7 +207,10 @@ def run_experiment(config):
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
         'fixed_traj_path': config['traj_path'],
-        'traj_dir': config['traj_dir']
+        'traj_dir': config['traj_dir'],
+        'traj_curriculum_dir': config['traj_curriculum_dir'],
+        # Convert curriculum frequency from iterations to steps
+        'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps']
     })
 
     # create env

@@ -53,6 +53,10 @@ DEFAULT_ENV_CONFIG = {
     'fixed_traj_path': None,
     # set to use one specific set of trajectories
     'traj_dir': None,
+    # gradually introduce a curriculum of trajectories
+    'traj_curriculum_dir': None,
+    # frequency of introducing curriculum trajectories
+    'traj_curriculum_freq': 100,
     # enable lane changing
     'lane_changing': True,
     # enable road grade in energy function
@@ -88,6 +92,9 @@ class TrajectoryEnv(gym.Env):
     def __init__(self, config, _simulate=False, _verbose=True):
         super().__init__()
 
+        # Keep track of total number of training steps
+        self.step_count = 0
+
         # extract params from config
         self.config = dict(DEFAULT_ENV_CONFIG)
         self.config.update(config)
@@ -103,12 +110,13 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         # instantiate generator of dataset trajectories
-        self.data_loader = DataLoader(traj_dir=self.traj_dir)
+        self.data_loader = DataLoader(traj_path=self.fixed_traj_path, traj_dir=self.traj_dir,
+                                      curriculum_dir=self.traj_curriculum_dir)
 
-        chunk_size = None if self.whole_trajectory else self.horizon
+        self.chunk_size = None if self.whole_trajectory else self.horizon
         self.trajectories = self.data_loader.get_trajectories(
-            chunk_size=chunk_size,
-            fixed_traj_path=self.fixed_traj_path,
+            chunk_size=self.chunk_size,
+            # fixed_traj_path=self.fixed_traj_path,
         )
         self.traj = None
 
@@ -476,6 +484,14 @@ class TrajectoryEnv(gym.Env):
             })
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
+
+        # Track total number of steps
+        self.step_count += 1
+
+        # Update curriculum if applicable
+        if self.traj_curriculum_dir and self.step_count % self.traj_curriculum_freq == 0:
+            self.data_loader.update_curriculum()
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.chunk_size)
 
         return next_state, reward, done, infos
 
