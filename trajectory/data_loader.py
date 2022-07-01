@@ -28,15 +28,21 @@ class DataLoader(object):
             self.trajectories = self.process_trajectories(positions_from_speeds, traj_path=traj_path)
         elif traj_dir:
             self.trajectories = self.process_trajectories(positions_from_speeds, traj_dir=traj_dir)
+        else:
+            # Add all available trajectories if no path or directory specified
+            self.trajectories = self.process_trajectories(positions_from_speeds)
 
         if curriculum_dir:
             self.curriculum_trajectories = self.process_trajectories(positions_from_speeds, traj_dir=curriculum_dir)
+            if len(self.curriculum_trajectories) == 0:
+                raise ValueError(f"Curriculum directory {curriculum_dir} is empty, does not contain trajectories, "
+                                 f"or does not exist")
 
     def process_trajectories(self, positions_from_speeds, traj_path=None, traj_dir=None):
         trajectories = []
         if traj_path:
             raw_data = [[Path(traj_path), pd.read_csv(traj_path)]]
-        elif traj_dir:
+        else:
             raw_data = self.get_raw_data(traj_dir)
 
         for fp, data in raw_data:
