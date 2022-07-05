@@ -1,6 +1,6 @@
 # script to evaluate controllers in an experiment logdir (handles grid searches)
 # no lane change / road grade functionality for now
-
+import json
 from pathlib import Path
 import argparse
 from trajectory.env.trajectory_env import TrajectoryEnv, DEFAULT_ENV_CONFIG
@@ -221,11 +221,16 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
         print('>', traj_fig_path)
 
         # run controllers
-        av_configs = [
-            {'av_controller': baseline_controller, 'av_kwargs': 'dict(noise=0)'},
-            *[{'av_controller': 'av', 'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")'}
-              for (config_path, cp_path) in rl_paths],
-        ]
+        av_configs = [{'av_controller': baseline_controller, 'av_kwargs': 'dict(noise=0)'}]
+        for config_path, cp_path in rl_paths:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                av_configs.append(
+                    {'av_controller': 'av',
+                     'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")',
+                     'max_headway': config['env_config']['max_headway'],
+                     'max_time_headway': config['env_config']['max_time_headway']})
+
         av_env_configs = []
         for av_config in av_configs:
             env_config = copy.deepcopy(abstract_env_config)
