@@ -241,6 +241,8 @@ class TrajectoryEnv(gym.Env):
             'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
             'avg_gallons': (
                 np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
+            'traj_idx': (self.traj_idx, 10.0),
+            'chunk_idx': (self.chunk_idx, 10000.0),
         }
 
         return vf_state
