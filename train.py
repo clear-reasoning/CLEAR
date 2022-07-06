@@ -102,6 +102,13 @@ def parse_args_train():
     parser.add_argument('--traj_dir', type=str,
                         default=None,
                         help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
+    parser.add_argument('--traj_curriculum', type=int, default=0, nargs='+',
+                        help='If set to 1, introduce additional trajectories into training.')
+    parser.add_argument('--traj_curriculum_dir', type=str, default=None, nargs='+',
+                        help='If traj_curriculum, which set of trajectories to gradually introduce into training.')
+    parser.add_argument('--traj_curriculum_freq', type=float, default=100,
+                        help='Frequency at which to introduce trajectories into training.')
+
     parser.add_argument('--env_num_concat_states', type=int, default=1, nargs='+',
                         help='This many past states will be concatenated. If set to 1, it\'s just the current state. '
                              'This works only for the base states and not for the additional vf states.')
@@ -156,6 +163,10 @@ def parse_args_train():
                         help='If set to 1, inrix data will be included in memory.')
     parser.add_argument('--no_lc', type=int, default=0, nargs='+',
                         help='If set to 1, disables the lane-changing model.')
+    parser.add_argument('--lc_prob', type=float, default=0, nargs='+',
+                        help='If no_lc, can set a probability that the lane changing model is enabled for each rollout.')
+    parser.add_argument('--lc_curriculum_iters', type=int, default=0, nargs='+',
+                        help='If no_lc, can set number of iters after which lc model begins to kick in at probability lc_prob.')
     parser.add_argument('--road_grade', type=str, default=None,
                         help='Can be set to i24 or i680. If set, road grade will be included in the energy function.')
     parser.add_argument('--platoon_size', type=int, default=5,
@@ -199,10 +210,16 @@ def run_experiment(config):
         'include_local_segment': config['env_include_local_segment'],
         'inrix_mem': config['env_inrix_mem'],
         'lane_changing': not config['no_lc'],
+        'lc_prob': config['lc_prob'],
+        'lc_curriculum_steps': config['lc_curriculum_iters'] * config['n_steps'],
         'road_grade': config['road_grade'],
         'platoon_size': config['platoon_size'],
         'fixed_traj_path': config['traj_path'],
-        'traj_dir': config['traj_dir']
+        'traj_dir': config['traj_dir'],
+        'traj_curriculum': config['traj_curriculum'],
+        'traj_curriculum_dir': config['traj_curriculum_dir'],
+        # Convert curriculum frequency from iterations to steps
+        'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps']
     })
 
     # create env
