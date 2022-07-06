@@ -72,7 +72,7 @@ DEFAULT_ENV_CONFIG = {
     # set size of platoon for observation
     'platoon_size': 5,
     # whether to add downstream speeds to state / use them
-    'downstream': False,
+    'downstream': 0,
     # how many segments of downstream info to add to state
     'downstream_num_segments': 10,
     # whether to include INRIX data for local segment (only applies if downstream is set)

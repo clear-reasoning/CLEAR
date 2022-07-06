@@ -158,7 +158,7 @@ def parse_args_train():
                              'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
-    parser.add_argument('--env_downstream', default=False, action='store_true',
+    parser.add_argument('--env_downstream', type=int, default=0, nargs='+',
                         help='If set, adds downstream speed information to the base state.')
     parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
