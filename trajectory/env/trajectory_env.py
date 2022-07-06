@@ -41,6 +41,8 @@ DEFAULT_ENV_CONFIG = {
     'num_concat_states': 1,
     # number of larger interval concat states
     'num_concat_states_large': 0,
+    # number of leader speed memory in state
+    'num_leader_speed_memory': 0,
     # platoon (combination of avs and humans following the leader car)
     'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
@@ -202,6 +204,17 @@ class TrajectoryEnv(gym.Env):
         # Add inrix data to base state if downstream set and including in memory
         if self.downstream and self.inrix_mem:
             state.update(self.get_downstream_state(av_idx))
+
+        if self.num_leader_speed_memory:
+            n_mem = self.num_leader_speed_memory
+
+            # Get past leader speeds from simulation (all but current), and ensure that
+            # past leader speed is at least as long as n_mem
+            past_leader_speeds = [0] * n_mem + self.sim.get_data(av, 'leader_speed')[:-1]
+            state.update({
+                f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
+                for i in range(1, n_mem+1)
+            })
 
         return state
 

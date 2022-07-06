@@ -117,6 +117,9 @@ def parse_args_train():
     parser.add_argument('--env_num_concat_states_large', type=int, default=0, nargs='+',
                         help='Same as --env_num_concat_states, but this concatenate states at a 1s interval instead of 0.1s. '
                              'The two commands can be used together.')
+    parser.add_argument('--env_num_leader_speed_memory', type=int, default=0, nargs='+',
+                        help='Number of previous leader speeds to add to state. If set to 0, no leader speed is added.')
+
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_actions', type=int, default=50, nargs='+',
@@ -206,6 +209,7 @@ def run_experiment(config):
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
         'num_concat_states_large': config['env_num_concat_states_large'],
+        'num_leader_speed_memory': config['env_num_leader_speed_memory'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
         'downstream': config['env_downstream'],
