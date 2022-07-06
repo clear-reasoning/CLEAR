@@ -69,6 +69,8 @@ DEFAULT_ENV_CONFIG = {
     'include_thresholds': False,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'inrix_mem': 1,
+    # whether inrix portion of state is included in memory (if set to 1, included)
+    'vf_include_chunk_idx': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -240,10 +242,12 @@ class TrajectoryEnv(gym.Env):
             'time': (self.sim.step_counter, self.horizon),
             'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
             'avg_gallons': (
-                np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
-            'traj_idx': (self.traj_idx, 10.0),
-            'chunk_idx': (self.chunk_idx, 10000.0),
+                np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0)
         }
+
+        if self.vf_include_chunk_idx:
+            vf_state.update({'traj_idx': (self.traj_idx, 10.0),
+                             'chunk_idx': (self.chunk_idx, 10000.0)})
 
         return vf_state
 
