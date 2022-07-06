@@ -94,7 +94,9 @@ def parse_args_train():
                         help='PPO seed, random if not specified')
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
                         help='If true, the value function will be augmented with some additional states.')
-
+    parser.add_argument('--vf_include_chunk_idx', type=int, default=0, nargs='+',
+                        help='If enabled (and augment_vf enabled), will pass in index of trajectory and starting index'
+                             'of chunk into the value function.')
     # env params
     parser.add_argument('--traj_path', type=str,
                         default=None,
@@ -194,6 +196,7 @@ def run_experiment(config):
         'max_accel': config['env_max_accel'],
         'use_fs': config['use_fs'],
         'augment_vf': config['augment_vf'],
+        'vf_include_chunk_idx': config['vf_include_chunk_idx'],
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
         'accel_penalty': config['env_accel_penalty'],

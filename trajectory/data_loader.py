@@ -106,9 +106,10 @@ class DataLoader(object):
                 if str(t['path']).split("/")[-2] == fixed_traj_path.split("/")[-2]
             ]
         for _ in counter(count):
-            traj = random.sample(available_trajectories, k=1)[0]
+            traj_idx = random.randrange(len(available_trajectories))
+            traj = available_trajectories[traj_idx]
             if chunk_size is None:
-                yield dict(traj)
+                yield (traj_idx, 0), dict(traj)
                 continue
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
@@ -121,7 +122,7 @@ class DataLoader(object):
                 'duration': round(np.max(traj_chunk['times']) - np.min(traj_chunk['times']), 3),
                 'size': len(traj_chunk['times']),
             })
-            yield traj_chunk
+            yield (traj_idx, start_idx), traj_chunk
 
 
 ###################################################################################################
@@ -369,7 +370,7 @@ if __name__ == '__main__':
 
         low_speed_mpgs = []
         high_speed_mpgs = []
-        for i, traj in enumerate(data_loader.get_trajectories(chunk_size=600, count=100)):
+        for i, (traj_idx, traj) in enumerate(data_loader.get_trajectories(chunk_size=600, count=100)):
             print(i)
             idm_params = dict(v0=35, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3)
             sim = Simulation(timestep=traj['timestep'])

@@ -79,6 +79,8 @@ DEFAULT_ENV_CONFIG = {
     'include_thresholds': False,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'inrix_mem': 1,
+    # whether inrix portion of state is included in memory (if set to 1, included)
+    'vf_include_chunk_idx': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -125,6 +127,8 @@ class TrajectoryEnv(gym.Env):
             # fixed_traj_path=self.fixed_traj_path,
         )
         self.traj = None
+        self.traj_idx = -1
+        self.chunk_idx = -1
 
         # create simulation
         self.create_simulation(self.lane_changing)
@@ -152,6 +156,7 @@ class TrajectoryEnv(gym.Env):
         # get number of states
         n_states = len(self.get_base_state())
         n_additional_vf_states = len(self.get_base_additional_vf_state())
+        assert n_additional_vf_states <= n_states
         if self.augment_vf:
             n_additional_vf_states = 0
         assert (n_additional_vf_states <= n_states)
@@ -251,8 +256,12 @@ class TrajectoryEnv(gym.Env):
             'time': (self.sim.step_counter, self.horizon),
             'avg_miles': (np.mean([self.sim.get_data(veh, 'total_miles')[-1] for veh in self.mpg_cars]), 50.0),
             'avg_gallons': (
-                np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0),
+                np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0)
         }
+
+        if self.vf_include_chunk_idx:
+            vf_state.update({'traj_idx': (self.traj_idx, 10.0),
+                             'chunk_idx': (self.chunk_idx, 10000.0)})
 
         return vf_state
 
@@ -346,7 +355,7 @@ class TrajectoryEnv(gym.Env):
     def create_simulation(self, lc):
         """Create simulation."""
         # collect the next trajectory
-        self.traj = next(self.trajectories)
+        (self.traj_idx, self.chunk_idx), self.traj = next(self.trajectories)
         self.horizon = len(self.traj['positions'])
 
         # create a simulation object
