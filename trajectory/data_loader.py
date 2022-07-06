@@ -23,9 +23,29 @@ DT = 0.1
 class DataLoader(object):
     """Data loader."""
 
-    def __init__(self, positions_from_speeds=True, traj_dir=None):
-        self.trajectories = []
-        for fp, data in self.get_raw_data(traj_dir):
+    def __init__(self, positions_from_speeds=True, traj_path=None, traj_dir=None, curriculum_dir=None):
+        if traj_path:
+            self.trajectories = self.process_trajectories(positions_from_speeds, traj_path=traj_path)
+        elif traj_dir:
+            self.trajectories = self.process_trajectories(positions_from_speeds, traj_dir=traj_dir)
+        else:
+            # Add all available trajectories if no path or directory specified
+            self.trajectories = self.process_trajectories(positions_from_speeds)
+
+        if curriculum_dir:
+            self.curriculum_trajectories = self.process_trajectories(positions_from_speeds, traj_dir=curriculum_dir)
+            if len(self.curriculum_trajectories) == 0:
+                raise ValueError(f"Curriculum directory {curriculum_dir} is empty, does not contain trajectories, "
+                                 f"or does not exist")
+
+    def process_trajectories(self, positions_from_speeds, traj_path=None, traj_dir=None):
+        trajectories = []
+        if traj_path:
+            raw_data = [[Path(traj_path), pd.read_csv(traj_path)]]
+        else:
+            raw_data = self.get_raw_data(traj_dir)
+
+        for fp, data in raw_data:
             # Values for the I-680 are in m/s, while those for the I-24 appear
             # to be in km/hr.
             scale = 1. if "i680" in str(fp) else 3.6
@@ -37,7 +57,7 @@ class DataLoader(object):
             else:
                 positions = np.array(data['DistanceGPS'])
 
-            self.trajectories.append({
+            trajectories.append({
                 'path': fp,
                 'timestep': round(data['Time'][1] - data['Time'][0], 3),
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
@@ -47,6 +67,7 @@ class DataLoader(object):
                 'velocities': np.array(data['Velocity']) / scale,
                 'accelerations': np.array(data['Acceleration'])
             })
+        return trajectories
 
     def get_raw_data(self, traj_dir=None):
         """Get raw data."""
@@ -65,6 +86,11 @@ class DataLoader(object):
 
         data = map(pd.read_csv, file_paths)
         return zip(file_paths, data)
+
+    def update_curriculum(self):
+        if self.curriculum_trajectories:
+            new_trajectory = self.curriculum_trajectories.pop(0)
+            self.trajectories.append(new_trajectory)
 
     def get_all_trajectories(self):
         """Get all trajectories."""

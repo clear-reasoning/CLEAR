@@ -53,8 +53,18 @@ DEFAULT_ENV_CONFIG = {
     'fixed_traj_path': None,
     # set to use one specific set of trajectories
     'traj_dir': None,
+    # Whether to gradually add trajectories to training
+    'traj_curriculum': 0,
+    # which set of trajectories to draw from for curriculum
+    'traj_curriculum_dir': None,
+    # frequency of introducing curriculum trajectories
+    'traj_curriculum_freq': 100,
     # enable lane changing
     'lane_changing': True,
+    # set probability of lane changing model enabled in a given rollout
+    'lc_prob': 0,
+    # set time step after which lane changing is enabled randomly
+    'lc_curriculum_steps': 0,
     # enable road grade in energy function
     'road_grade': '',
     # set size of platoon for observation
@@ -90,6 +100,9 @@ class TrajectoryEnv(gym.Env):
     def __init__(self, config, _simulate=False, _verbose=True):
         super().__init__()
 
+        # Keep track of total number of training steps
+        self.step_count = 0
+
         # extract params from config
         self.config = dict(DEFAULT_ENV_CONFIG)
         self.config.update(config)
@@ -105,19 +118,20 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         # instantiate generator of dataset trajectories
-        self.data_loader = DataLoader(traj_dir=self.traj_dir)
+        self.data_loader = DataLoader(traj_path=self.fixed_traj_path, traj_dir=self.traj_dir,
+                                      curriculum_dir=self.traj_curriculum_dir)
 
-        chunk_size = None if self.whole_trajectory else self.horizon
+        self.chunk_size = None if self.whole_trajectory else self.horizon
         self.trajectories = self.data_loader.get_trajectories(
-            chunk_size=chunk_size,
-            fixed_traj_path=self.fixed_traj_path,
+            chunk_size=self.chunk_size,
+            # fixed_traj_path=self.fixed_traj_path,
         )
         self.traj = None
         self.traj_idx = -1
         self.chunk_idx = -1
 
         # create simulation
-        self.create_simulation()
+        self.create_simulation(self.lane_changing)
 
         self._verbose = _verbose
         if self._verbose:
@@ -338,7 +352,7 @@ class TrajectoryEnv(gym.Env):
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
 
-    def create_simulation(self):
+    def create_simulation(self, lc):
         """Create simulation."""
         # collect the next trajectory
         (self.traj_idx, self.chunk_idx), self.traj = next(self.trajectories)
@@ -348,7 +362,7 @@ class TrajectoryEnv(gym.Env):
         self.time_step = self.traj['timestep']
         self.sim = Simulation(
             timestep=self.time_step,
-            enable_lane_changing=self.lane_changing,
+            enable_lane_changing=lc,
             road_grade=self.road_grade,
             downstream_path=os.path.dirname(self.traj["path"]),
         )
@@ -403,7 +417,13 @@ class TrajectoryEnv(gym.Env):
 
     def reset(self):
         """Reset."""
-        self.create_simulation()
+
+        # Create simulation with lc enabled with a probability of lc_prob (if lane changing is disabled overall)
+        lc = self.lane_changing
+        if not self.lane_changing and not self.simulate and self.step_count > self.lc_curriculum_steps:
+            lc = np.random.rand() < self.lc_prob
+        self.create_simulation(lc)
+
         # reset memory
         self.past_states = {
             i: np.zeros(self.n_states)
@@ -485,6 +505,14 @@ class TrajectoryEnv(gym.Env):
             })
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
+
+        # Track total number of steps
+        self.step_count += 1
+
+        # Update curriculum if applicable
+        if self.traj_curriculum and self.step_count % self.traj_curriculum_freq == 0:
+            self.data_loader.update_curriculum()
+            self.trajectories = self.data_loader.get_trajectories(chunk_size=self.chunk_size)
 
         return next_state, reward, done, infos
 
