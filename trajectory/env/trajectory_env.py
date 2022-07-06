@@ -140,6 +140,7 @@ class TrajectoryEnv(gym.Env):
         # get number of states
         n_states = len(self.get_base_state())
         n_additional_vf_states = len(self.get_base_additional_vf_state())
+        assert n_additional_vf_states <= n_states
         if self.augment_vf:
             n_additional_vf_states = 0
         assert (n_additional_vf_states <= n_states)
