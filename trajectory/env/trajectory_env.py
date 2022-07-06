@@ -111,6 +111,8 @@ class TrajectoryEnv(gym.Env):
             fixed_traj_path=self.fixed_traj_path,
         )
         self.traj = None
+        self.traj_idx = -1
+        self.chunk_idx = -1
 
         # create simulation
         self.create_simulation()
@@ -332,7 +334,7 @@ class TrajectoryEnv(gym.Env):
     def create_simulation(self):
         """Create simulation."""
         # collect the next trajectory
-        self.traj = next(self.trajectories)
+        (self.traj_idx, self.chunk_idx), self.traj = next(self.trajectories)
         self.horizon = len(self.traj['positions'])
 
         # create a simulation object
