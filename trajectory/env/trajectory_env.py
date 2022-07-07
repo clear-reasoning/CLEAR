@@ -33,6 +33,9 @@ DEFAULT_ENV_CONFIG = {
     # if we get closer then this time headway we are forced to break with maximum decel
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
+    'headway_penalty': 0.0,
+    'min_headway_penalty_gap': 10.0,
+    'min_headway_penalty_speed': 1.0,
     'accel_penalty': 0.2,
     'intervention_penalty': 0,
     'penalize_energy': 1,
@@ -353,6 +356,7 @@ class TrajectoryEnv(gym.Env):
         accel_reward = -self.accel_penalty * (action ** 2)
         reward += accel_reward
 
+        # penalize use of interventions
         gap_closing = av.get_headway() > self.gap_closing_threshold(av)
         failsafe = av.get_headway() < av.failsafe_threshold()
         intervention_reward = 0
@@ -360,7 +364,14 @@ class TrajectoryEnv(gym.Env):
             intervention_reward = -self.accel_penalty * self.intervention_penalty
             reward += intervention_reward
 
-        return reward, energy_reward, accel_reward, intervention_reward
+        # penalize large headways
+        headway_reward = 0
+        if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
+            headway_reward = -self.headway_penalty * av.get_time_headway()
+            reward += headway_reward
+            # print(av.get_time_headway(), av.speed, av.get_headway(), headway_reward)
+
+        return reward, energy_reward, accel_reward, intervention_reward, headway_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -470,9 +481,9 @@ class TrajectoryEnv(gym.Env):
                 metrics['vdes_delta'] = float(action) * self.time_step
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
-        # compute reward
-        reward, energy_reward, accel_reward, intervention_reward \
-            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0)
+        # compute reward, store reward components for rollout dict
+        reward, energy_reward, accel_reward, intervention_reward, headway_reward \
+            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
@@ -503,6 +514,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['energy_rewards'].append(energy_reward)
             self.collected_rollout['accel_rewards'].append(accel_reward)
             self.collected_rollout['intervention_rewards'].append(intervention_reward)
+            self.collected_rollout['headway_rewards'].append(headway_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({

@@ -101,8 +101,7 @@ def parse_args_train():
     parser.add_argument('--traj_path', type=str,
                         default=None,
                         help='Set to train on a specific trajectory (eg dataset/data_v2_preprocessed_west/path/traj.csv).')
-    parser.add_argument('--traj_dir', type=str,
-                        default=None,
+    parser.add_argument('--traj_dir', type=str, default=None, nargs='+',
                         help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
     parser.add_argument('--traj_curriculum', type=int, default=0, nargs='+',
                         help='If set to 1, introduce additional trajectories into training.')
@@ -143,6 +142,10 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
                         help='Sets the time to collision below which we get penalized.')
+    # Add arg for headway penalty
+    parser.add_argument('--env_headway_penalty', type=float, default=0.0, nargs='+',
+                        help='Sets the magnitude of the headway penalty (if > 0), where this coefficient'
+                             'is multiplied by the time headway when headway > 10.')
     parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
                         help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
     parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
@@ -202,6 +205,7 @@ def run_experiment(config):
         'vf_include_chunk_idx': config['vf_include_chunk_idx'],
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
+        'headway_penalty': config['env_headway_penalty'],
         'accel_penalty': config['env_accel_penalty'],
         'intervention_penalty': config['env_intervention_penalty'],
         'include_thresholds': config['env_include_thresholds'],
