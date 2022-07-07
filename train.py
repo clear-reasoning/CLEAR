@@ -443,15 +443,6 @@ if __name__ == '__main__':
 
     print(f'\nTraining terminated\n\t{exp_logdir}')
 
-    # Simulate all trained policies
-    simulate_args = parse_args_simulate(return_defaults=True)  # Get default simulate args
-    simulate_args.av_controller = 'rl'
-    simulate_args.cp_dir = exp_logdir
-    simulate_args.no_lc = args.no_lc
-    simulate_args.n_runs = 5
-
-    simulate_dir(simulate_args)
-
     if args.telegram:
         import telegram
         import os
