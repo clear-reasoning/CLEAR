@@ -15,7 +15,6 @@ from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
-from simulate import simulate_dir, parse_args_simulate
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
@@ -101,8 +100,7 @@ def parse_args_train():
     parser.add_argument('--traj_path', type=str,
                         default=None,
                         help='Set to train on a specific trajectory (eg dataset/data_v2_preprocessed_west/path/traj.csv).')
-    parser.add_argument('--traj_dir', type=str,
-                        default=None,
+    parser.add_argument('--traj_dir', type=str, default=None, nargs='+',
                         help='Set to train on a specific set of trajectories (eg dataset/data_v2_preprocessed_west/).')
     parser.add_argument('--traj_curriculum', type=int, default=0, nargs='+',
                         help='If set to 1, introduce additional trajectories into training.')
@@ -117,6 +115,9 @@ def parse_args_train():
     parser.add_argument('--env_num_concat_states_large', type=int, default=0, nargs='+',
                         help='Same as --env_num_concat_states, but this concatenate states at a 1s interval instead of 0.1s. '
                              'The two commands can be used together.')
+    parser.add_argument('--env_num_leader_speed_memory', type=int, default=0, nargs='+',
+                        help='Number of previous leader speeds to add to state. If set to 0, no leader speed is added.')
+
     parser.add_argument('--env_discrete', type=int, default=0, nargs='+',
                         help='If true, the environment has a discrete action space.')
     parser.add_argument('--env_num_actions', type=int, default=50, nargs='+',
@@ -140,6 +141,10 @@ def parse_args_train():
                         help='Sets the time headway below which we get penalized.')
     parser.add_argument('--env_minimal_time_to_collision', type=float, default=6.0, nargs='+',
                         help='Sets the time to collision below which we get penalized.')
+    # Add arg for headway penalty
+    parser.add_argument('--env_headway_penalty', type=float, default=0.0, nargs='+',
+                        help='Sets the magnitude of the headway penalty (if > 0), where this coefficient'
+                             'is multiplied by the time headway when headway > 10.')
     parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
                         help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
     parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
@@ -155,7 +160,7 @@ def parse_args_train():
                              'Vehicle tags can be passed with hashtags, eg "av#tag" "human#tag*3"')
     parser.add_argument('--env_human_kwargs', type=str, default='{}', nargs='+',
                         help='Dict of keyword arguments to pass to the IDM platoon cars controller.')
-    parser.add_argument('--env_downstream', default=False, action='store_true',
+    parser.add_argument('--env_downstream', type=int, default=0, nargs='+',
                         help='If set, adds downstream speed information to the base state.')
     parser.add_argument('--env_downstream_num_segments', type=int, default=10, nargs='+',
                         help='If downstream is set, average speed and distance to this many segments is added to state.')
@@ -199,6 +204,7 @@ def run_experiment(config):
         'vf_include_chunk_idx': config['vf_include_chunk_idx'],
         'minimal_time_headway': config['env_minimal_time_headway'],
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
+        'headway_penalty': config['env_headway_penalty'],
         'accel_penalty': config['env_accel_penalty'],
         'intervention_penalty': config['env_intervention_penalty'],
         'include_thresholds': config['env_include_thresholds'],
@@ -206,6 +212,7 @@ def run_experiment(config):
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
         'num_concat_states_large': config['env_num_concat_states_large'],
+        'num_leader_speed_memory': config['env_num_leader_speed_memory'],
         'platoon': config['env_platoon'],
         'human_kwargs': config['env_human_kwargs'],
         'downstream': config['env_downstream'],
@@ -438,15 +445,6 @@ if __name__ == '__main__':
             pool.map(run_experiment, configs)
 
     print(f'\nTraining terminated\n\t{exp_logdir}')
-
-    # Simulate all trained policies
-    simulate_args = parse_args_simulate(return_defaults=True)  # Get default simulate args
-    simulate_args.av_controller = 'rl'
-    simulate_args.cp_dir = exp_logdir
-    simulate_args.no_lc = args.no_lc
-    simulate_args.n_runs = 5
-
-    simulate_dir(simulate_args)
 
     if args.telegram:
         import telegram

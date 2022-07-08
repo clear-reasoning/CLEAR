@@ -33,6 +33,9 @@ DEFAULT_ENV_CONFIG = {
     # if we get closer then this time headway we are forced to break with maximum decel
     'minimal_time_headway': 1.0,
     'minimal_time_to_collision': 6.0,
+    'headway_penalty': 0.0,
+    'min_headway_penalty_gap': 10.0,
+    'min_headway_penalty_speed': 1.0,
     'accel_penalty': 0.2,
     'intervention_penalty': 0,
     'penalize_energy': 1,
@@ -41,6 +44,8 @@ DEFAULT_ENV_CONFIG = {
     'num_concat_states': 1,
     # number of larger interval concat states
     'num_concat_states_large': 0,
+    # number of leader speed memory in state
+    'num_leader_speed_memory': 0,
     # platoon (combination of avs and humans following the leader car)
     'platoon': 'av human*5',
     # controller to use for the AV (available options: rl, idm, fs)
@@ -70,7 +75,7 @@ DEFAULT_ENV_CONFIG = {
     # set size of platoon for observation
     'platoon_size': 5,
     # whether to add downstream speeds to state / use them
-    'downstream': False,
+    'downstream': 0,
     # how many segments of downstream info to add to state
     'downstream_num_segments': 10,
     # whether to include INRIX data for local segment (only applies if downstream is set)
@@ -202,6 +207,17 @@ class TrajectoryEnv(gym.Env):
         # Add inrix data to base state if downstream set and including in memory
         if self.downstream and self.inrix_mem:
             state.update(self.get_downstream_state(av_idx))
+
+        if self.num_leader_speed_memory:
+            n_mem = self.num_leader_speed_memory
+
+            # Get past leader speeds from simulation (all but current), and ensure that
+            # past leader speed is at least as long as n_mem
+            past_leader_speeds = [0] * n_mem + self.sim.get_data(av, 'leader_speed')[:-1]
+            state.update({
+                f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
+                for i in range(1, n_mem+1)
+            })
 
         return state
 
@@ -340,6 +356,7 @@ class TrajectoryEnv(gym.Env):
         accel_reward = -self.accel_penalty * (action ** 2)
         reward += accel_reward
 
+        # penalize use of interventions
         gap_closing = av.get_headway() > self.gap_closing_threshold(av)
         failsafe = av.get_headway() < av.failsafe_threshold()
         intervention_reward = 0
@@ -347,7 +364,14 @@ class TrajectoryEnv(gym.Env):
             intervention_reward = -self.accel_penalty * self.intervention_penalty
             reward += intervention_reward
 
-        return reward, energy_reward, accel_reward, intervention_reward
+        # penalize large headways
+        headway_reward = 0
+        if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
+            headway_reward = -self.headway_penalty * av.get_time_headway()
+            reward += headway_reward
+            # print(av.get_time_headway(), av.speed, av.get_headway(), headway_reward)
+
+        return reward, energy_reward, accel_reward, intervention_reward, headway_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -457,9 +481,9 @@ class TrajectoryEnv(gym.Env):
                 metrics['vdes_delta'] = float(action) * self.time_step
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
 
-        # compute reward
-        reward, energy_reward, accel_reward, intervention_reward \
-            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0)
+        # compute reward, store reward components for rollout dict
+        reward, energy_reward, accel_reward, intervention_reward, headway_reward \
+            = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
 
         # print crashes
         crash = (self.avs[0].get_headway() <= 0)
@@ -490,6 +514,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['energy_rewards'].append(energy_reward)
             self.collected_rollout['accel_rewards'].append(accel_reward)
             self.collected_rollout['intervention_rewards'].append(intervention_reward)
+            self.collected_rollout['headway_rewards'].append(headway_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({

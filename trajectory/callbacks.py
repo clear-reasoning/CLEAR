@@ -102,6 +102,7 @@ class TensorboardCallback(BaseCallback):
         episode_energy_reward = np.sum(rollout_dict['training']['energy_rewards'])
         episode_accel_reward = np.sum(rollout_dict['training']['accel_rewards'])
         episode_intervention_reward = np.sum(rollout_dict['training']['intervention_rewards'])
+        episode_headway_reward = np.sum(rollout_dict['training']['headway_rewards'])
         av_mpg = rollout_dict['sim_data_avs']['avg_mpg'][-1]
         system_mpg = rollout_dict['system']['avg_mpg'][-1]
         system_speed = rollout_dict['system']['speed'][-1]
@@ -109,6 +110,7 @@ class TensorboardCallback(BaseCallback):
         self.logger.record(f'{base_name}/{base_name}_episode_energy_reward', episode_energy_reward)
         self.logger.record(f'{base_name}/{base_name}_episode_accel_reward', episode_accel_reward)
         self.logger.record(f'{base_name}/{base_name}_episode_intervention_reward', episode_intervention_reward)
+        self.logger.record(f'{base_name}/{base_name}_episode_headway_reward', episode_headway_reward)
         self.logger.record(f'{base_name}/{base_name}_av_mpg', av_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_mpg', system_mpg)
         self.logger.record(f'{base_name}/{base_name}_system_speed', system_speed)
@@ -144,6 +146,7 @@ class TensorboardCallback(BaseCallback):
         rollout_dict['training']['energy_rewards'] = collected_rollout['energy_rewards']
         rollout_dict['training']['accel_rewards'] = collected_rollout['accel_rewards']
         rollout_dict['training']['intervention_rewards'] = collected_rollout['intervention_rewards']
+        rollout_dict['training']['headway_rewards'] = collected_rollout['headway_rewards']
         rollout_dict['training']['dones'] = collected_rollout['dones']
         rollout_dict['training']['actions'] = collected_rollout['actions']
 

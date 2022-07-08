@@ -407,6 +407,8 @@ class AvVehicle(Vehicle):
         self.include_thresholds = self.config['env_config']['include_thresholds']
         self.inrix_mem = self.config['env_config'].get('inrix_mem', True)
         self.include_local_segment = self.config['env_config']['include_local_segment']
+        self.num_leader_speed_memory = self.config['env_config']['num_leader_speed_memory']
+        self.past_leader_speeds = np.zeros(self.num_leader_speed_memory)
         self.n_base_states = len(self.get_base_state())
         self.n_downstream_states = len(self.get_downstream_state()) if (self.downstream and not self.inrix_mem) else 0
         n_states = (self.n_base_states * (self.num_concat_states + self.num_concat_states_large)
@@ -457,6 +459,9 @@ class AvVehicle(Vehicle):
 
         if self.downstream and self.inrix_mem:
             state.extend(self.get_downstream_state())
+
+        if self.num_leader_speed_memory:
+            state.extend([speed / 40.0 for speed in self.past_leader_speeds])
 
         return state
 
@@ -514,6 +519,11 @@ class AvVehicle(Vehicle):
         # if including inrix data outside of memory, add it to the state after stacking
         if self.downstream and not self.inrix_mem:
             state[end_index:end_index+self.n_downstream_states] = self.get_downstream_state()
+
+        # update leader speed memory
+        if self.num_leader_speed_memory:
+            self.past_leader_speeds = np.roll(self.past_leader_speeds, 1)
+            self.past_leader_speeds[0] = self.leader.speed
 
         return state
 
