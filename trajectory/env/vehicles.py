@@ -546,5 +546,4 @@ class AvVehicle(Vehicle):
             accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
             accel = IDMVehicle.apply_failsafe(self, accel)
 
-
         return super().step(accel=accel, ballistic=True, tse=tse)
