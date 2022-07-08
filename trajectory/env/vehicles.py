@@ -463,8 +463,6 @@ class AvVehicle(Vehicle):
         if self.num_leader_speed_memory:
             state.extend([speed / 40.0 for speed in self.past_leader_speeds])
 
-        print(state)
-
         return state
 
     def get_downstream_state(self):
