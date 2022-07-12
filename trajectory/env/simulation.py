@@ -312,11 +312,8 @@ class Simulation(object):
         """
         # If no downstream path was specific, or the data does not exist, no
         # data will be available.
-        if downstream_path is None:
+        if downstream_path is None or not os.path.exists(os.path.join(downstream_path, 'speed.csv')):
             return None, None
-
-        if not os.path.exists(os.path.join(downstream_path, "speed.csv")):
-            raise ValueError("No inrix data available in {}".format(downstream_path))
 
         tse = {}
 

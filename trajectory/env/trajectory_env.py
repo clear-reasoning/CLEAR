@@ -384,11 +384,16 @@ class TrajectoryEnv(gym.Env):
 
         # create a simulation object
         self.time_step = self.traj['timestep']
+
+        downstream_path = os.path.dirname(self.traj["path"])
+        if self.downstream and not os.path.exists(os.path.join(downstream_path, "speed.csv")):
+            raise ValueError("No inrix data available in {}".format(downstream_path))
+
         self.sim = Simulation(
             timestep=self.time_step,
             enable_lane_changing=lc,
             road_grade=self.road_grade,
-            downstream_path=os.path.dirname(self.traj["path"]) if self.downstream else None,
+            downstream_path=downstream_path
         )
 
         # populate simulation with a trajectory leader
