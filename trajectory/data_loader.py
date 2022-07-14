@@ -108,7 +108,7 @@ class DataLoader(object):
         for _ in counter(count):
             traj_idx = random.randrange(len(available_trajectories))
             traj = available_trajectories[traj_idx]
-            if chunk_size is None:
+            if chunk_size is None or traj['size'] <= chunk_size:
                 yield (traj_idx, 0), dict(traj)
                 continue
             start_idx = random.randint(0, traj['size'] - chunk_size)
