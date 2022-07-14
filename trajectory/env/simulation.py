@@ -6,6 +6,7 @@ from collections import defaultdict
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, \
     RLVehicle, TrajectoryVehicle, AvVehicle
 from trajectory.env.energy_models import PFM2019RAV4
+from trajectory.env.failsafes import safe_velocity
 from trajectory.env.utils import get_last_or
 import random
 import pickle
@@ -259,17 +260,20 @@ class Simulation(object):
                         # compute gap between veh and the inserted vehicle
                         inserted_gap = min_insertion_gap + gap_ratio * (max_insertion_gap - min_insertion_gap)
 
-                        # add vehicle in front of veh
-                        self.add_vehicle(
-                            controller='idm',
-                            kind='human',
-                            gap=inserted_gap,
-                            initial_speed=inserted_speed,
-                            insert_at_index=i)
-                        self.n_cutins += 1
+                        # make sure that cut-in is safe and won't result in a crash
+                        if veh.speed <= safe_velocity(veh.speed, inserted_speed, inserted_gap,
+                                                      veh.max_decel, self.timestep):
+                            # add vehicle in front of veh
+                            self.add_vehicle(
+                                controller='idm',
+                                kind='human',
+                                gap=gap - veh.length - inserted_gap,
+                                initial_speed=inserted_speed,
+                                insert_at_index=i)
+                            self.n_cutins += 1
 
-                        # increment index to skip newly inserted vehicle in loop
-                        i += 1
+                            # increment index to skip newly inserted vehicle in loop
+                            i += 1
 
             # handle cut-outs: first make sure we wouldn't remove an
             # AV or the trajectory leader
