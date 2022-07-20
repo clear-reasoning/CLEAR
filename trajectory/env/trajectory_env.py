@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
 import gym
-from gym.spaces import Discrete, Box
+from gym.spaces import Discrete, Box, MultiDiscrete
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -17,6 +17,7 @@ from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
 # env params that will be used except for params explicitly set in the command-line arguments
+MPH_TO_MS = 0.44704
 DEFAULT_ENV_CONFIG = {
     'horizon': 1000,
     'min_headway': 10.0,
@@ -86,6 +87,11 @@ DEFAULT_ENV_CONFIG = {
     'inrix_mem': 1,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'vf_include_chunk_idx': 0,
+    # constants for acc controller
+    'acc_num_speed_settings': 3,
+    'acc_min_speed': 20 * MPH_TO_MS,
+    'acc_max_speed': 80 * MPH_TO_MS,
+    'acc_speed_step': 1 * MPH_TO_MS,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -122,6 +128,10 @@ class TrajectoryEnv(gym.Env):
             assert not self.discrete
             self.av_controller = 'rl_fs'
 
+        if self.output_acc:
+            assert self.av_controller == 'rl'
+            self.av_controller = 'rl_acc'
+
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader(traj_path=self.fixed_traj_path, traj_dir=self.traj_dir,
                                       curriculum_dir=self.traj_curriculum_dir)
@@ -149,7 +159,10 @@ class TrajectoryEnv(gym.Env):
         # define action space
         a_min = self.min_accel
         a_max = self.max_accel
-        if self.discrete:
+        if self.output_acc:
+            n_speeds = (self.acc_max_speed - self.acc_min_speed)
+            self.action_space = MultiDiscrete([])
+        elif self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)
         else:
@@ -485,6 +498,18 @@ class TrajectoryEnv(gym.Env):
                 metrics['vdes_command'] = vdes_command
                 metrics['vdes_delta'] = float(action) * self.time_step
                 av.set_vdes(vdes_command)  # set v_des = v_av + accel * dt
+        elif self.av_controller == 'rl_acc':
+            if type(actions) not in [list, np.ndarray]:
+                actions = [actions]
+            for av, action in zip(self.avs, actions):
+                speed_setting, gap_setting = action
+                metrics['rl_acc_speed_setting'] = speed_setting
+                metrics['rl_acc_gap_setting'] = gap_setting
+                accel = av.set_acc(speed_setting, gap_setting)
+                metrics['rl_controller_accel'] = accel
+                metrics['rl_processed_accel'] = accel
+                # TODO add acc to metrics
+
 
         # compute reward, store reward components for rollout dict
         reward, energy_reward, accel_reward, intervention_reward, headway_reward \
