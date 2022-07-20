@@ -26,5 +26,6 @@ ICRA_2021/
 *.pdf
 leaderboard_uploads/
 *.mat
+*acc_*
 *.m
 data/
