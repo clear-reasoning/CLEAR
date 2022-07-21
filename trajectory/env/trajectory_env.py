@@ -88,7 +88,7 @@ DEFAULT_ENV_CONFIG = {
     # whether inrix portion of state is included in memory (if set to 1, included)
     'vf_include_chunk_idx': 0,
     # constants for acc controller
-    'acc_num_speed_settings': 3,
+    'acc_num_gap_settings': 3,
     'acc_min_speed': 20 * MPH_TO_MS,
     'acc_max_speed': 80 * MPH_TO_MS,
     'acc_speed_step': 1 * MPH_TO_MS,
@@ -160,8 +160,8 @@ class TrajectoryEnv(gym.Env):
         a_min = self.min_accel
         a_max = self.max_accel
         if self.output_acc:
-            n_speeds = (self.acc_max_speed - self.acc_min_speed)
-            self.action_space = MultiDiscrete([])
+            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
+            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_speed_settings])
         elif self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)
