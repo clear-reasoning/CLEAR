@@ -34,7 +34,7 @@ class TensorboardCallback(BaseCallback):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.env.av_controller), custom_plot=True)
 
     def _on_rollout_start(self):
         self.env.start_collecting_rollout()
@@ -46,7 +46,7 @@ class TensorboardCallback(BaseCallback):
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl'), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.env.av_controller), custom_plot=True)
 
         self.rollout += 1
 
@@ -84,6 +84,11 @@ class TensorboardCallback(BaseCallback):
                     },
                     'rewards': rollout_dict['training']['rewards'],
                 }
+                if 'gap_actions' and 'speed_actions' in rollout_dict['training']:
+                    custom_metrics.update({
+                        'speed_actions': rollout_dict['training']['speed_actions'],
+                        'gap_actions': rollout_dict['training']['gap_actions'],
+                    })
                 for k, v in custom_metrics.items():
                     if isinstance(v, dict):
                         with plotter.subplot(title=k, grid=True, legend=True):
@@ -149,6 +154,9 @@ class TensorboardCallback(BaseCallback):
         rollout_dict['training']['headway_rewards'] = collected_rollout['headway_rewards']
         rollout_dict['training']['dones'] = collected_rollout['dones']
         rollout_dict['training']['actions'] = collected_rollout['actions']
+        if env.output_acc:
+            rollout_dict['training']['speed_actions'] = collected_rollout['speed_actions']
+            rollout_dict['training']['gap_actions'] = collected_rollout['gap_actions']
 
         if 'metrics' in collected_rollout['infos'][0]:
             for info in collected_rollout['infos']:
@@ -193,6 +201,7 @@ class TensorboardCallback(BaseCallback):
     def run_eval(self, av_controller):
         """Run evaluation."""
         # set seed so that the different evaluated controllers use the same trajectory
+
         random.seed(self.rollout)
         np.random.seed(self.rollout)
 
@@ -212,7 +221,9 @@ class TensorboardCallback(BaseCallback):
         done = False
         test_env.start_collecting_rollout()
         while not done:
-            if av_controller == 'rl':
+            if av_controller == 'rl_acc':
+                action = self.model.predict(state, deterministic=True)[0]
+            elif av_controller == 'rl':
                 action = get_first_element(self.model.predict(state, deterministic=True))
             else:
                 action = 0

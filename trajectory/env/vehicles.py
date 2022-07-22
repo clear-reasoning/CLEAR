@@ -1,5 +1,7 @@
 """Vehicles."""
-from gym.spaces import Discrete
+from gym.spaces import Discrete, MultiDiscrete
+
+from trajectory.env.acc_controller import ACCController
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
 from trajectory.env.utils import get_first_element
@@ -391,12 +393,7 @@ class AvVehicle(Vehicle):
         with open(config_path, 'r') as fp:
             self.config = json.load(fp)
 
-        if self.config['env_config']['discrete']:
-            a_min = self.config['env_config']['min_accel']
-            a_max = self.config['env_config']['max_accel']
-            self.action_space = Discrete(self.config['env_config']['num_actions'])
-            self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
-
+        self.discrete = self.config['env_config']['discrete']
         self.max_headway = self.config['env_config']['max_headway']
         self.max_time_headway = self.config['env_config']['max_time_headway']
         self.num_concat_states = self.config['env_config']['num_concat_states']
@@ -408,14 +405,34 @@ class AvVehicle(Vehicle):
         self.inrix_mem = self.config['env_config'].get('inrix_mem', True)
         self.include_local_segment = self.config['env_config']['include_local_segment']
         self.num_leader_speed_memory = self.config['env_config']['num_leader_speed_memory']
+
         self.past_leader_speeds = np.zeros(self.num_leader_speed_memory)
         self.n_base_states = len(self.get_base_state())
         self.n_downstream_states = len(self.get_downstream_state()) if (self.downstream and not self.inrix_mem) else 0
         n_states = (self.n_base_states * (self.num_concat_states + self.num_concat_states_large)
                     + self.n_downstream_states) * (2 if self.augment_vf else 1)
         self.states = np.zeros(n_states)
+        self.output_acc = self.config['env_config']['output_acc']
         self.step_counter = 0
         self.idm = IDMController()  # Instantiate IDM controller for use when self.pos < 0
+
+        if self.output_acc:
+            self.acc = ACCController()  # Instantiate ACCController for use when output acc is enabled
+            self.acc_min_speed = self.config['env_config']['acc_min_speed']
+            self.acc_max_speed = self.config['env_config']['acc_max_speed']
+            self.acc_speed_step = self.config['env_config']['acc_speed_step']
+            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
+            self.acc_num_gap_settings = self.config['env_config']['acc_num_gap_settings']
+            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
+            self.gap_action_set = np.array([1, 2, 3])
+            self.speed_action_set = np.arange(self.acc_min_speed,
+                                              self.acc_max_speed + self.acc_speed_step,
+                                              self.acc_speed_step)
+        elif self.discrete:
+            a_min = self.config['env_config']['min_accel']
+            a_max = self.config['env_config']['max_accel']
+            self.action_space = Discrete(self.config['env_config']['num_actions'])
+            self.action_set = np.linspace(a_min, a_max, self.config['env_config']['num_actions'])
 
         # retrieve algorithm
         alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", self.config['algorithm']).group(1, 2)
@@ -426,7 +443,7 @@ class AvVehicle(Vehicle):
         self.model = algorithm.load(cp_path)
 
     def get_action(self, state):
-        return get_first_element(self.model.predict(state, deterministic=True))
+        return self.model.predict(state, deterministic=True)[0]
 
     def gap_closing_threshold(self):
         return max(self.max_headway, self.max_time_headway * self.speed)
@@ -532,16 +549,26 @@ class AvVehicle(Vehicle):
 
         # Only use RL after pos is 0, use IDM before
         if self.pos >= 0:
-            # get action from model
-            action = self.get_action(self.get_state())
-            accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
+            if self.output_acc:
+                action = self.get_action(self.get_state())
 
-            # hardcoded gap closing
-            if self.get_headway() > self.gap_closing_threshold():
-                accel = 1.0
+                # Get ACC actions from RL model
+                speed_action = self.speed_action_set[action[0]]
+                gap_action = self.gap_action_set[action[1]]
 
-            # failsafe
-            accel = self.apply_failsafe(accel)
+                # Get corresponding accel from ACC controller model
+                accel = self.acc.get_accel(self.speed, self.leader.speed, self.get_headway(), speed_action, gap_action)
+            else:
+                # get action from model
+                action = self.get_action(self.get_state())
+                accel = self.action_set[action] if self.config['env_config']['discrete'] else float(action)
+
+                # hardcoded gap closing
+                if self.get_headway() > self.gap_closing_threshold():
+                    accel = 1.0
+
+                # failsafe
+                accel = self.apply_failsafe(accel)
         else:
             accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
             accel = IDMVehicle.apply_failsafe(self, accel)

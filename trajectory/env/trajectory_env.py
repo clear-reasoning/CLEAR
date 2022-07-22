@@ -87,7 +87,8 @@ DEFAULT_ENV_CONFIG = {
     'inrix_mem': 1,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'vf_include_chunk_idx': 0,
-    # constants for acc controller
+    # params for acc controller (rl_acc vehicle)
+    'output_acc': False,  # If set, output acc gap and speed settings instead of accel
     'acc_num_gap_settings': 3,
     'acc_min_speed': 20 * MPH_TO_MS,
     'acc_max_speed': 80 * MPH_TO_MS,
@@ -129,7 +130,7 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         if self.output_acc:
-            assert self.av_controller == 'rl'
+            assert 'rl' in self.av_controller
             self.av_controller = 'rl_acc'
 
         # instantiate generator of dataset trajectories
@@ -161,7 +162,12 @@ class TrajectoryEnv(gym.Env):
         a_max = self.max_accel
         if self.output_acc:
             self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
-            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_speed_settings])
+            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
+            self.gap_action_set = np.array([1, 2, 3])
+            self.speed_action_set = np.arange(self.acc_min_speed,
+                                              self.acc_max_speed + self.acc_speed_step,
+                                              self.acc_speed_step)
+
         elif self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)
@@ -501,24 +507,30 @@ class TrajectoryEnv(gym.Env):
         elif self.av_controller == 'rl_acc':
             if type(actions) not in [list, np.ndarray]:
                 actions = [actions]
+            elif type(actions) is np.ndarray and len(actions.shape) < 2:
+                actions = np.array([actions])
+
             for av, action in zip(self.avs, actions):
-                speed_setting, gap_setting = action
+                speed_setting = self.speed_action_set[action[0]]
+                gap_setting = self.gap_action_set[action[1]]
                 metrics['rl_acc_speed_setting'] = speed_setting
                 metrics['rl_acc_gap_setting'] = gap_setting
                 accel = av.set_acc(speed_setting, gap_setting)
                 metrics['rl_controller_accel'] = accel
                 metrics['rl_processed_accel'] = accel
-                # TODO add acc to metrics
-
 
         # compute reward, store reward components for rollout dict
         reward, energy_reward, accel_reward, intervention_reward, headway_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
 
         # print crashes
-        crash = (self.avs[0].get_headway() <= 0)
-        if crash:
-            print('CRASH', self.avs[0].vid)
+        crash = False
+        crashes = [av.get_headway() <= 0 for av in self.avs]
+        for i, crashed in enumerate(crashes):
+            if crashed:
+                print(f'Crash {i}')
+                crash = True
+
         metrics['crash'] = int(crash)
 
         # execute one simulation step
@@ -538,6 +550,11 @@ class TrajectoryEnv(gym.Env):
 
         if self.collect_rollout:
             self.collected_rollout['actions'].append(get_first_element(actions))
+            if self.output_acc:
+                self.collected_rollout['speed_actions'].append(self.speed_action_set[actions[0][0]])
+                self.collected_rollout['gap_actions'].append(self.gap_action_set[actions[0][1]])
+            self.collected_rollout['actions'].append(get_first_element(actions))
+
             self.collected_rollout['base_states'].append(self.get_base_state())
             self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
             self.collected_rollout['rewards'].append(reward)
