@@ -1,15 +1,16 @@
 """Trajectory environment."""
+import os
+import re
+import time
 from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
+from pathlib import Path
+
 import gym
-from gym.spaces import Discrete, Box, MultiDiscrete
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import re
-import time
-import os
+from gym.spaces import Discrete, Box, MultiDiscrete
 
 from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
@@ -515,7 +516,7 @@ class TrajectoryEnv(gym.Env):
                 gap_setting = self.gap_action_set[action[1]]
                 metrics['rl_acc_speed_setting'] = speed_setting
                 metrics['rl_acc_gap_setting'] = gap_setting
-                accel = av.set_acc(speed_setting, gap_setting)
+                accel = av.set_acc(speed_setting, gap_setting, large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_controller_accel'] = accel
                 metrics['rl_processed_accel'] = accel
 
