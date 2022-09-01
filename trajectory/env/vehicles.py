@@ -1,12 +1,12 @@
 """Vehicles."""
+import bisect
+
+import numpy as np
 from gym.spaces import Discrete, MultiDiscrete
 
 from trajectory.env.acc_controller import ACCController
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
-from trajectory.env.utils import get_first_element
-import numpy as np
-import bisect
 
 
 class Vehicle(object):
@@ -558,6 +558,7 @@ class AvVehicle(Vehicle):
 
                 # Get corresponding accel from ACC controller model
                 accel = self.acc.get_accel(self.speed, self.leader.speed, self.get_headway(), speed_action, gap_action)
+                accel = Vehicle.apply_failsafe(self, accel)  # Apply basic failsafe, not custom TTC Failsafe
             else:
                 # get action from model
                 action = self.get_action(self.get_state())
