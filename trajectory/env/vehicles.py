@@ -4,9 +4,9 @@ import bisect
 import numpy as np
 from gym.spaces import Discrete, MultiDiscrete
 
-from trajectory.env.acc_controller import ACCController
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
 from trajectory.env.failsafes import safe_velocity, safe_ttc_velocity
+from trajectory.env.megacontroller import MegaController
 
 
 class Vehicle(object):
@@ -417,7 +417,8 @@ class AvVehicle(Vehicle):
         self.idm = IDMController()  # Instantiate IDM controller for use when self.pos < 0
 
         if self.output_acc:
-            self.acc = ACCController()  # Instantiate ACCController for use when output acc is enabled
+            # self.acc = ACCController()  # Instantiate ACCController for use when output acc is enabled
+            self.megacontroller = MegaController(output_acc=True)  # Instantiate MegaController for use when output acc is enabled
             self.acc_min_speed = self.config['env_config']['acc_min_speed']
             self.acc_max_speed = self.config['env_config']['acc_max_speed']
             self.acc_speed_step = self.config['env_config']['acc_speed_step']
@@ -557,7 +558,7 @@ class AvVehicle(Vehicle):
                 gap_action = self.gap_action_set[action[1]]
 
                 # Get corresponding accel from ACC controller model
-                accel = self.acc.get_accel(self.speed, self.leader.speed, self.get_headway(), speed_action, gap_action)
+                accel = self.megacontroller.get_acc_accel(self.speed, self.leader.speed, self.get_headway(), speed_action, gap_action)
                 accel = Vehicle.apply_failsafe(self, accel)  # Apply basic failsafe, not custom TTC Failsafe
             else:
                 # get action from model
