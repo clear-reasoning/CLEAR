@@ -378,7 +378,7 @@ class TrajectoryEnv(gym.Env):
 
         # penalize use of interventions
         gap_closing = av.get_headway() > self.gap_closing_threshold(av)
-        failsafe = av.get_headway() < av.failsafe_threshold()
+        failsafe = (av.apply_failsafe(action) != action)
         intervention_reward = 0
         if gap_closing or failsafe:
             intervention_reward = -self.accel_penalty * self.intervention_penalty
@@ -389,7 +389,6 @@ class TrajectoryEnv(gym.Env):
         if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
             headway_reward = -self.headway_penalty * av.get_time_headway()
             reward += headway_reward
-            # print(av.get_time_headway(), av.speed, av.get_headway(), headway_reward)
 
         return reward, energy_reward, accel_reward, intervention_reward, headway_reward
 
