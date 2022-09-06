@@ -4,7 +4,6 @@ from datetime import datetime
 from datetime import timezone
 import gym
 from gym.spaces import Discrete, Box
-from megacontroller import MegaController
 import numpy as np
 import pandas as pd
 from pathlib import Path
