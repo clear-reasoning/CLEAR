@@ -224,7 +224,7 @@ class TrajectoryEnv(gym.Env):
             })
         
         if self.speed_planner:
-           megacontroller =  MegaController(output_acc=True)
+           megacontroller =  MegaController(output_acc=False)
            megacontroller.run_speed_planner(veh)
            target_speed, max_headway = megacontroller.get_target(veh)
            state.update({
