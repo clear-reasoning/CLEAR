@@ -400,10 +400,10 @@ class MegaController(AbstractMegaController):
         x_range = np.arange(-20000, 21000, new_dx)
         debug = True
 
-        if veh._tse["sim_speed"] is not None:
+        if veh._tse["avg_speed"] is not None:
             x = np.array(veh._tse["segments"])
             inrix = np.array(veh._tse["avg_speed"])
-            speed = np.array(veh._tse["sim_speed"])
+            speed = np.array(veh._tse["avg_speed"])
             if debug:
                 plt.figure(figsize=(15, 10))
                 plt.plot(x, inrix, "o-", color="g", label="Raw INRIX Profile")
