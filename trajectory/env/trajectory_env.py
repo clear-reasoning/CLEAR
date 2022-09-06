@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timezone
 import gym
 from gym.spaces import Discrete, Box
+from megacontroller import MegaController
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -15,6 +16,8 @@ from trajectory.data_loader import DataLoader
 from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
+
+from trajectory.env.megacontroller import MegaController
 
 # env params that will be used except for params explicitly set in the command-line arguments
 DEFAULT_ENV_CONFIG = {
@@ -86,6 +89,8 @@ DEFAULT_ENV_CONFIG = {
     'inrix_mem': 1,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'vf_include_chunk_idx': 0,
+    # whether to add speed planner to state (if set to 1, included)
+    'speed_planner': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -218,6 +223,16 @@ class TrajectoryEnv(gym.Env):
                 f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
                 for i in range(1, n_mem+1)
             })
+        
+        if self.speed_planner:
+           megacontroller =  MegaController(output_acc=True)
+           megacontroller.run_speed_planner(veh)
+           target_speed, max_headway = megacontroller.get_target(veh)
+           state.update({
+                'target_speed': (target_speed, 40.0),
+                'max_headway': (max_headway, 1.0)
+            })
+
 
         return state
 
