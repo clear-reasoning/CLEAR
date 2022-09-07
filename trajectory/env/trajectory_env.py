@@ -358,6 +358,7 @@ class TrajectoryEnv(gym.Env):
 
     def reward_function(self, av, action):
         # reward should be positive, otherwise controller would learn to crash
+
         reward = 1
         # reward = 0
 
@@ -378,7 +379,8 @@ class TrajectoryEnv(gym.Env):
 
         # penalize use of interventions
         gap_closing = av.get_headway() > self.gap_closing_threshold(av)
-        failsafe = (av.apply_failsafe(action) != action)
+        failsafe = av.get_headway() < av.failsafe_threshold()
+
         intervention_reward = 0
         if gap_closing or failsafe:
             intervention_reward = -self.accel_penalty * self.intervention_penalty

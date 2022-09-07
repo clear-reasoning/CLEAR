@@ -27,8 +27,12 @@ class ACCWrappedRLVehicle(Vehicle):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # self.acc = ACCController(**self.controller_args)
-        self.megacontroller = MegaController(output_acc=True)
         self.max_speed = 35.76  # 80 mph
+        self.megacontroller = MegaController(output_acc=True, speed_setting=self.max_speed)
+
+    # Used for failsafe penalty, not necessarily what's applied
+    def failsafe_threshold(self):
+        return 6 * ((self.speed + 1 + self.speed * 4 / 30) - self.leader.speed)
 
     def step(self, accel=None, ballistic=False, tse=None):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
@@ -36,12 +40,12 @@ class ACCWrappedRLVehicle(Vehicle):
     def set_acc(self, speed_setting, gap_setting, large_gap_threshold=120):
         if self.get_headway() >= large_gap_threshold:
             speed_setting = self.max_speed
-            gap_setting = 3
 
         accel = self.megacontroller.get_acc_accel(self.speed, self.get_leader_speed(), self.get_headway(),
                                                   speed_setting, gap_setting)
         self.accel_with_noise_no_failsafe = accel
         self.accel_no_noise_no_failsafe = accel
+        # Note that failsafe applied isn't necessarily the same as failsafe_threshold
         self.accel_no_noise_with_failsafe = self.apply_failsafe(self.accel_no_noise_no_failsafe)
         self.accel = self.accel_no_noise_with_failsafe
         return self.accel

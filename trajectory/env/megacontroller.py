@@ -212,6 +212,7 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         headway,
         target_speed_setting=None,
         target_gap_setting=None,
+        sim_step=0.1,
         force=False,
     ):
         """Get ACC acceleration.
@@ -228,6 +229,7 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         if self.time_counter >= 0.5 or force:
             assert target_speed_setting is not None
             assert target_gap_setting is not None
+            self.time_counter = 0
 
             # Set target speed setting to at least 20 mph.
             target_speed_setting_mph = target_speed_setting / MPH_TO_MS
@@ -290,6 +292,8 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
             # Set gap setting of controller.
             if target_gap_setting != self.gap_setting:
                 self.gap_setting = self.gap_transitions[self.gap_setting]
+        else:
+            self.time_counter += sim_step
 
         if force:
             accel = self.acc.get_accel(
@@ -309,48 +313,6 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
             )
         self.accel_without_noise = accel
         return accel
-
-    @abc.abstractmethod
-    def get_acc_settings(
-        self,
-        this_vel,
-        lead_vel,
-        headway,
-        prev_vels=[-1] * 640,
-        target_speed=-1,
-        max_headway=True,
-        sim_step=0.1,
-    ):
-        """Get ACC settings.
-
-        Parameters
-        ----------
-        See get_accel() docstring.
-
-        Returns
-        -------
-        speed_setting : float
-            Requested speed setting in m/s.
-        gap_setting : int
-            Requested time gap setting from {1, 2, 3}.
-        """
-        pass
-
-    def get_accel_without_noise(
-        self,
-        this_vel,
-        lead_vel,
-        headway,
-        prev_vels=[-1] * 640,
-        target_speed=-1,
-        max_headway=True,
-        sim_step=0.1,
-    ):
-        """Return the accel without applying any noise.
-
-        Must be called after get_accel or get_acc_accel to updated result.
-        """
-        return self.accel_without_noise
 
 
 class MegaController(AbstractMegaController):
