@@ -89,6 +89,8 @@ def parse_args_train():
                         help='Discount factor.')
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
                         help='Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
+    parser.add_argument('--ent_coef', type=float, default=0.0, nargs='+',
+                        help='Entropy coefficient for the loss calculation')
     parser.add_argument('--seed', type=int, default=None, nargs='+',
                         help='PPO seed, random if not specified')
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
@@ -284,7 +286,7 @@ def run_experiment(config):
             'seed': config['seed'],
             'clip_range': 0.2,
             'clip_range_vf': 50,
-            'ent_coef': 0.0,
+            'ent_coef': config['ent_coef'],
             'vf_coef': 0.5,
             'max_grad_norm': 0.5,
         }
