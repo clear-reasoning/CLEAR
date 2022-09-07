@@ -30,9 +30,9 @@ def get_bearing(lat1, lon1, lat2, lon2):
 
 def get_driving_direction(bearing):
     """Get driving direction."""
-    if(bearing > 270 and bearing < 360):
+    if (bearing > 270 and bearing < 360):
         return 'West'
-    elif(bearing > 90 and bearing < 190):
+    elif (bearing > 90 and bearing < 190):
         return 'East'
     else:
         return None

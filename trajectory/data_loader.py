@@ -63,7 +63,7 @@ class DataLoader(object):
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
-                'positions': positions,  #  np.array(data['DistanceGPS']),
+                'positions': positions,  # np.array(data['DistanceGPS']),
                 'velocities': np.array(data['Velocity']) / scale,
                 'accelerations': np.array(data['Acceleration'])
             })
@@ -156,7 +156,7 @@ def _preprocess_data():
                     df.loc[idx] = df.loc[i - 1] + (df.loc[i] - df.loc[i - 1]) * k / missing
                     df.loc[idx]['Time'] = round(df.loc[idx]['Time'], 3)
         df = df.sort_index().reset_index(drop=True)
-        assert(all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(df['Time'])))
+        assert (all(abs(t1 - t0 - timestep) < 1e-3 for t0, t1 in pairwise(df['Time'])))
 
         # smooth accelerations
         df['Acceleration'] = smooth_data(np.array(df['Acceleration']), n=50, mu=0.9)

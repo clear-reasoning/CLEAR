@@ -222,10 +222,8 @@ class TrajectoryEnv(gym.Env):
                 f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
                 for i in range(1, n_mem+1)
             })
-        
         if self.speed_planner:
-
-            megacontroller =  MegaController(output_acc=False)
+            megacontroller = MegaController(output_acc=False)
             megacontroller.run_speed_planner(av)
             target_speed, max_headway = megacontroller.get_target(av)
             state.update({
@@ -233,7 +231,6 @@ class TrajectoryEnv(gym.Env):
                     'max_headway': (max_headway, 1.0)
                 })
             print("target speed and max headway are: ", target_speed, max_headway)
-
 
         return state
 
