@@ -3,6 +3,8 @@ import json
 import os
 import bisect
 from collections import defaultdict
+
+from trajectory.env.acc_vehicles import ACCVehicle, ACCWrappedRLVehicle
 from trajectory.env.vehicles import FSVehicle, FSWrappedRLVehicle, IDMVehicle, \
     RLVehicle, TrajectoryVehicle, AvVehicle
 from trajectory.env.energy_models import PFM2019RAV4
@@ -140,7 +142,9 @@ class Simulation(object):
             'trajectory': TrajectoryVehicle,
             'rl': RLVehicle,
             'rl_fs': FSWrappedRLVehicle,
+            'rl_acc': ACCWrappedRLVehicle,
             'av': AvVehicle,
+            'acc': ACCVehicle,
         }
 
         if controller not in vehicle_classes.keys():

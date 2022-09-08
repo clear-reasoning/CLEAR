@@ -1,11 +1,12 @@
 """MegaController Submissions."""
 import abc
+from copy import deepcopy
+from collections import defaultdict
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as spi
-
-from copy import deepcopy
-from collections import defaultdict
 
 MPH_TO_MS = 0.44704
 
@@ -213,6 +214,7 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         headway,
         target_speed_setting=None,
         target_gap_setting=None,
+        sim_step=0.1,
         force=False,
     ):
         """Get ACC acceleration.
@@ -229,6 +231,7 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         if self.time_counter >= 0.5 or force:
             assert target_speed_setting is not None
             assert target_gap_setting is not None
+            self.time_counter = 0
 
             # Set target speed setting to at least 20 mph.
             target_speed_setting_mph = target_speed_setting / MPH_TO_MS
@@ -291,6 +294,8 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
             # Set gap setting of controller.
             if target_gap_setting != self.gap_setting:
                 self.gap_setting = self.gap_transitions[self.gap_setting]
+        else:
+            self.time_counter += sim_step
 
         if force:
             accel = self.acc.get_accel(

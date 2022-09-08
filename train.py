@@ -89,6 +89,8 @@ def parse_args_train():
                         help='Discount factor.')
     parser.add_argument('--gae_lambda', type=float, default=0.99, nargs='+',
                         help='Factor for trade-off of bias vs. variance for Generalized Advantage Estimator.')
+    parser.add_argument('--ent_coef', type=float, default=0.0, nargs='+',
+                        help='Entropy coefficient for the loss calculation')
     parser.add_argument('--seed', type=int, default=None, nargs='+',
                         help='PPO seed, random if not specified')
     parser.add_argument('--augment_vf', type=int, default=1, nargs='+',
@@ -180,6 +182,9 @@ def parse_args_train():
                         help='Sets the size of the platoon to observe during training.')
     parser.add_argument('--env_speed_planner', type=int, default=0, nargs='+',
                         help='If set, adds speed planner information to the base state.')
+    parser.add_argument('--output_acc', default=False, action='store_true',
+                        help='If set, outputs ACC settings rather than accel directly.')
+
     args = parser.parse_args()
     return args
 
@@ -231,7 +236,8 @@ def run_experiment(config):
         'traj_curriculum_dir': config['traj_curriculum_dir'],
         'speed_planner': config['env_speed_planner'],
         # Convert curriculum frequency from iterations to steps
-        'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps']
+        'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
+        'output_acc': config['output_acc']
     })
 
     # create env
@@ -283,7 +289,7 @@ def run_experiment(config):
             'seed': config['seed'],
             'clip_range': 0.2,
             'clip_range_vf': 50,
-            'ent_coef': 0.0,
+            'ent_coef': config['ent_coef'],
             'vf_coef': 0.5,
             'max_grad_norm': 0.5,
         }
