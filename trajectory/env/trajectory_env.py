@@ -230,7 +230,7 @@ class TrajectoryEnv(gym.Env):
                     'target_speed': (target_speed, 40.0),
                     'max_headway': (max_headway, 1.0)
                 })
-        
+
         return state
 
     def get_downstream_state(self, av_idx=0):
