@@ -5,6 +5,7 @@ import numpy as np
 import scipy.interpolate as spi
 
 from copy import deepcopy
+from collections import defaultdict
 
 MPH_TO_MS = 0.44704
 
@@ -391,8 +392,10 @@ class MegaController(AbstractMegaController):
         self.previous_accel = None
         self.previous_headway = None
         self.time_since_lc = 0
-        self.target_speed_profile = -1
-        self.max_headway_profile = -1
+        self.target_speed_profile = defaultdict(lambda: -1)
+        self.max_headway_profile = defaultdict(lambda: -1)
+        
+        self.latest_tse = {}
 
     def run_speed_planner(self, veh):
         """See parent class."""
@@ -400,31 +403,33 @@ class MegaController(AbstractMegaController):
         x_range = np.arange(-20000, 21000, new_dx)
 
         if veh._tse["avg_speed"] is not None:
-            x = np.array(veh._tse["segments"])
-            speed = np.array(veh._tse["avg_speed"])
+            if veh not in self.latest_tse or (self.latest_tse[veh] != veh._tse["avg_speed"]).any():
+                self.latest_tse[veh] = veh._tse["avg_speed"]
+                x = np.array(veh._tse["segments"])
+                speed = np.array(veh._tse["avg_speed"])
 
-            # resample to finer spatial grid
-            speed_interp = spi.interp1d(
-                x, speed, kind="linear", fill_value="extrapolate"
-            )
-            speed = speed_interp(x_range)
+                # resample to finer spatial grid
+                speed_interp = spi.interp1d(
+                    x, speed, kind="linear", fill_value="extrapolate"
+                )
+                speed = speed_interp(x_range)
 
-            # apply gaussian smoothing
-            gaussian_smoothed_speed = np.array(
-                [
-                    gaussian(x_range[i], x_range, np.array(speed), sigma=250)
-                    for i in range(len(x_range))
-                ]
-            )
+                # apply gaussian smoothing
+                gaussian_smoothed_speed = np.array(
+                    [
+                        gaussian(x_range[i], x_range, np.array(speed), sigma=250)
+                        for i in range(len(x_range))
+                    ]
+                )
 
-            (
-                target_speed_profile,
-                max_headway_profile,
-            ) = get_target_profiles_with_fixed_decel(
-                x_range, gaussian_smoothed_speed, decel=-0.5
-            )
-            self.target_speed_profile = target_speed_profile
-            self.max_headway_profile = max_headway_profile
+                (
+                    target_speed_profile,
+                    max_headway_profile,
+                ) = get_target_profiles_with_fixed_decel(
+                    x_range, gaussian_smoothed_speed, decel=-0.5
+                )
+                self.target_speed_profile[veh] = target_speed_profile
+                self.max_headway_profile[veh] = max_headway_profile
 
             return
 
@@ -433,14 +438,14 @@ class MegaController(AbstractMegaController):
         free_headway_profile = tuple(
             [x_range, np.array([True] * len(x_range)), np.array(1)]
         )
-        self.target_speed_profile = free_speed_profile
-        self.max_headway_profile = free_headway_profile
+        self.target_speed_profile[veh] = free_speed_profile
+        self.max_headway_profile[veh] = free_headway_profile
         return
 
     def get_target(self, veh):
         """Get target speed and max headway."""
-        target_speed = get_target_by_position(self.target_speed_profile, veh.pos, float)
-        max_headway = get_target_by_position(self.max_headway_profile, veh.pos, bool)
+        target_speed = get_target_by_position(self.target_speed_profile[veh], veh.pos, float)
+        max_headway = get_target_by_position(self.max_headway_profile[veh], veh.pos, bool)
         return target_speed, max_headway
 
     def get_main_accel(

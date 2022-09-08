@@ -138,6 +138,8 @@ class TrajectoryEnv(gym.Env):
         self.traj = None
         self.traj_idx = -1
         self.chunk_idx = -1
+        
+        self.megacontroller = MegaController(output_acc=False)
 
         # create simulation
         self.create_simulation(self.lane_changing)
@@ -222,14 +224,14 @@ class TrajectoryEnv(gym.Env):
                 f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
                 for i in range(1, n_mem+1)
             })
+
         if self.speed_planner:
-            megacontroller = MegaController(output_acc=False)
-            megacontroller.run_speed_planner(av)
-            target_speed, max_headway = megacontroller.get_target(av)
+            self.megacontroller.run_speed_planner(av)
+            target_speed, max_headway = self.megacontroller.get_target(av)
             state.update({
-                    'target_speed': (target_speed, 40.0),
-                    'max_headway': (max_headway, 1.0)
-                })
+                'target_speed': (target_speed, 40.0),
+                'max_headway': (max_headway, 1.0)
+            })
 
         return state
 
