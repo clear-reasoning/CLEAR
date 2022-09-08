@@ -17,6 +17,8 @@ from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
 
+from trajectory.env.megacontroller import MegaController
+
 # env params that will be used except for params explicitly set in the command-line arguments
 MPH_TO_MS = 0.44704
 DEFAULT_ENV_CONFIG = {
@@ -88,6 +90,8 @@ DEFAULT_ENV_CONFIG = {
     'inrix_mem': 1,
     # whether inrix portion of state is included in memory (if set to 1, included)
     'vf_include_chunk_idx': 0,
+    # whether to add speed planner to state (if set to 1, included)
+    'speed_planner': 0,
     # params for acc controller (rl_acc vehicle)
     'output_acc': False,  # If set, output acc gap and speed settings instead of accel
     'acc_num_gap_settings': 3,
@@ -146,6 +150,8 @@ class TrajectoryEnv(gym.Env):
         self.traj = None
         self.traj_idx = -1
         self.chunk_idx = -1
+        
+        self.megacontroller = MegaController(output_acc=False)
 
         # create simulation
         self.create_simulation(self.lane_changing)
@@ -237,6 +243,14 @@ class TrajectoryEnv(gym.Env):
             state.update({
                 f'leader_speed_{i}': (past_leader_speeds[-i], 40.0)
                 for i in range(1, n_mem+1)
+            })
+
+        if self.speed_planner:
+            self.megacontroller.run_speed_planner(av)
+            target_speed, max_headway = self.megacontroller.get_target(av)
+            state.update({
+                'target_speed': (target_speed, 40.0),
+                'max_headway': (max_headway, 1.0)
             })
 
         return state

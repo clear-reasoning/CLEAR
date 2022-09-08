@@ -1,6 +1,8 @@
 """MegaController Submissions."""
 import abc
 from copy import deepcopy
+from collections import defaultdict
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -314,6 +316,48 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         self.accel_without_noise = accel
         return accel
 
+    @abc.abstractmethod
+    def get_acc_settings(
+        self,
+        this_vel,
+        lead_vel,
+        headway,
+        prev_vels=[-1] * 640,
+        target_speed=-1,
+        max_headway=True,
+        sim_step=0.1,
+    ):
+        """Get ACC settings.
+
+        Parameters
+        ----------
+        See get_accel() docstring.
+
+        Returns
+        -------
+        speed_setting : float
+            Requested speed setting in m/s.
+        gap_setting : int
+            Requested time gap setting from {1, 2, 3}.
+        """
+        pass
+
+    def get_accel_without_noise(
+        self,
+        this_vel,
+        lead_vel,
+        headway,
+        prev_vels=[-1] * 640,
+        target_speed=-1,
+        max_headway=True,
+        sim_step=0.1,
+    ):
+        """Return the accel without applying any noise.
+
+        Must be called after get_accel or get_acc_accel to updated result.
+        """
+        return self.accel_without_noise
+
 
 class MegaController(AbstractMegaController):
     """MegaController."""
@@ -353,73 +397,45 @@ class MegaController(AbstractMegaController):
         self.previous_accel = None
         self.previous_headway = None
         self.time_since_lc = 0
-        self.target_speed_profile = -1
-        self.max_headway_profile = -1
+        self.target_speed_profile = defaultdict(lambda: -1)
+        self.max_headway_profile = defaultdict(lambda: -1)
+        
+        self.latest_tse = {}
 
     def run_speed_planner(self, veh):
         """See parent class."""
         new_dx = 100  # 100 meter resolution on resampled profile
         x_range = np.arange(-20000, 21000, new_dx)
-        debug = True
 
-        if veh._tse["sim_speed"] is not None:
-            x = np.array(veh._tse["segments"])
-            inrix = np.array(veh._tse["avg_speed"])
-            speed = np.array(veh._tse["sim_speed"])
-            if debug:
-                plt.figure(figsize=(15, 10))
-                plt.plot(x, inrix, "o-", color="g", label="Raw INRIX Profile")
-                plt.plot(
-                    x, speed, "o-", color="orange", label="Simulated INRIX Profile"
+        if veh._tse["avg_speed"] is not None:
+            if veh not in self.latest_tse or (self.latest_tse[veh] != veh._tse["avg_speed"]).any():
+                self.latest_tse[veh] = veh._tse["avg_speed"]
+                x = np.array(veh._tse["segments"])
+                speed = np.array(veh._tse["avg_speed"])
+
+                # resample to finer spatial grid
+                speed_interp = spi.interp1d(
+                    x, speed, kind="linear", fill_value="extrapolate"
+                )
+                speed = speed_interp(x_range)
+
+                # apply gaussian smoothing
+                gaussian_smoothed_speed = np.array(
+                    [
+                        gaussian(x_range[i], x_range, np.array(speed), sigma=250)
+                        for i in range(len(x_range))
+                    ]
                 )
 
-            # resample to finer spatial grid
-            speed_interp = spi.interp1d(
-                x, speed, kind="linear", fill_value="extrapolate"
-            )
-            speed = speed_interp(x_range)
-
-            # apply gaussian smoothing
-            gaussian_smoothed_speed = np.array(
-                [
-                    gaussian(x_range[i], x_range, np.array(speed), sigma=250)
-                    for i in range(len(x_range))
-                ]
-            )
-            if debug:
-                plt.plot(
-                    x_range,
-                    gaussian_smoothed_speed,
-                    color="r",
-                    linewidth=3,
-                    zorder=1,
-                    label="Smoothed Speed Profile",
+                (
+                    target_speed_profile,
+                    max_headway_profile,
+                ) = get_target_profiles_with_fixed_decel(
+                    x_range, gaussian_smoothed_speed, decel=-0.5
                 )
+                self.target_speed_profile[veh] = target_speed_profile
+                self.max_headway_profile[veh] = max_headway_profile
 
-            (
-                target_speed_profile,
-                max_headway_profile,
-            ) = get_target_profiles_with_fixed_decel(
-                x_range, gaussian_smoothed_speed, decel=-0.5
-            )
-            self.target_speed_profile = target_speed_profile
-            self.max_headway_profile = max_headway_profile
-
-            if debug:
-                plt.plot(
-                    x_range,
-                    target_speed_profile[1],
-                    color="b",
-                    linewidth=2,
-                    zorder=2,
-                    label="Speed Planner Profile",
-                )
-                plt.xlabel("Position (m)", fontsize=20)
-                plt.ylabel("Speed (m/s)", fontsize=20)
-                plt.legend(loc="lower left", fontsize=18)
-                plt.ylim(0, 35)
-                plt.savefig("planner_{}.png".format(veh._tse["time"]))
-                plt.close()
             return
 
         # Update with free speed profile if veh._tse is disabled or no bottleneck observed
@@ -427,14 +443,14 @@ class MegaController(AbstractMegaController):
         free_headway_profile = tuple(
             [x_range, np.array([True] * len(x_range)), np.array(1)]
         )
-        self.target_speed_profile = free_speed_profile
-        self.max_headway_profile = free_headway_profile
+        self.target_speed_profile[veh] = free_speed_profile
+        self.max_headway_profile[veh] = free_headway_profile
         return
 
     def get_target(self, veh):
         """Get target speed and max headway."""
-        target_speed = get_target_by_position(self.target_speed_profile, veh.pos, float)
-        max_headway = get_target_by_position(self.max_headway_profile, veh.pos, bool)
+        target_speed = get_target_by_position(self.target_speed_profile[veh], veh.pos, float)
+        max_headway = get_target_by_position(self.max_headway_profile[veh], veh.pos, bool)
         return target_speed, max_headway
 
     def get_main_accel(

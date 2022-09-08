@@ -28,7 +28,7 @@ class DataLoader(object):
                 'duration': round(data['Time'].max() - data['Time'].min(), 3),
                 'size': len(data['Time']),
                 'times': np.array(data['Time']) - data['Time'][0],
-                'positions': positions,  #  np.array(data['DistanceGPS']),
+                'positions': positions,  # np.array(data['DistanceGPS']),
                 'velocities': np.array(data['Velocity']) / 3.6,
                 'accelerations': np.array(data['Acceleration'])
             })
