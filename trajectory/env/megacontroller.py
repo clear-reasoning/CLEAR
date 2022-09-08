@@ -398,18 +398,10 @@ class MegaController(AbstractMegaController):
         """See parent class."""
         new_dx = 100  # 100 meter resolution on resampled profile
         x_range = np.arange(-20000, 21000, new_dx)
-        debug = True
 
         if veh._tse["avg_speed"] is not None:
             x = np.array(veh._tse["segments"])
-            inrix = np.array(veh._tse["avg_speed"])
             speed = np.array(veh._tse["avg_speed"])
-            if debug:
-                plt.figure(figsize=(15, 10))
-                plt.plot(x, inrix, "o-", color="g", label="Raw INRIX Profile")
-                plt.plot(
-                    x, speed, "o-", color="orange", label="Simulated INRIX Profile"
-                )
 
             # resample to finer spatial grid
             speed_interp = spi.interp1d(
@@ -424,15 +416,6 @@ class MegaController(AbstractMegaController):
                     for i in range(len(x_range))
                 ]
             )
-            if debug:
-                plt.plot(
-                    x_range,
-                    gaussian_smoothed_speed,
-                    color="r",
-                    linewidth=3,
-                    zorder=1,
-                    label="Smoothed Speed Profile",
-                )
 
             (
                 target_speed_profile,
@@ -443,21 +426,6 @@ class MegaController(AbstractMegaController):
             self.target_speed_profile = target_speed_profile
             self.max_headway_profile = max_headway_profile
 
-            if debug:
-                plt.plot(
-                    x_range,
-                    target_speed_profile[1],
-                    color="b",
-                    linewidth=2,
-                    zorder=2,
-                    label="Speed Planner Profile",
-                )
-                plt.xlabel("Position (m)", fontsize=20)
-                plt.ylabel("Speed (m/s)", fontsize=20)
-                plt.legend(loc="lower left", fontsize=18)
-                plt.ylim(0, 35)
-                plt.savefig("planner_{}.png".format(veh._tse["time"]))
-                plt.close()
             return
 
         # Update with free speed profile if veh._tse is disabled or no bottleneck observed
