@@ -169,7 +169,11 @@ class TrajectoryEnv(gym.Env):
         a_max = self.max_accel
         if self.output_acc:
             self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
-            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
+            if self.action_delta:
+                self.action_space = MultiDiscrete([4, self.acc_num_gap_settings])
+                self.action_mapping = {0: -5 * MPH_TO_MS, 1: -1 * MPH_TO_MS, 2: 1 * MPH_TO_MS, 3: 5 * MPH_TO_MS} # in m/s
+            else:
+                self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
             self.gap_action_set = np.array([1, 2, 3])
             self.speed_action_set = np.arange(self.acc_min_speed,
                                               self.acc_max_speed + self.acc_speed_step,
@@ -527,11 +531,20 @@ class TrajectoryEnv(gym.Env):
                 actions = np.array([actions])
 
             for av, action in zip(self.avs, actions):
-                speed_setting = self.speed_action_set[action[0]]
+                if self.action_delta:
+                    delta = self.action_mapping[action[0]]
+                    if curr_speed := av.get_speed_setting():
+                        speed_setting = curr_speed + delta
+                    else:
+                        speed_setting = self.speed_action_set[action[0]]
+                else:                    
+                    speed_setting = self.speed_action_set[action[0]]
                 gap_setting = self.gap_action_set[action[1]]
+                av.set_speed_setting(speed_setting)
+                av.set_gap_setting(gap_setting)
                 metrics['rl_acc_speed_setting'] = speed_setting
                 metrics['rl_acc_gap_setting'] = gap_setting
-                accel = av.set_acc(speed_setting, gap_setting, large_gap_threshold=self.gap_closing_threshold(av))
+                accel = av.set_acc(large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_controller_accel'] = accel
                 metrics['rl_processed_accel'] = accel
 

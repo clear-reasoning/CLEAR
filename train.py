@@ -184,6 +184,9 @@ def parse_args_train():
                         help='If set, adds speed planner information to the base state.')
     parser.add_argument('--output_acc', default=False, action='store_true',
                         help='If set, outputs ACC settings rather than accel directly.')
+    parser.add_argument('--action_delta', default=False, action='store_true',
+                        help='If set with ACC, action space is in the form (-5, -1, 1, 5).')
+
 
     args = parser.parse_args()
     return args
@@ -237,7 +240,8 @@ def run_experiment(config):
         'speed_planner': config['env_speed_planner'],
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
-        'output_acc': config['output_acc']
+        'output_acc': config['output_acc'],
+        'action_delta': config['action_delta']
     })
 
     # create env
