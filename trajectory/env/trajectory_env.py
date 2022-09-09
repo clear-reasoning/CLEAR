@@ -564,6 +564,18 @@ class TrajectoryEnv(gym.Env):
                     delta = self.action_mapping[action[0]]
                     if curr_speed := av.get_speed_setting():
                         speed_setting = curr_speed + delta
+                elif self.jonny_style:
+                    lead_vel = self.avs[0].get_leader_speed()
+                    # self.megacontroller.run_speed_planner(av)
+                    target_speed, _ = self.megacontroller.get_target(av)
+
+                    if target_speed < lead_vel:
+                        speed_setting = target_speed * 0.6 + lead_vel * 0.4
+                    else:
+                        speed_setting = target_speed
+                    # Apply delta
+                    delta = self.action_mapping[action[0]]
+                    speed_setting += delta
 
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)

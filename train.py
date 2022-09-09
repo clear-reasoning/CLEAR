@@ -190,7 +190,8 @@ def parse_args_train():
                         help='If set, outputs ACC settings rather than accel directly.')
     parser.add_argument('--action_delta', default=False, action='store_true',
                         help='If set with ACC, action space is in the form (-5, -1, 1, 5).')
-
+    parser.add_argument('--jonny_style', default=False, action='store_true',
+                        help='If set, calculates delta by...? ') 
 
     args = parser.parse_args()
     return args
@@ -247,7 +248,8 @@ def run_experiment(config):
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
         'output_acc': config['output_acc'],
-        'action_delta': config['action_delta']
+        'action_delta': config['action_delta'],
+        'jonny_style': config['jonny_style']
     })
 
     # create env
