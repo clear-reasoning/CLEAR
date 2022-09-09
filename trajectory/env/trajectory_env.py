@@ -13,11 +13,10 @@ import pandas as pd
 from gym.spaces import Discrete, Box, MultiDiscrete
 
 from trajectory.data_loader import DataLoader
+from trajectory.env.megacontroller import MegaController
 from trajectory.env.simulation import Simulation
 from trajectory.env.utils import get_first_element
 from trajectory.visualize.time_space_diagram import plot_time_space_diagram
-
-from trajectory.env.megacontroller import MegaController
 
 # env params that will be used except for params explicitly set in the command-line arguments
 MPH_TO_MS = 0.44704
@@ -593,14 +592,21 @@ class TrajectoryEnv(gym.Env):
         infos = {'metrics': metrics}
 
         if self.collect_rollout:
+            base_state = self.get_base_state()
             self.collected_rollout['actions'].append(get_first_element(actions))
             if self.output_acc:
                 speed_setting, gap_setting = self.get_acc_input(actions[0])
                 self.collected_rollout['speed_actions'].append(speed_setting)
                 self.collected_rollout['gap_actions'].append(gap_setting)
+                self.collected_rollout['speed_setting'].append(self.avs[0].megacontroller.speed_setting)
+                self.collected_rollout['gap_setting'].append(self.avs[0].megacontroller.gap_setting)
+            if self.speed_planner:
+                target_speed = float(base_state['target_speed'][0])
+                self.collected_rollout['target_speed'].append(target_speed)
+
             self.collected_rollout['actions'].append(get_first_element(actions))
 
-            self.collected_rollout['base_states'].append(self.get_base_state())
+            self.collected_rollout['base_states'].append(base_state)
             self.collected_rollout['base_states_vf'].append(self.get_base_additional_vf_state())
             self.collected_rollout['rewards'].append(reward)
             self.collected_rollout['energy_rewards'].append(energy_reward)
