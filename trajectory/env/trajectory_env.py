@@ -100,6 +100,9 @@ DEFAULT_ENV_CONFIG = {
     'acc_speed_step': 1 * MPH_TO_MS,
     # whether to add current speed and gap ACC settings to the state
     'acc_states': 0,
+    # whether to set the neural network output as continuous (and clipped/rounded)
+    # by default the output is discrete
+    'acc_continuous': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -170,13 +173,16 @@ class TrajectoryEnv(gym.Env):
         a_min = self.min_accel
         a_max = self.max_accel
         if self.output_acc:
-            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
-            self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
-            self.gap_action_set = np.array([1, 2, 3])
-            self.speed_action_set = np.arange(self.acc_min_speed,
-                                              self.acc_max_speed + self.acc_speed_step,
-                                              self.acc_speed_step)
-
+            if self.acc_continuous:
+                self.action_space = Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
+            else:
+                self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
+                self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
+                self.gap_action_set = np.array([1, 2, 3])
+                self.speed_action_set = np.arange(self.acc_min_speed,
+                                                self.acc_max_speed + self.acc_speed_step,
+                                                self.acc_speed_step)
+                    
         elif self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)
@@ -213,6 +219,21 @@ class TrajectoryEnv(gym.Env):
         if self.augment_vf:
             n_obs *= 2  # additional room for vf states
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
+
+    def get_acc_input(self, action):
+        if self.acc_continuous:
+            action = np.clip(action, -1.0, 1.0)
+            speed_setting = int((action[0] + 1.0) * 20.0)
+            if action[1] > 1.0 / 3.0:
+                gap_setting = 1
+            elif action[1] > -1.0 / 3.0:
+                gap_setting = 2
+            else:
+                gap_setting = 3
+        else:
+            speed_setting = self.speed_action_set[action[0]]
+            gap_setting = self.gap_action_set[action[1]]
+        return speed_setting, gap_setting
 
     def get_base_state(self, av_idx=None):
         """Get base state.
@@ -535,8 +556,7 @@ class TrajectoryEnv(gym.Env):
                 actions = np.array([actions])
 
             for av, action in zip(self.avs, actions):
-                speed_setting = self.speed_action_set[action[0]]
-                gap_setting = self.gap_action_set[action[1]]
+                speed_setting, gap_setting = self.get_acc_input(action)
                 metrics['rl_acc_speed_setting'] = speed_setting
                 metrics['rl_acc_gap_setting'] = gap_setting
                 accel = av.set_acc(speed_setting, gap_setting, large_gap_threshold=self.gap_closing_threshold(av))
@@ -575,8 +595,9 @@ class TrajectoryEnv(gym.Env):
         if self.collect_rollout:
             self.collected_rollout['actions'].append(get_first_element(actions))
             if self.output_acc:
-                self.collected_rollout['speed_actions'].append(self.speed_action_set[actions[0][0]])
-                self.collected_rollout['gap_actions'].append(self.gap_action_set[actions[0][1]])
+                speed_setting, gap_setting = self.get_acc_input(actions[0])
+                self.collected_rollout['speed_actions'].append(speed_setting)
+                self.collected_rollout['gap_actions'].append(gap_setting)
             self.collected_rollout['actions'].append(get_first_element(actions))
 
             self.collected_rollout['base_states'].append(self.get_base_state())
