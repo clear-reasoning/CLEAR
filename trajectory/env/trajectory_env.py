@@ -98,6 +98,11 @@ DEFAULT_ENV_CONFIG = {
     'acc_min_speed': 20 * MPH_TO_MS,
     'acc_max_speed': 80 * MPH_TO_MS,
     'acc_speed_step': 1 * MPH_TO_MS,
+    # whether to add current speed and gap ACC settings to the state
+    'acc_states': 0,
+    # whether to set the neural network output as continuous (and clipped/rounded)
+    # by default the output is discrete
+    'acc_continuous': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -168,12 +173,14 @@ class TrajectoryEnv(gym.Env):
         a_min = self.min_accel
         a_max = self.max_accel
         if self.output_acc:
-            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
             if self.action_delta:
                 self.action_space = MultiDiscrete([4, self.acc_num_gap_settings])
                 self.action_mapping = {0: -5 * MPH_TO_MS, 1: -1 * MPH_TO_MS, 2: 1 * MPH_TO_MS, 3: 5 * MPH_TO_MS} # in m/s
+            elif self.acc_continuous:
+                self.action_space = Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
             else:
                 self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
+            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
             self.gap_action_set = np.array([1, 2, 3])
             self.speed_action_set = np.arange(self.acc_min_speed,
                                               self.acc_max_speed + self.acc_speed_step,
@@ -216,6 +223,21 @@ class TrajectoryEnv(gym.Env):
             n_obs *= 2  # additional room for vf states
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(n_obs,), dtype=np.float32)
 
+    def get_acc_input(self, action):
+        if self.acc_continuous:
+            action = np.clip(action, -1.0, 1.0)
+            speed_setting = int((action[0] + 1.0) * 20.0)
+            if action[1] > 1.0 / 3.0:
+                gap_setting = 1
+            elif action[1] > -1.0 / 3.0:
+                gap_setting = 2
+            else:
+                gap_setting = 3
+        else:
+            speed_setting = self.speed_action_set[action[0]]
+            gap_setting = self.gap_action_set[action[1]]
+        return speed_setting, gap_setting
+
     def get_base_state(self, av_idx=None):
         """Get base state.
 
@@ -254,7 +276,13 @@ class TrajectoryEnv(gym.Env):
             target_speed, max_headway = self.megacontroller.get_target(av)
             state.update({
                 'target_speed': (target_speed, 40.0),
-                'max_headway': (max_headway, 1.0)
+                'max_headway': (max_headway, 1.0),
+            })
+            
+        if self.acc_states:
+            state.update({
+                'speed_setting': (av.megacontroller.speed_setting, 40.0),
+                'gap_setting': (av.megacontroller.gap_setting, 3.0),                
             })
 
         return state
@@ -531,15 +559,12 @@ class TrajectoryEnv(gym.Env):
                 actions = np.array([actions])
 
             for av, action in zip(self.avs, actions):
+                speed_setting, gap_setting = self.get_acc_input(action)
                 if self.action_delta:
                     delta = self.action_mapping[action[0]]
                     if curr_speed := av.get_speed_setting():
                         speed_setting = curr_speed + delta
-                    else:
-                        speed_setting = self.speed_action_set[action[0]]
-                else:                    
-                    speed_setting = self.speed_action_set[action[0]]
-                gap_setting = self.gap_action_set[action[1]]
+
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)
                 metrics['rl_acc_speed_setting'] = speed_setting
@@ -580,8 +605,9 @@ class TrajectoryEnv(gym.Env):
         if self.collect_rollout:
             self.collected_rollout['actions'].append(get_first_element(actions))
             if self.output_acc:
-                self.collected_rollout['speed_actions'].append(self.speed_action_set[actions[0][0]])
-                self.collected_rollout['gap_actions'].append(self.gap_action_set[actions[0][1]])
+                speed_setting, gap_setting = self.get_acc_input(actions[0])
+                self.collected_rollout['speed_actions'].append(speed_setting)
+                self.collected_rollout['gap_actions'].append(gap_setting)
             self.collected_rollout['actions'].append(get_first_element(actions))
 
             self.collected_rollout['base_states'].append(self.get_base_state())

@@ -25,7 +25,7 @@ class ACCWrappedRLVehicle(Vehicle):
     """ACCWrappedRLVehicle."""
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, max_decel=4.0)
         # self.acc = ACCController(**self.controller_args)
         self.max_speed = 35.76  # 80 mph
         self.megacontroller = MegaController(output_acc=True, speed_setting=self.max_speed)
@@ -56,6 +56,8 @@ class ACCWrappedRLVehicle(Vehicle):
         gap_setting = self.gap_setting
         if self.get_headway() >= large_gap_threshold:
             speed_setting = self.max_speed
+        if self.get_headway() <= self.failsafe_threshold():
+            speed_setting = 0
 
         accel = self.megacontroller.get_acc_accel(self.speed, self.get_leader_speed(), self.get_headway(),
                                                   speed_setting, gap_setting)
