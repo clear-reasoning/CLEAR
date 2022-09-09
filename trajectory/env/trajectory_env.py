@@ -173,6 +173,7 @@ class TrajectoryEnv(gym.Env):
         a_min = self.min_accel
         a_max = self.max_accel
         if self.output_acc:
+            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
             if self.action_delta:
                 self.action_space = MultiDiscrete([4, self.acc_num_gap_settings])
                 self.action_mapping = {0: -5 * MPH_TO_MS, 1: -1 * MPH_TO_MS, 2: 1 * MPH_TO_MS, 3: 5 * MPH_TO_MS} # in m/s
@@ -180,7 +181,6 @@ class TrajectoryEnv(gym.Env):
                 self.action_space = Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
             else:
                 self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
-            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
             self.gap_action_set = np.array([1, 2, 3])
             self.speed_action_set = np.arange(self.acc_min_speed,
                                               self.acc_max_speed + self.acc_speed_step,
@@ -438,7 +438,14 @@ class TrajectoryEnv(gym.Env):
             headway_reward = -self.headway_penalty * av.get_time_headway()
             reward += headway_reward
 
-        return reward, energy_reward, accel_reward, intervention_reward, headway_reward
+        # speed planner and curr speed diff
+        speed_diff_reward = 0
+        target_speed, _ = self.megacontroller.get_target(av)
+        speed_diff_reward = self.speed_diff_reward_weight * (target_speed - av.speed)**2
+        reward += speed_diff_reward
+        
+    
+        return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -586,7 +593,7 @@ class TrajectoryEnv(gym.Env):
                 metrics['rl_processed_accel'] = accel
 
         # compute reward, store reward components for rollout dict
-        reward, energy_reward, accel_reward, intervention_reward, headway_reward \
+        reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
 
         # print crashes
@@ -629,6 +636,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['accel_rewards'].append(accel_reward)
             self.collected_rollout['intervention_rewards'].append(intervention_reward)
             self.collected_rollout['headway_rewards'].append(headway_reward)
+            self.collected_rollout['speed_diff_reward'].append(speed_diff_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({

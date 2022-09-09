@@ -192,6 +192,8 @@ def parse_args_train():
                         help='If set with ACC, action space is in the form (-5, -1, 1, 5).')
     parser.add_argument('--jonny_style', default=False, action='store_true',
                         help='If set, calculates delta by...? ') 
+    parser.add_argument('--speed_diff_reward_weight', type=float, default=0, nargs='+',
+                        help='Weights speed diff reward') 
 
     args = parser.parse_args()
     return args
@@ -249,7 +251,8 @@ def run_experiment(config):
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
         'output_acc': config['output_acc'],
         'action_delta': config['action_delta'],
-        'jonny_style': config['jonny_style']
+        'jonny_style': config['jonny_style'],
+        'speed_diff_reward_weight': config['speed_diff_reward_weight']
     })
 
     # create env
