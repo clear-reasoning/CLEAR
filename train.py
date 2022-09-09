@@ -182,6 +182,8 @@ def parse_args_train():
                         help='Sets the size of the platoon to observe during training.')
     parser.add_argument('--env_speed_planner', type=int, default=0, nargs='+',
                         help='If set, adds speed planner information to the base state.')
+    parser.add_argument('--acc_states', type=int, default=0, nargs='+',
+                        help='If set, adds current ACC speed and gap settings into the state.')
     parser.add_argument('--output_acc', default=False, action='store_true',
                         help='If set, outputs ACC settings rather than accel directly.')
 
@@ -235,6 +237,7 @@ def run_experiment(config):
         'traj_curriculum': config['traj_curriculum'],
         'traj_curriculum_dir': config['traj_curriculum_dir'],
         'speed_planner': config['env_speed_planner'],
+        'acc_states': config['acc_states'],
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
         'output_acc': config['output_acc']

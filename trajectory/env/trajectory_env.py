@@ -98,6 +98,8 @@ DEFAULT_ENV_CONFIG = {
     'acc_min_speed': 20 * MPH_TO_MS,
     'acc_max_speed': 80 * MPH_TO_MS,
     'acc_speed_step': 1 * MPH_TO_MS,
+    # whether to add current speed and gap ACC settings to the state
+    'acc_states': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -250,7 +252,13 @@ class TrajectoryEnv(gym.Env):
             target_speed, max_headway = self.megacontroller.get_target(av)
             state.update({
                 'target_speed': (target_speed, 40.0),
-                'max_headway': (max_headway, 1.0)
+                'max_headway': (max_headway, 1.0),
+            })
+            
+        if self.acc_states:
+            state.update({
+                'speed_setting': (av.megacontroller.speed_setting, 40.0),
+                'gap_setting': (av.megacontroller.gap_setting, 3.0),                
             })
 
         return state
