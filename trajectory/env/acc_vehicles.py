@@ -40,6 +40,7 @@ class ACCWrappedRLVehicle(Vehicle):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def get_speed_setting(self):
+        """Pretty sure this is in m/s."""
         return self.speed_setting
 
     def get_gap_setting(self):
