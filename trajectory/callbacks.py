@@ -1,19 +1,22 @@
 """Callbacks."""
-from trajectory.visualize.plotter import TensorboardPlotter
-from trajectory.env.utils import duration_to_str, get_first_element
-from trajectory.env.trajectory_env import TrajectoryEnv
-import time
-from stable_baselines3.common.callbacks import BaseCallback
-import random
-from pathlib import Path
-import os
-import numpy as np
-from datetime import datetime
 import math
-import pytz
+import os
+import random
+import time
 from collections import defaultdict, deque
+from datetime import datetime
+from pathlib import Path
+
 import boto3
 import matplotlib
+import numpy as np
+import pytz
+from stable_baselines3.common.callbacks import BaseCallback
+
+from trajectory.env.trajectory_env import TrajectoryEnv
+from trajectory.env.utils import duration_to_str, get_first_element
+from trajectory.visualize.plotter import TensorboardPlotter
+
 matplotlib.use('agg')
 
 
@@ -88,6 +91,12 @@ class TensorboardCallback(BaseCallback):
                     custom_metrics.update({
                         'speed_actions': rollout_dict['training']['speed_actions'],
                         'gap_actions': rollout_dict['training']['gap_actions'],
+                        'speed_setting': rollout_dict['training']['speed_setting'],
+                        'gap_setting': rollout_dict['training']['gap_setting'],
+                    })
+                if 'target_speed' in rollout_dict['training']:
+                    custom_metrics.update({
+                        'target_speed': rollout_dict['training']['target_speed'],
                     })
                 for k, v in custom_metrics.items():
                     if isinstance(v, dict):
@@ -160,6 +169,11 @@ class TensorboardCallback(BaseCallback):
         if env.output_acc:
             rollout_dict['training']['speed_actions'] = collected_rollout['speed_actions']
             rollout_dict['training']['gap_actions'] = collected_rollout['gap_actions']
+            rollout_dict['training']['speed_setting'] = collected_rollout['speed_setting']
+            rollout_dict['training']['gap_setting'] = collected_rollout['gap_setting']
+        if env.speed_planner:
+            rollout_dict['training']['target_speed'] = collected_rollout['target_speed']
+
 
         if 'metrics' in collected_rollout['infos'][0]:
             for info in collected_rollout['infos']:
