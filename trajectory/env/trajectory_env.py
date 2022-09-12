@@ -440,10 +440,9 @@ class TrajectoryEnv(gym.Env):
         # speed planner and curr speed diff
         speed_diff_reward = 0
         target_speed, _ = self.megacontroller.get_target(av)
-        speed_diff_reward = self.speed_diff_reward_weight * (target_speed - av.speed)**2
+        speed_diff_reward = -self.speed_diff_reward_weight * (target_speed - av.speed)**2
         reward += speed_diff_reward
-        
-    
+
         return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
 
     def gap_closing_threshold(self, av):
