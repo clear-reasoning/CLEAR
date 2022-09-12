@@ -565,40 +565,40 @@ class TrajectoryEnv(gym.Env):
                 actions = np.array([actions])
 
             for av, action in zip(self.avs, actions):
-                # <================= copy and pasting from megacontroller.py for sanity check that something isn't 
-                # straight up not using action so it better fucking work
-                target_speed, max_headway = self.megacontroller.get_target(av)
-                lead_vel = self.avs[0].get_leader_speed()
-                if target_speed < lead_vel:
-                    speed_setting = target_speed * 0.6 + lead_vel * 0.4
-                else:
-                    speed_setting = target_speed
-                if max_headway:
-                    gap_setting = 1
-                else:
-                    gap_setting = 3
+                # # <================= copy and pasting from megacontroller.py for sanity check that something isn't 
+                # # straight up not using action so it better fucking work
+                # target_speed, max_headway = self.megacontroller.get_target(av)
+                # lead_vel = self.avs[0].get_leader_speed()
+                # if target_speed < lead_vel:
+                #     speed_setting = target_speed * 0.6 + lead_vel * 0.4
+                # else:
+                #     speed_setting = target_speed
+                # if max_headway:
+                #     gap_setting = 1
+                # else:
+                #     gap_setting = 3
                 
-                speed_setting = round(speed_setting / MPH_TO_MS) * MPH_TO_MS
-                speed_setting = max(speed_setting, MPH_TO_MS * 20)
-                # =================>
+                # speed_setting = round(speed_setting / MPH_TO_MS) * MPH_TO_MS
+                # speed_setting = max(speed_setting, MPH_TO_MS * 20)
+                # # =================>
 
-                # speed_setting, gap_setting = self.get_acc_input(action)
-                # if self.action_delta:
-                #     delta = self.action_mapping[action[0]]
-                #     if curr_speed := av.get_speed_setting():
-                #         speed_setting = curr_speed + delta
-                # elif self.jonny_style:
-                #     lead_vel = self.avs[0].get_leader_speed()
-                #     # self.megacontroller.run_speed_planner(av)
-                #     target_speed, _ = self.megacontroller.get_target(av)
+                speed_setting, gap_setting = self.get_acc_input(action)
+                if self.action_delta:
+                    delta = self.action_mapping[action[0]]
+                    if curr_speed := av.get_speed_setting():
+                        speed_setting = curr_speed + delta
+                elif self.jonny_style:
+                    lead_vel = self.avs[0].get_leader_speed()
+                    # self.megacontroller.run_speed_planner(av)
+                    target_speed, _ = self.megacontroller.get_target(av)
 
-                #     if target_speed < lead_vel:
-                #         speed_setting = target_speed * 0.6 + lead_vel * 0.4
-                #     else:
-                #         speed_setting = target_speed
-                #     # Apply delta
-                #     delta = self.action_mapping[action[0]]
-                #     speed_setting += delta
+                    if target_speed < lead_vel:
+                        speed_setting = target_speed * 0.6 + lead_vel * 0.4
+                    else:
+                        speed_setting = target_speed
+                    # Apply delta
+                    delta = self.action_mapping[action[0]]
+                    speed_setting += delta
 
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)
