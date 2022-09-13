@@ -23,6 +23,8 @@ class OnnxablePolicy(torch.nn.Module):
         action = self.action_net(x)
         return action
 
+MODEL_INPUT_NAME = 'onnx::Gemm_0'
+
 
 if __name__ == '__main__':
     # parse args
@@ -41,17 +43,17 @@ if __name__ == '__main__':
 
     # load model
     model_path = path / 'checkpoint.zip'
-    print(f'> Loading model from {model_path}')
+    print(f'\n> Loading model from {model_path}')
     model = AugmentedPPO.load(model_path)
     n_observations = model.observation_space.shape[0] // 2
-    print(f'> Model has {n_observations} inputs')
+    print(f'> Model has {n_observations} inputs, input name is {MODEL_INPUT_NAME}')
     onnxable_model = OnnxablePolicy(model)
 
     # export model to onnx
     onnx_path = path / 'model.onnx'
     dummy_input = torch.randn(1, n_observations)
     torch.onnx.export(onnxable_model, dummy_input, str(onnx_path), opset_version=9)
-    print(f'> Wrote ONNX model at {onnx_path}')
+    print(f'> Wrote ONNX model at {onnx_path}\n')
 
     # load onnx model and test it
     onnx_model = onnx.load(str(onnx_path))
@@ -59,12 +61,13 @@ if __name__ == '__main__':
     ort_sess = ort.InferenceSession(str(onnx_path))
     for i in range(3):
         observation = np.round(np.random.rand(1, n_observations).astype(np.float32), 3)
-        onnx_action = ort_sess.run(None, {'onnx::Gemm_0': observation})
+        onnx_action = ort_sess.run(None, {MODEL_INPUT_NAME: observation})
         model_action = model.predict(np.concatenate((observation, observation), axis=1), deterministic=True)[0]
         onnx_action_clipped = np.clip(onnx_action, model.action_space.low, model.action_space.high)
         assert np.all((model_action[0] - onnx_action_clipped[0][0]) < 1e-5)
         print(f'> Test input #{i+1}: {observation}')
-        print(f'> Expected output #{i+1}: {np.round(onnx_action_clipped, 5)}')
+        print(f'> Expected output #{i+1}: {np.round(onnx_action, 5)}')
+    print(f'\n> Note: output should be clipped between {model.action_space.low} and {model.action_space.high}\n')
 
     # load environment
     env = TrajectoryEnv(config['env_config'], _verbose=False)
@@ -74,17 +77,10 @@ if __name__ == '__main__':
     state_keys = list(sample_state.keys())
     state_values = [x[0] for x in sample_state.values()]
     state_normalizations = [x[1] for x in sample_state.values()]
-    memory_short = env.num_concat_states  # every 0.1s
-    memory_long = env.num_concat_states  # every 1.0s
     print(f'> Base state is: {state_keys}')
     print(f'  with normalization: {state_normalizations}')
     print(f'  eg. (without norm): {state_values}')
-    print(f'> Using {memory_short} short-term (0.1s) memory and {memory_long} long-term (1.0s) memory')
-    print('  with memory initialized at 0')
-    final_state = ['t', *[f't-{round(0.1 * (i + 1), 1)}s' for i in range(memory_short)],
-                   *[f't-{round(1.0 * (i + 1), 1)}s' for i in range(memory_long)]]
-    print(f'> State in terms of base states is: [{", ".join(final_state)}]')
-        
+
     state_to_cpp_map = {
         'speed': 'this_vel',
         'leader_speed': 'lead_vel',
@@ -148,4 +144,4 @@ float get_accel(float this_vel, float lead_vel, float headway, std::vector<float
 
     return accel;
 }}'''
-    print(f'> C++ pseudocode:\n{cpp_pseudocode}')
+    print(f'\n> C++ pseudocode:\n{cpp_pseudocode}')
