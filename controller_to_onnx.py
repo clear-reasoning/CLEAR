@@ -54,6 +54,16 @@ if __name__ == '__main__':
     dummy_input = torch.randn(1, n_observations)
     torch.onnx.export(onnxable_model, dummy_input, str(onnx_path), opset_version=9)
     print(f'> Wrote ONNX model at {onnx_path}\n')
+    
+    # conversion for discrete actions
+    env_config = config['env_config']
+    discrete_actions = env_config.get('acc_output', False) == True and env_config.get('acc_continuous') == False
+    if discrete_actions:
+        acc_num_speed_settings = int((env_config['acc_max_speed'] - env_config['acc_min_speed'])/ env_config['acc_speed_step'] + 1)
+        gap_action_set = np.array([1, 2, 3])
+        speed_action_set = np.arange(env_config['acc_min_speed'],
+                                     env_config['acc_max_speed'] + env_config['acc_speed_step'],
+                                     env_config['acc_speed_step'])
 
     # load onnx model and test it
     onnx_model = onnx.load(str(onnx_path))
@@ -63,11 +73,17 @@ if __name__ == '__main__':
         observation = np.round(np.random.rand(1, n_observations).astype(np.float32), 3)
         onnx_action = ort_sess.run(None, {MODEL_INPUT_NAME: observation})
         model_action = model.predict(np.concatenate((observation, observation), axis=1), deterministic=True)[0]
-        onnx_action_clipped = np.clip(onnx_action, model.action_space.low, model.action_space.high)
+        if discrete_actions:
+            onnx_action_clipped = [[np.argmax(onnx_action[0][0][0:61]), np.argmax(onnx_action[0][0][61:64])]]
+        else:
+            onnx_action_clipped = np.clip(onnx_action, model.action_space.low, model.action_space.high)
         assert np.all((model_action[0] - onnx_action_clipped[0][0]) < 1e-5)
         print(f'> Test input #{i+1}: {observation}')
         print(f'> Expected output #{i+1}: {np.round(onnx_action, 5)}')
-    print(f'\n> Note: output should be clipped between {model.action_space.low} and {model.action_space.high}\n')
+    if discrete_actions:
+        print(f'\n> Note: output is discrete logits, first {acc_num_speed_settings} are for speed settings, next 3 for gap settings')
+    else:
+        print(f'\n> Note: output should be clipped between {model.action_space.low} and {model.action_space.high}\n')
 
     # load environment
     env = TrajectoryEnv(config['env_config'], _verbose=False)
@@ -90,10 +106,51 @@ if __name__ == '__main__':
         'max_headway': 'static_cast<float>(max_headway)',
         'speed_setting': 'mega.get_speed_setting()',
         'gap_setting': 'mega.get_gap_setting()',
+        'gap_closing': f"std::max({int(env_config['max_headway'])}.0f, {int(env_config['max_time_headway'])}.0f * this_vel)",
+        'failsafe': f"6.0f * ((this_vel + 1.0f + this_vel * 4.0f / 30.0f) - lead_vel)",
     }
 
     states_cpp_str = '\n        '.join([f'{state_to_cpp_map[state_key]} / {state_norm}f,'
                                         for state_key, state_norm in zip(state_keys, state_normalizations)])
+
+    if discrete_actions:
+        action_computation_str = f'''// get logits from neural network
+    std::vector<float> logits = onnx_checkpoint.forward(state);
+    
+    // find argmax of speed setting logits (indexes 0 to {acc_num_speed_settings} excluded)
+    int speed_action = 0;
+    float max_speed_logit = logits[0];
+    for (int i = 1; i < {acc_num_speed_settings}; ++i) {{
+        if (logits[i] > max_speed_logit) {{
+            speed_action = i;
+            max_speed_logit = logits[i];
+        }}
+    }}
+    
+    // find argmax of gap setting logits (indexes {acc_num_speed_settings} to {acc_num_speed_settings + 3} excluded)
+    int gap_action = 0;
+    float max_gap_logit = logits[0];
+    for (int i = {acc_num_speed_settings}; i < {acc_num_speed_settings + 3}; ++i) {{
+        if (logits[i] > max_gap_logit) {{
+            gap_action = i;
+            max_gap_logit = logits[i];
+        }}
+    }}
+    
+    // convert discrete actions to respective settings
+    float speed_setting = {env_config['acc_min_speed']} + {env_config['acc_speed_step']} * i;
+    int gap_setting = gap_action + 1;'''
+    else:  
+        action_computation_str = f'''// get accel from neural network
+    auto[speed_action, gap_action] = onnx_checkpoint.forward(state);
+    
+    // clip actions
+    speed_action = std::clamp(speed_action, -1.0f, 1.0f);
+    gap_action = std::clamp(gap_action, -1.0f, 1.0f);
+
+    // compute actions for ACC
+    int speed_setting = static_cast<int>((speed_action + 1.0f) * 20.0f);
+    int gap_setting = gap_action > (1.0f / 3.0f) ? 1 : gap_action > (-1.0f / 3.0f) ? 2 : 3;'''
 
     cpp_pseudocode = f'''/**
  * Get RL controller acceleration.
@@ -117,16 +174,7 @@ float get_accel(float this_vel, float lead_vel, float headway, std::vector<float
         {states_cpp_str}
     }};
 
-    // get accel from neural network
-    auto[speed_action, gap_action] = onnx_checkpoint.forward(state);
-
-    // clip actions
-    speed_action = std::clamp(speed_action, -1.0f, 1.0f);
-    gap_action = std::clamp(gap_action, -1.0f, 1.0f);
-    
-    // compute actions for ACC
-    int speed_setting = static_cast<int>((speed_action + 1.0f) * 20.0f);
-    int gap_setting = gap_action > (1.0f / 3.0f) ? 1 : gap_action > (-1.0f / 3.0f) ? 2 : 3;
+    {action_computation_str}
 
     // apply gap closing and failsafe
     const float gap_closing_threshold = std::max({int(env.max_headway)}.0f, {int(env.max_time_headway)}.0f * ego_vel);
