@@ -243,11 +243,13 @@ class TrajectoryEnv(gym.Env):
         Dict of state_name: (state_value, state_normalization_scale)
         """
         av = self.avs[av_idx if av_idx is not None else 0]
-        state = {
-            'speed': (av.speed, 40.0),
-            'leader_speed': (av.get_leader_speed(), 40.0),
-            'headway': (av.get_headway(), 100.0),
-        }
+
+        state = {'speed': (av.speed, 40.0)}
+        if not self.stripped_state:
+            state.update({
+                'leader_speed': (av.get_leader_speed(), 40.0),
+                'headway': (av.get_headway(), 100.0),
+            })
 
         if self.include_thresholds:
             state.update({
@@ -327,7 +329,7 @@ class TrajectoryEnv(gym.Env):
             })
         return state
 
-    def get_base_additional_vf_state(self):
+    def get_base_additional_vf_state(self, av_idx=None):
         """Get base additional vf state.
 
         Dict of state_name: (state_value, state_normalization_scale)
@@ -339,6 +341,13 @@ class TrajectoryEnv(gym.Env):
             'avg_gallons': (
                 np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0)
         }
+
+        if self.stripped_state:
+            av = self.avs[av_idx if av_idx is not None else 0]
+            vf_state.update({
+                'leader_speed': (av.get_leader_speed(), 40.0),
+                'headway': (av.get_headway(), 100.0),
+            })
 
         if self.vf_include_chunk_idx:
             vf_state.update({'traj_idx': (self.traj_idx, 10.0),
@@ -500,7 +509,7 @@ class TrajectoryEnv(gym.Env):
                     self.avs.append(
                         self.sim.add_vehicle(controller=self.av_controller, kind='av',
                                              tags=tags, gap=-1, **eval(self.av_kwargs),
-                                             default_time_headway=3.0)
+                                             default_time_headway=3.0, stripped_state=self.stripped_state)
                     )
                 elif vtype == 'human':
                     self.humans.append(

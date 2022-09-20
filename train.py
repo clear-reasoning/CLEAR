@@ -194,6 +194,8 @@ def parse_args_train():
                         help='If set, calculates delta by...? ') 
     parser.add_argument('--speed_diff_reward_weight', type=float, default=0, nargs='+',
                         help='Weights speed diff reward') 
+    parser.add_argument('--stripped_state', default=False, action='store_true',
+                        help='If set, a stripped down state space without leader information will be used.') 
 
     args = parser.parse_args()
     return args
@@ -252,7 +254,8 @@ def run_experiment(config):
         'output_acc': config['output_acc'],
         'action_delta': config['action_delta'],
         'jonny_style': config['jonny_style'],
-        'speed_diff_reward_weight': config['speed_diff_reward_weight']
+        'speed_diff_reward_weight': config['speed_diff_reward_weight'],
+        'stripped_state': config['stripped_state']
     })
 
     # create env
