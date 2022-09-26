@@ -172,16 +172,19 @@ class TrajectoryEnv(gym.Env):
         a_min = self.min_accel
         a_max = self.max_accel
         if self.output_acc:
-            if self.acc_continuous:
+            self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
+            if self.action_delta:
+                self.action_space = MultiDiscrete([4, self.acc_num_gap_settings])
+                self.action_mapping = {0: -5 * MPH_TO_MS, 1: -1 * MPH_TO_MS, 2: 1 * MPH_TO_MS, 3: 5 * MPH_TO_MS} # in m/s
+            elif self.acc_continuous:
                 self.action_space = Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
             else:
-                self.acc_num_speed_settings = int((self.acc_max_speed - self.acc_min_speed)/ self.acc_speed_step + 1)
                 self.action_space = MultiDiscrete([self.acc_num_speed_settings, self.acc_num_gap_settings])
-                self.gap_action_set = np.array([1, 2, 3])
-                self.speed_action_set = np.arange(self.acc_min_speed,
-                                                self.acc_max_speed + self.acc_speed_step,
-                                                self.acc_speed_step)
-                    
+            self.gap_action_set = np.array([1, 2, 3])
+            self.speed_action_set = np.arange(self.acc_min_speed,
+                                              self.acc_max_speed + self.acc_speed_step,
+                                              self.acc_speed_step)
+
         elif self.discrete:
             self.action_space = Discrete(self.num_actions)
             self.action_set = np.linspace(a_min, a_max, self.num_actions)
@@ -240,11 +243,13 @@ class TrajectoryEnv(gym.Env):
         Dict of state_name: (state_value, state_normalization_scale)
         """
         av = self.avs[av_idx if av_idx is not None else 0]
-        state = {
-            'speed': (av.speed, 40.0),
-            'leader_speed': (av.get_leader_speed(), 40.0),
-            'headway': (av.get_headway(), 100.0),
-        }
+
+        state = {'speed': (av.speed, 40.0)}
+        if not self.stripped_state:
+            state.update({
+                'leader_speed': (av.get_leader_speed(), 40.0),
+                'headway': (av.get_headway(), 100.0),
+            })
 
         if self.include_thresholds:
             state.update({
@@ -324,7 +329,7 @@ class TrajectoryEnv(gym.Env):
             })
         return state
 
-    def get_base_additional_vf_state(self):
+    def get_base_additional_vf_state(self, av_idx=None):
         """Get base additional vf state.
 
         Dict of state_name: (state_value, state_normalization_scale)
@@ -336,6 +341,13 @@ class TrajectoryEnv(gym.Env):
             'avg_gallons': (
                 np.mean([self.sim.get_data(veh, 'total_gallons')[-1] + 1e-6 for veh in self.mpg_cars]), 100.0)
         }
+
+        if self.stripped_state:
+            av = self.avs[av_idx if av_idx is not None else 0]
+            vf_state.update({
+                'leader_speed': (av.get_leader_speed(), 40.0),
+                'headway': (av.get_headway(), 100.0),
+            })
 
         if self.vf_include_chunk_idx:
             vf_state.update({'traj_idx': (self.traj_idx, 10.0),
@@ -433,8 +445,14 @@ class TrajectoryEnv(gym.Env):
         if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
             headway_reward = -self.headway_penalty * av.get_time_headway()
             reward += headway_reward
+    
+        # speed planner and curr speed diff
+        speed_diff_reward = 0
+        target_speed, _ = self.megacontroller.get_target(av)
+        speed_diff_reward = -self.speed_diff_reward_weight * (target_speed - av.speed)**2
+        reward += speed_diff_reward
 
-        return reward, energy_reward, accel_reward, intervention_reward, headway_reward
+        return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -491,7 +509,7 @@ class TrajectoryEnv(gym.Env):
                     self.avs.append(
                         self.sim.add_vehicle(controller=self.av_controller, kind='av',
                                              tags=tags, gap=-1, **eval(self.av_kwargs),
-                                             default_time_headway=3.0)
+                                             default_time_headway=3.0, stripped_state=self.stripped_state)
                     )
                 elif vtype == 'human':
                     self.humans.append(
@@ -555,15 +573,51 @@ class TrajectoryEnv(gym.Env):
                 actions = np.array([actions])
 
             for av, action in zip(self.avs, actions):
+                # # <================= copy and pasting from megacontroller.py for sanity check that something isn't 
+                # # straight up not using action so it better fucking work
+                # target_speed, max_headway = self.megacontroller.get_target(av)
+                # lead_vel = self.avs[0].get_leader_speed()
+                # if target_speed < lead_vel:
+                #     speed_setting = target_speed * 0.6 + lead_vel * 0.4
+                # else:
+                #     speed_setting = target_speed
+                # if max_headway:
+                #     gap_setting = 1
+                # else:
+                #     gap_setting = 3
+                
+                # speed_setting = round(speed_setting / MPH_TO_MS) * MPH_TO_MS
+                # speed_setting = max(speed_setting, MPH_TO_MS * 20)
+                # # =================>
+
                 speed_setting, gap_setting = self.get_acc_input(action)
+                if self.action_delta:
+                    delta = self.action_mapping[action[0]]
+                    if curr_speed := av.get_speed_setting():
+                        speed_setting = curr_speed + delta
+                elif self.jonny_style:
+                    lead_vel = self.avs[0].get_leader_speed()
+                    # self.megacontroller.run_speed_planner(av)
+                    target_speed, _ = self.megacontroller.get_target(av)
+
+                    if target_speed < lead_vel:
+                        speed_setting = target_speed * 0.6 + lead_vel * 0.4
+                    else:
+                        speed_setting = target_speed
+                    # Apply delta
+                    delta = self.action_mapping[action[0]]
+                    speed_setting += delta
+
+                av.set_speed_setting(speed_setting)
+                av.set_gap_setting(gap_setting)
                 metrics['rl_acc_speed_setting'] = speed_setting
                 metrics['rl_acc_gap_setting'] = gap_setting
-                accel = av.set_acc(speed_setting, gap_setting, large_gap_threshold=self.gap_closing_threshold(av))
+                accel = av.set_acc(large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_controller_accel'] = accel
                 metrics['rl_processed_accel'] = accel
 
         # compute reward, store reward components for rollout dict
-        reward, energy_reward, accel_reward, intervention_reward, headway_reward \
+        reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
 
         # print crashes
@@ -613,6 +667,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['accel_rewards'].append(accel_reward)
             self.collected_rollout['intervention_rewards'].append(intervention_reward)
             self.collected_rollout['headway_rewards'].append(headway_reward)
+            self.collected_rollout['speed_diff_reward'].append(speed_diff_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({

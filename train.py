@@ -188,6 +188,14 @@ def parse_args_train():
                         help='If set, ACC output will be continuous (and clipped/rounded) instead of discrete.')
     parser.add_argument('--output_acc', default=False, action='store_true',
                         help='If set, outputs ACC settings rather than accel directly.')
+    parser.add_argument('--action_delta', default=False, action='store_true',
+                        help='If set with ACC, action space is in the form (-5, -1, 1, 5).')
+    parser.add_argument('--jonny_style', default=False, action='store_true',
+                        help='If set, calculates delta by...? ') 
+    parser.add_argument('--speed_diff_reward_weight', type=float, default=0, nargs='+',
+                        help='Weights speed diff reward') 
+    parser.add_argument('--stripped_state', default=False, action='store_true',
+                        help='If set, a stripped down state space without leader information will be used.') 
 
     args = parser.parse_args()
     return args
@@ -243,7 +251,11 @@ def run_experiment(config):
         'acc_continuous': config['acc_continuous'],
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
-        'output_acc': config['output_acc']
+        'output_acc': config['output_acc'],
+        'action_delta': config['action_delta'],
+        'jonny_style': config['jonny_style'],
+        'speed_diff_reward_weight': config['speed_diff_reward_weight'],
+        'stripped_state': config['stripped_state']
     })
 
     # create env
