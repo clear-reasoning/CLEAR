@@ -102,6 +102,11 @@ DEFAULT_ENV_CONFIG = {
     # whether to set the neural network output as continuous (and clipped/rounded)
     # by default the output is discrete
     'acc_continuous': 0,
+    # args for stripped / reduced state
+    'stripped_state': 0,
+    'leader_present': 0,
+    'leader_present_threshold': 80,
+    'dummy_states': 0
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -251,6 +256,13 @@ class TrajectoryEnv(gym.Env):
                 'headway': (av.get_headway(), 100.0),
             })
 
+        if self.leader_present:
+            state.update({
+                # 1 if leader within headway threshold, 0 otherwise
+                'leader_present': (int(av.get_headway() < self.leader_present_threshold), 100.0),
+            })
+
+
         if self.include_thresholds:
             state.update({
                 'gap_closing': (self.gap_closing_threshold(av), 100.0),
@@ -285,6 +297,10 @@ class TrajectoryEnv(gym.Env):
                 'speed_setting': (av.megacontroller.speed_setting, 40.0),
                 'gap_setting': (av.megacontroller.gap_setting, 3.0),                
             })
+
+        if self.dummy_states > 0:
+            state.update({f"dummy_{i}": (0.0, 1.0) for i in range(self.dummy_states)})
+        print(state)
 
         return state
 
@@ -353,6 +369,7 @@ class TrajectoryEnv(gym.Env):
             vf_state.update({'traj_idx': (self.traj_idx, 10.0),
                              'chunk_idx': (self.chunk_idx, 10000.0)})
 
+        print(vf_state)
         return vf_state
 
     def get_platoon_state(self, veh):
@@ -448,9 +465,12 @@ class TrajectoryEnv(gym.Env):
     
         # speed planner and curr speed diff
         speed_diff_reward = 0
-        target_speed, _ = self.megacontroller.get_target(av)
-        speed_diff_reward = -self.speed_diff_reward_weight * (target_speed - av.speed)**2
-        reward += speed_diff_reward
+
+        if self.speed_planner:
+            speed_diff_reward = 0
+            target_speed, _ = self.megacontroller.get_target(av)
+            speed_diff_reward = -self.speed_diff_reward_weight * (target_speed - av.speed)**2
+            reward += speed_diff_reward
 
         return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
 
