@@ -9,13 +9,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
+import wandb
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
