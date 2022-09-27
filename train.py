@@ -9,13 +9,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import wandb
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
-import wandb
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
@@ -197,7 +197,7 @@ def parse_args_train():
     parser.add_argument('--stripped_state', default=False, action='store_true',
                         help='If set, a stripped down state space without leader information will be used.')
     # add arg for leader_present
-    parser.add_argument('--env_leader_present', default=False, action='store_true',
+    parser.add_argument('--env_leader_present', type=int, default=0, nargs='+',
                         help='If set, state has flag for whether the leader is within a certain threshold')
     parser.add_argument('--env_leader_present_threshold', type=float, default=80, nargs='+',
                         help='If leader_present, sets headway threshold for when the leader is considered present')

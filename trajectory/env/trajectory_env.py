@@ -300,7 +300,6 @@ class TrajectoryEnv(gym.Env):
 
         if self.dummy_states > 0:
             state.update({f"dummy_{i}": (0.0, 1.0) for i in range(self.dummy_states)})
-        print(state)
 
         return state
 
@@ -369,7 +368,7 @@ class TrajectoryEnv(gym.Env):
             vf_state.update({'traj_idx': (self.traj_idx, 10.0),
                              'chunk_idx': (self.chunk_idx, 10000.0)})
 
-        print(vf_state)
+
         return vf_state
 
     def get_platoon_state(self, veh):
