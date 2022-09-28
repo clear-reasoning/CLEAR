@@ -33,6 +33,9 @@ class ACCWrappedRLVehicle(Vehicle):
         self.max_speed = 35.76  # 80 mph
         self.megacontroller = MegaController(output_acc=True, speed_setting=self.max_speed)
         self.tse_log = pd.DataFrame()
+        self.speed_setting = None
+        self.gap_setting = None
+        self.stripped_state = kwargs['stripped_state']
 
     # Used for failsafe penalty, not necessarily what's applied
     def failsafe_threshold(self):
@@ -41,9 +44,25 @@ class ACCWrappedRLVehicle(Vehicle):
     def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
-    def set_acc(self, speed_setting, gap_setting, large_gap_threshold=120):
-        if self.get_headway() >= large_gap_threshold:
-            speed_setting = self.max_speed
+    def get_speed_setting(self):
+        """Pretty sure this is in m/s."""
+        return self.speed_setting
+
+    def get_gap_setting(self):
+        return self.gap_setting
+
+    def set_speed_setting(self, speed_setting):
+        self.speed_setting = speed_setting
+    
+    def set_gap_setting(self, gap_setting):
+        self.gap_setting = gap_setting
+
+    def set_acc(self, large_gap_threshold=120):
+        speed_setting = self.speed_setting
+        gap_setting = self.gap_setting
+        if not self.stripped_state:
+            if self.get_headway() >= large_gap_threshold:
+                speed_setting = self.max_speed
         if self.get_headway() <= self.failsafe_threshold():
             speed_setting = 0
 

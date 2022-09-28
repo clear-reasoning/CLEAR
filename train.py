@@ -1,13 +1,13 @@
 """Train a policy."""
 import argparse
-from datetime import datetime
 import itertools
 import multiprocessing
 import os
-from pathlib import Path
 import platform
 import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
@@ -15,13 +15,13 @@ from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
+import wandb
 from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from trajectory.algos.td3.policies import CustomTD3Policy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
-import wandb
 
 register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
 
@@ -188,6 +188,21 @@ def parse_args_train():
                         help='If set, ACC output will be continuous (and clipped/rounded) instead of discrete.')
     parser.add_argument('--output_acc', default=False, action='store_true',
                         help='If set, outputs ACC settings rather than accel directly.')
+    parser.add_argument('--action_delta', default=False, action='store_true',
+                        help='If set with ACC, action space is in the form (-5, -1, 1, 5).')
+    parser.add_argument('--jonny_style', default=False, action='store_true',
+                        help='If set, calculates delta by...? ') 
+    parser.add_argument('--speed_diff_reward_weight', type=float, default=0, nargs='+',
+                        help='Weights speed diff reward') 
+    parser.add_argument('--stripped_state', default=False, action='store_true',
+                        help='If set, a stripped down state space without leader information will be used.')
+    # add arg for leader_present
+    parser.add_argument('--env_leader_present', type=int, default=0, nargs='+',
+                        help='If set, state has flag for whether the leader is within a certain threshold')
+    parser.add_argument('--env_leader_present_threshold', type=float, default=80, nargs='+',
+                        help='If leader_present, sets headway threshold for when the leader is considered present')
+    parser.add_argument('--env_dummy_states', type=int, default=0, nargs='+',
+                        help='If set, adds this many dummy states to the state space.')
 
     args = parser.parse_args()
     return args
@@ -243,7 +258,14 @@ def run_experiment(config):
         'acc_continuous': config['acc_continuous'],
         # Convert curriculum frequency from iterations to steps
         'traj_curriculum_freq': config['traj_curriculum_freq'] * config['n_steps'],
-        'output_acc': config['output_acc']
+        'output_acc': config['output_acc'],
+        'action_delta': config['action_delta'],
+        'jonny_style': config['jonny_style'],
+        'speed_diff_reward_weight': config['speed_diff_reward_weight'],
+        'stripped_state': config['stripped_state'],
+        'leader_present': config['env_leader_present'],
+        'leader_present_threshold': config['env_leader_present_threshold'],
+        'dummy_states': config['env_dummy_states']
     })
 
     # create env
