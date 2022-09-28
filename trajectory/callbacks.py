@@ -200,6 +200,17 @@ class TensorboardCallback(BaseCallback):
                 for k, v in env.sim.data_by_vehicle[veh.name].items():
                     if k == 'speed':
                         rollout_dict['sim_data_leader'][k] = v
+                        
+        for veh in env.sim.vehicles:
+            if veh.kind == 'leader':
+                rollout_dict['speed_planner']['leader_speed'] = env.sim.data_by_vehicle[veh.name]['speed']
+            if veh.kind == 'av':
+                rollout_dict['speed_planner']['gap'] = env.sim.data_by_vehicle[veh.name]['headway']
+                rollout_dict['speed_planner']['inrix_local_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_local_speed']
+                rollout_dict['speed_planner']['inrix_next_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_next_speed']
+                rollout_dict['speed_planner']['inrix_next_next_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_next_next_speed']
+                rollout_dict['speed_planner']['target_speed'] = rollout_dict['base_state']['target_speed']
+                rollout_dict['speed_planner']['max_headway'] = rollout_dict['base_state']['max_headway']
 
         for i in range(len(env.avs)):
             for platoon_state in collected_rollout[f'platoon_{i}']:

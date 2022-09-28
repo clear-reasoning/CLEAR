@@ -2,6 +2,7 @@
 import bisect
 
 import numpy as np
+import pandas as pd
 from gym.spaces import Discrete, MultiDiscrete
 
 from trajectory.env.accel_controllers import TimeHeadwayFollowerStopper, IDMController
@@ -249,6 +250,7 @@ class IDMVehicle(Vehicle):
         super().__init__(**kwargs)
 
         self.idm = IDMController(**self.controller_args)
+        self.tse_log = pd.DataFrame()
 
     def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """See parent."""

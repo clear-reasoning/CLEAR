@@ -456,3 +456,8 @@ class Simulation(object):
             self.add_data(veh, 'target_accel_with_noise_no_failsafe', veh.accel_with_noise_no_failsafe)
             self.add_data(veh, 'target_accel_no_noise_with_failsafe', veh.accel_no_noise_with_failsafe)
             self.add_data(veh, 'vdes', veh.fs.v_des if hasattr(veh, 'fs') else -1)
+
+            inrix = veh.get_downstream_avg_speed(k=3)
+            self.add_data(veh, 'inrix_local_speed', inrix[1][0] if inrix is not None else -1)
+            self.add_data(veh, 'inrix_next_speed', inrix[1][1] if inrix is not None else -1)
+            self.add_data(veh, 'inrix_next_next_speed', inrix[1][2] if inrix is not None else -1)
