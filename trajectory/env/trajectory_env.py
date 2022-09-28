@@ -112,6 +112,7 @@ PLATOON_PRESETS = {
     '2avs_7%': 'av human*13 av human*13',
     '2avs_10%': 'av human*9 av human*9',
     '2avs_12.5%': 'av human*7 av human*7',
+    '33avs_4%': '(av human*24)*33',
 }
 
 
