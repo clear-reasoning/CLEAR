@@ -6,7 +6,7 @@ from trajectory.env.failsafes import safe_velocity
 class IDMController(object):
     """IDM Controller."""
 
-    def __init__(self, v0=45, T=1, a=1.3, b=2.0, delta=4, s0=2, noise=0.3):
+    def __init__(self, v0=35, T=1.24, a=1.3, b=2.0, delta=4, s0=2, noise=0.0):
         self.v0 = v0
         self.T = T
         self.a = a
