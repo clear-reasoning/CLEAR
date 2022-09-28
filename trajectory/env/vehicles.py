@@ -55,7 +55,7 @@ class Vehicle(object):
 
         assert (timestep is not None)
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """Step forward."""
         if accel is not None:
             self.accel = accel
@@ -250,7 +250,7 @@ class IDMVehicle(Vehicle):
 
         self.idm = IDMController(**self.controller_args)
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """See parent."""
         accel = self.idm.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
@@ -269,7 +269,7 @@ class FSVehicle(Vehicle):
 
         self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """See parent."""
         self.fs.v_des = self.get_leader_speed()
 
@@ -291,7 +291,7 @@ class TrajectoryVehicle(Vehicle):
         self.trajectory = self.controller_args['trajectory']
         self.step()
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """See parent."""
         traj_data = next(self.trajectory, None)
         if traj_data is None:
@@ -310,7 +310,7 @@ class RLVehicle(Vehicle):
         super().__init__(**kwargs)
         self.idm = IDMController()
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         return super().step(accel=self.accel, ballistic=True, tse=tse)
 
     def set_accel(self, accel, large_gap_threshold=120):
@@ -361,7 +361,7 @@ class FSWrappedRLVehicle(Vehicle):
         self.fs = TimeHeadwayFollowerStopper(**self.controller_args)
         self.fs.v_des = self.speed
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         """See parent."""
         accel = self.fs.get_accel(self.speed, self.get_leader_speed(), self.get_headway(), self.dt)
         self.accel_with_noise_no_failsafe = accel
@@ -545,7 +545,7 @@ class AvVehicle(Vehicle):
 
         return state
 
-    def step(self, accel=None, ballistic=False, tse=None):
+    def step(self, accel=None, ballistic=False, tse=None, tse_log=None):
         self.step_counter += 1
 
         # Only use RL after pos is 0, use IDM before

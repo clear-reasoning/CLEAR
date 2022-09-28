@@ -58,6 +58,7 @@ class Simulation(object):
         # Store downstream information data.
         self._prev_tse = None
         self._tse_obs, self._tse_times = self._init_tse(self.downstream_path)
+        self.tse_log = pd.DataFrame()
 
         self.setup_grade_and_altitude_map(network=road_grade)
 
@@ -380,6 +381,8 @@ class Simulation(object):
 
         # Collect macroscopic traffic state estimates.
         tse = self._get_tse() if self._tse_obs is not None else None
+        if self.time_counter % 60 == 0:
+            self.tse_log[str(int(self.time_counter))] = self.tse['sim_speed'] if self._tse_obs is not None else None
 
         if self.enable_lane_changing and self.step_counter < env.horizon:
             # Catch the edge case where lane change happens on last step and then data
@@ -397,7 +400,10 @@ class Simulation(object):
             # independent of the vehicle behind you. if at some point it is,
             # then new position/speed/accel have to be calculated for every
             # vehicle before applying the changes
-            return_status &= veh.step(tse=tse)
+            if veh.kind == 'av':
+                return_status &= veh.step(tse=tse, tse_log=self.tse_log)
+            else:
+                return_status &= veh.step(tse=tse)
 
         self.collect_data()
 

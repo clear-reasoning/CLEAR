@@ -3,6 +3,7 @@ import abc
 from copy import deepcopy
 from collections import defaultdict
 
+import pandas as pd
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -427,12 +428,12 @@ class MegaController(AbstractMegaController):
                     ]
                 )
 
-                (
-                    target_speed_profile,
-                    max_headway_profile,
-                ) = get_target_profiles_with_fixed_decel(
-                    x_range, gaussian_smoothed_speed, decel=-0.5
+                bn_pos, stand_bn_pos, move_bn_pos = get_bn_loc_by_type(veh)
+
+                target_speed_profile, max_headway_profile = get_target_profiles_with_equilibrium_mbn(
+                    x_range, gaussian_smoothed_speed, stand_bn_pos=stand_bn_pos, move_bn_pos=move_bn_pos
                 )
+
                 self.target_speed_profile[veh] = target_speed_profile
                 self.max_headway_profile[veh] = max_headway_profile
 
@@ -770,6 +771,156 @@ class MegaController(AbstractMegaController):
         return speed_setting, gap_setting
 
 
+def get_target_profiles_with_equilibrium_mbn(
+    x, speed, stand_bn_pos=[], move_bn_pos=[], v_q=27, k_c=0.048, c_bn=2000/3600, over_decel_rate=1, decel=-0.1, aggresiveness=0.2):
+    # headway_profile = [True] * len(speed)
+    target_speed_df = pd.DataFrame()
+    dx = x[1] - x[0]
+
+    if len(stand_bn_pos) > 0:
+
+        speed_stand = deepcopy(speed)
+        bn_loc = stand_bn_pos[0]
+
+        speed_bn = speed[x < bn_loc]
+        speed_bn = speed_bn[speed_bn < v_q]
+        n_bn = get_k_of_v(speed_bn) * dx
+        # q_bn = min(c_bn, get_k_of_v(speed_bn.min()) * speed_bn.min())
+        # v_sl = q_bn / k_c * over_decel_rate
+        v_sl = speed_bn.min() * 1.05
+        # print(v_sl)
+        l_decel = (v_sl ** 2 - v_q ** 2) / (2 * decel)
+
+        l_buffer = n_bn.sum() / k_c
+
+        start_loc = bn_loc - l_buffer - l_decel
+
+        next_speed = speed_stand[-1]
+
+        if start_loc <= 0:
+            start_loc = 0
+            if bn_loc > l_decel:
+                l_buffer = bn_loc - l_decel
+
+            else:
+                l_buffer = 0
+                l_decel = bn_loc
+                decel = (v_sl ** 2 - v_q ** 2) / (2 * l_decel)
+
+        for i in range(len(x) - 1, 0, -1):
+            decel_speed = speed_stand[i]
+            if (x[i] >= start_loc) & (x[i] <= bn_loc - l_buffer):
+                decel_speed = np.sqrt(next_speed ** 2 - dx * decel * 2.0)
+
+            elif (x[i] <= bn_loc) & (x[i] > bn_loc - l_buffer):
+                decel_speed = v_sl
+
+            if decel_speed < speed_stand[i]:
+                speed_stand[i] = decel_speed
+            next_speed = speed_stand[i]
+        target_speed_df['stand_bn'] = speed_stand
+
+    if len(move_bn_pos) > 0:
+        for wave_loc in move_bn_pos:
+            bn_loc = wave_loc
+            move_speed = deepcopy(speed)
+            v_wave = move_speed[x == int(wave_loc/dx)*dx]
+            l_decel = (v_wave ** 2 - v_q ** 2) / (2 * decel)
+
+            start_loc = bn_loc - l_decel
+
+            next_speed = move_speed[-1]
+
+            if start_loc <= 0:
+                start_loc = 0
+                l_decel = bn_loc
+                decel = (v_wave ** 2 - v_q ** 2) / (2 * l_decel)
+
+            for i in range(len(x) - 1, 0, -1):
+                decel_speed = move_speed[i]
+                if (x[i] >= start_loc) & (x[i] <= bn_loc):
+                    decel_speed = np.sqrt(next_speed ** 2 - dx * decel * 2.0)
+
+                if decel_speed < move_speed[i]:
+                    move_speed[i] = decel_speed
+                next_speed = move_speed[i]
+            target_speed_df[f'{int(wave_loc)}'] = move_speed
+
+    target_speed_df['raw'] = speed
+    target_speed_df['target_raw'] = target_speed_df.apply(lambda x: x.min(), axis=1)
+
+    target_speed_df['agrsv_con'] = speed * (1 - aggresiveness)
+    target_speed_df['target_soft'] = target_speed_df.apply(lambda x: max(x['target_raw'], x['agrsv_con']), axis=1)
+
+
+    target_speed_df['headway'] = target_speed_df.apply(lambda x: x['target_soft'] < x['raw'], axis=1)
+
+    target_speed = np.array(target_speed_df['target_soft'].values)
+    headway_profile = np.array(target_speed_df['headway'].values)
+
+    return tuple([x, target_speed, np.array(1)]), tuple([x, headway_profile, np.array(1)])
+
+
+def simlified_inverse_pems_bn_identify(inrix, v_diff=4):
+    """Identify bottleneck with simplified inverse PeMS."""
+    bn_inrix = deepcopy(inrix)
+    for i in range(len(inrix)-1, 0, -1):
+        if_bn = False
+        if inrix[i] <= 60:
+            if inrix[i] - inrix[i-1] > v_diff:
+                if_bn = True
+                bn_inrix[i] = False
+        bn_inrix[i-1] = if_bn
+    bn_inrix[0] = False
+    bn_inrix[len(inrix)-1] = False
+
+    return bn_inrix
+
+
+def get_bn_loc_by_type(veh, prev_time=5, stand_time=4):
+    bn_loc = simlified_inverse_pems_bn_identify(veh._tse["avg_speed"])
+
+    # if bn_inrix.sum()>0 & len(veh.tse_log.columns) > prev_time:
+    if len(veh.tse_log.columns) > prev_time:
+        prev_inrix = veh.tse_log.iloc[:, -prev_time:]
+        prev_bn = prev_inrix.apply(lambda x : simlified_inverse_pems_bn_identify(x), axis=0)
+        stand_bn_loc = prev_bn.apply(lambda x: x.sum() >= stand_time, axis=1) * bn_loc
+        move_bn_loc = (bn_loc - stand_bn_loc) > 0
+    else:
+        move_bn_loc = bn_loc
+        stand_bn_loc = bn_loc - move_bn_loc
+
+    bn_loc = bn_loc > 0
+    stand_bn_loc = stand_bn_loc > 0
+    move_bn_loc = move_bn_loc > 0
+
+    # # to test bn scenario
+    # stand_bn_loc = bn_loc
+    # move_bn_loc = [False for _ in stand_bn_loc]
+
+    bn_pos = np.array(veh._tse["segments"])[list(bn_loc)]
+    stand_bn_pos = np.array(veh._tse["segments"])[list(stand_bn_loc)]
+    move_bn_pos = np.array(veh._tse["segments"])[list(move_bn_loc)]
+
+    return bn_pos, stand_bn_pos, move_bn_pos
+
+
+def get_k_of_v(v):
+    """Get the density of the speed using IDM equilibrium."""
+    #  Read the IDM params from controller
+    # idm_params = self.get_idm_params()
+    # s = (idm_params.s0 + idm_params.T * idm_params.v) / (1 - (v / idm_params.v0) ** idm_params.delta) ** (1 / 2)
+    #  Manually define the IDM params
+    v0 = 35
+    T = 1.24
+    delta = 4
+    s0 = 2
+    # a = 1.3
+    # b = 2
+    s = (s0 + T * v) / (1 - (v / v0) ** delta) ** (1 / 2)
+    k = 1 / (s + 4)  # Assume average veh len is 4 meters
+    return k
+
 def get_sl_by_distance(x, v_0=33, v_bn=28 / 3.6, D=16000):
     """Get SL by distance."""
     a = (v_bn * v_bn - v_0 * v_0) / (2 * D)
@@ -849,11 +1000,11 @@ def naive_bn_identify(inrix):
     return congest_range[0][0] if len(congest_range[0]) > 0 else None
 
 
-def simlified_inverse_pems_bn_identify(inrix):
-    """Identify bottleneck with simplified inverse PeMS."""
-    inrix_diff = np.diff(inrix)
-    gap_loc = np.where(inrix_diff < -8)
-    return gap_loc[0][0] + 1 if len(gap_loc) > 0 else None
+# def simlified_inverse_pems_bn_identify(inrix):
+#     """Identify bottleneck with simplified inverse PeMS."""
+#     inrix_diff = np.diff(inrix)
+#     gap_loc = np.where(inrix_diff < -8)
+#     return gap_loc[0][0] + 1 if len(gap_loc) > 0 else None
 
 
 def anneal(x0, x, z, forward_width, backward_width):
