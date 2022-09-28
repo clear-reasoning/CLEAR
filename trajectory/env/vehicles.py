@@ -14,7 +14,7 @@ class Vehicle(object):
 
     def __init__(self, vid, controller, kind=None, tags=None,
                  pos=0, speed=0, accel=0,
-                 length=5.0, max_accel=1.5, max_decel=3.0,
+                 length=5.0, max_accel=1.5, max_decel=4.0,
                  timestep=None, leader=None, follower=None,
                  **controller_args):
 
