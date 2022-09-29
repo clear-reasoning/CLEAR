@@ -106,7 +106,10 @@ DEFAULT_ENV_CONFIG = {
     'stripped_state': 0,
     'leader_present': 0,
     'leader_present_threshold': 80,
-    'dummy_states': 0
+    'dummy_states': 0,
+    # past leader speeds and AV accels
+    'past_vels_state': False,
+    'past_accels_state': False,
 }
 
 # platoon presets that can be passed to the "platoon" env param
