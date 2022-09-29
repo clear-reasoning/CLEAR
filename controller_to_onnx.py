@@ -176,17 +176,6 @@ float get_accel(float this_vel, float lead_vel, float headway, std::vector<float
 
     {action_computation_str}
 
-    // apply gap closing and failsafe
-    const float gap_closing_threshold = std::max({int(env.max_headway)}.0f, {int(env.max_time_headway)}.0f * ego_vel);
-    const float failsafe_threshold = 6.0f * ((ego_vel + 1.0f + ego_vel * 4.0f / 30.0f) - lead_vel);
-    
-    if (headway > gap_closing_threshold) {{
-        speed_setting = 40;
-    }}
-    elif (headway < failsafe_threshold) {{
-        speed_setting = 0;
-    }}
-    
     // compute accel
     const float accel = mega.get_accel(speed_setting, gap_setting);
 
