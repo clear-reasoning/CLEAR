@@ -256,6 +256,22 @@ class TrajectoryEnv(gym.Env):
                 'leader_speed': (av.get_leader_speed(), 40.0),
                 'headway': (av.get_headway(), 100.0),
             })
+        
+        if self.past_vels_state:
+            past_vels = self.sim.get_data(av, 'speed')[-self.past_vels_state:]
+            past_vels = [0] * (self.past_vels_state - len(past_vels)) + past_vels
+            state.update({
+                f'past_vel_{i}': (past_vels[-i], 40.0)
+                for i in range(1, self.past_vels_state + 1)
+            })
+
+        if self.past_accels_state:
+            past_accels = self.sim.get_data(av, 'accel')[-self.past_accels_state:]
+            past_accels = [0] * (self.past_accels_state - len(past_accels)) + past_accels
+            state.update({
+                f'past_accel_{i}': (past_accels[-i], 4)
+                for i in range(1, self.past_accels_state + 1)
+            })
 
         if self.leader_present:
             state.update({
