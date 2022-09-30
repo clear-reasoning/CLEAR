@@ -207,9 +207,9 @@ def parse_args_train():
                         help='If set, includes this many past velocities in the state.')
     parser.add_argument('--past_accels_state', type=int, default=0, nargs='+',
                         help='If set, includes this many past accelerations in the state.')
-    parser.add_argument('--no_failsafe', default=False, action='store_true',
+    parser.add_argument('--no_acc_failsafe', default=False, action='store_true',
                         help='If set, will not use the ACCWrappedRLVehicle failsafe for speed setting.')
-    parser.add_argument('--no_gap_closing', default=False, action='store_true',
+    parser.add_argument('--no_acc_gap_closing', default=False, action='store_true',
                         help='If set, will not use the ACCWrappedRLVehicle method for closing gaps above large thresholds.')
                     
 
@@ -277,8 +277,8 @@ def run_experiment(config):
         'dummy_states': config['env_dummy_states'],
         'past_vels_state': config['past_vels_state'],
         'past_accels_state': config['past_accels_state'],
-        'no_failsafe': config['no_failsafe'],
-        'no_gap_closing': config['no_gap_closing']
+        'no_acc_failsafe': config['no_acc_failsafe'],
+        'no_acc_gap_closing': config['no_acc_gap_closing']
     })
 
     # create env
