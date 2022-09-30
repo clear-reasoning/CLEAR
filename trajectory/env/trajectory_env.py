@@ -106,6 +106,7 @@ DEFAULT_ENV_CONFIG = {
     'stripped_state': 0,
     'leader_present': 0,
     'leader_present_threshold': 80,
+    'leader_faster': 0,
     'dummy_states': 0,
     # past leader speeds and AV accels
     'past_vels_state': False,
@@ -279,9 +280,14 @@ class TrajectoryEnv(gym.Env):
         if self.leader_present:
             state.update({
                 # 1 if leader within headway threshold, 0 otherwise
-                'leader_present': (int(av.get_headway() < self.leader_present_threshold), 100.0),
+                'leader_present': (int(av.get_headway() < self.leader_present_threshold), 1),
             })
 
+        if self.leader_faster:
+            state.update({
+                # 1 if leader is faster than the av, 0 otherwise
+                'leader_faster': (int(av.get_leader_speed() > av.speed), 1),
+            })
 
         if self.include_thresholds:
             state.update({

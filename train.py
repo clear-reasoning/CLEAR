@@ -196,11 +196,12 @@ def parse_args_train():
                         help='Weights speed diff reward') 
     parser.add_argument('--stripped_state', default=False, action='store_true',
                         help='If set, a stripped down state space without leader information will be used.')
-    # add arg for leader_present
     parser.add_argument('--env_leader_present', type=int, default=0, nargs='+',
                         help='If set, state has flag for whether the leader is within a certain threshold')
     parser.add_argument('--env_leader_present_threshold', type=float, default=80, nargs='+',
                         help='If leader_present, sets headway threshold for when the leader is considered present')
+    parser.add_argument('--env_leader_faster', type=int, default=0, nargs='+',
+                        help='If set, state has flag for whether the leader is faster than the AV')
     parser.add_argument('--env_dummy_states', type=int, default=0, nargs='+',
                         help='If set, adds this many dummy states to the state space.')
     parser.add_argument('--past_vels_state', type=int, default=0, nargs='+',
@@ -274,6 +275,7 @@ def run_experiment(config):
         'stripped_state': config['stripped_state'],
         'leader_present': config['env_leader_present'],
         'leader_present_threshold': config['env_leader_present_threshold'],
+        'leader_faster': config['env_leader_faster'],
         'dummy_states': config['env_dummy_states'],
         'past_vels_state': config['past_vels_state'],
         'past_accels_state': config['past_accels_state'],
