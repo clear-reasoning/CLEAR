@@ -36,6 +36,8 @@ class ACCWrappedRLVehicle(Vehicle):
         self.speed_setting = None
         self.gap_setting = None
         self.stripped_state = kwargs['stripped_state']
+        self.no_failsafe = kwargs['no_failsafe']
+        self.no_gap_closing = kwargs['no_gap_closing']
 
     # Used for failsafe penalty, not necessarily what's applied
     def failsafe_threshold(self):
@@ -60,11 +62,12 @@ class ACCWrappedRLVehicle(Vehicle):
     def set_acc(self, large_gap_threshold=120):
         speed_setting = self.speed_setting
         gap_setting = self.gap_setting
-        if not self.stripped_state:
+        if not self.no_gap_closing:
             if self.get_headway() >= large_gap_threshold:
                 speed_setting = self.max_speed
-        if self.get_headway() <= self.failsafe_threshold():
-            speed_setting = 0
+        if not self.no_failsafe:
+            if self.get_headway() <= self.failsafe_threshold():
+                speed_setting = 0
 
         accel = self.megacontroller.get_acc_accel(self.speed, self.get_leader_speed(), self.get_headway(),
                                                   speed_setting, gap_setting)

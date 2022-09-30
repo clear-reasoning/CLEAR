@@ -534,7 +534,6 @@ class TrajectoryEnv(gym.Env):
         self.platoon = re.sub(r'\(([a-z0-9\s\*\#]+)\)\*([0-9]+)', replace1, self.platoon)
         # parse veh#tag1...#tagk*n into (veh, [tag1, ..., tagk], n)
         self.platoon_lst = re.findall(r'([a-z]+)((?:\#[a-z]+)*)(?:\*?([0-9]+))?', self.platoon)
-
         # spawn vehicles
         self.avs = []
         self.humans = []
@@ -545,7 +544,8 @@ class TrajectoryEnv(gym.Env):
                     self.avs.append(
                         self.sim.add_vehicle(controller=self.av_controller, kind='av',
                                              tags=tags, gap=-1, **eval(self.av_kwargs),
-                                             default_time_headway=3.0, stripped_state=self.stripped_state)
+                                             default_time_headway=3.0, stripped_state=self.stripped_state,
+                                             no_failsafe=self.no_failsafe, no_gap_closing=self.no_gap_closing)
                     )
                 elif vtype == 'human':
                     self.humans.append(
