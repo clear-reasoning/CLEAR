@@ -165,6 +165,9 @@ class TrajectoryEnv(gym.Env):
         self.traj_idx = -1
         self.chunk_idx = -1
         
+        self.past_av_speeds = [-40] * 10
+        self.past_requested_speed_setting = [-40] * 10
+
         self.megacontroller = MegaController(output_acc=False)
 
         # create simulation
@@ -318,6 +321,12 @@ class TrajectoryEnv(gym.Env):
                 'max_headway': (max_headway, 1.0),
             })
             
+        for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
+            target_speed_delta, _ = self.megacontroller.get_target(av, pos_delta=pos_delta)
+            state.update({
+                f'target_speed_{pos_delta}': (target_speed_delta, 40.0),
+            })
+            
         if self.acc_states:
             state.update({
                 'speed_setting': (av.megacontroller.speed_setting, 40.0),
@@ -326,6 +335,12 @@ class TrajectoryEnv(gym.Env):
 
         if self.dummy_states > 0:
             state.update({f"dummy_{i}": (0.0, 1.0) for i in range(self.dummy_states)})
+
+        for i in range(10):
+            state.update({
+                f'past_av_speeds_{i}': (self.past_av_speeds[-i-1], 40.0),
+                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i-1], 40.0),           
+            })
 
         return state
 
@@ -394,6 +409,10 @@ class TrajectoryEnv(gym.Env):
             vf_state.update({'traj_idx': (self.traj_idx, 10.0),
                              'chunk_idx': (self.chunk_idx, 10000.0)})
 
+        av = self.avs[av_idx if av_idx is not None else 0]
+        vf_state.update({
+            'av_pos': (av.pos, 5000.0),
+        })
 
         return vf_state
 
@@ -652,6 +671,9 @@ class TrajectoryEnv(gym.Env):
                     # Apply delta
                     delta = self.action_mapping[action[0]]
                     speed_setting += delta
+                
+                self.past_requested_speed_setting.append(speed_setting)
+                self.past_av_speeds.append(av.speed)
 
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)
