@@ -212,6 +212,8 @@ def parse_args_train():
                         help='If set, will not use the ACCWrappedRLVehicle failsafe for speed setting.')
     parser.add_argument('--no_acc_gap_closing', type=int, default=0, nargs='+',
                         help='If set, will not use the ACCWrappedRLVehicle method for closing gaps above large thresholds.')
+    parser.add_argument('--env_accel_delta_state', type=int, default=0, nargs='+',
+                        help='If set, includes the delta of AV accel and its instruction.')
                     
 
     args = parser.parse_args()
@@ -280,7 +282,8 @@ def run_experiment(config):
         'past_vels_state': config['past_vels_state'],
         'past_accels_state': config['past_accels_state'],
         'no_acc_failsafe': config['no_acc_failsafe'],
-        'no_acc_gap_closing': config['no_acc_gap_closing']
+        'no_acc_gap_closing': config['no_acc_gap_closing'],
+        'accel_delta_state': config['env_accel_delta_state']
     })
 
     # create env

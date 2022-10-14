@@ -284,16 +284,16 @@ class TrajectoryEnv(gym.Env):
                 for i in range(1, self.past_accels_state + 1)
             })
 
-        if True:
+        if self.accel_delta_state:
             spd_err = self.past_requested_speed_setting[-1] - self.past_av_speeds[-1]
             if spd_err > 0.6:
                 k = self.acc_params['p20']
                 c = self.acc_params['p21']
-                spd_control_accel = min(self.params['p3'], k * spd_err + c)
+                spd_control_accel = min(self.acc_params['p3'], k * spd_err + c)
             else:
                 k = self.acc_params['p22']
                 c = self.acc_params['p23']
-                spd_control_accel = max(self.params['p4'], k * spd_err + c)
+                spd_control_accel = max(self.acc_params['p4'], k * spd_err + c)
             if not np.isscalar(spd_control_accel):
                 spd_control_accel = spd_control_accel
             accel_delta = spd_control_accel - self.sim.get_data(av, 'accel')[-1]
