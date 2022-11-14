@@ -281,6 +281,9 @@ def run_experiment(config):
         'accel_delta_state': config['env_accel_delta_state']
     })
 
+    assert config['env_horizon'] % config['n_steps'] == 0, 'env horizon must be divisible by n steps to \
+                                                            get bootstrapping to work properly'
+
     # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
 
