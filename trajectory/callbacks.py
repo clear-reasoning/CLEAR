@@ -249,7 +249,7 @@ class TensorboardCallback(BaseCallback):
         state = test_env.reset()
         done = False
         test_env.start_collecting_rollout()
-        while not done:
+        while not test_env.end_of_horizon:
             if av_controller == 'rl_acc':
                 action = self.model.predict(state, deterministic=True)[0]
             elif av_controller == 'rl':

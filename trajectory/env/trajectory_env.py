@@ -132,6 +132,8 @@ class TrajectoryEnv(gym.Env):
     def __init__(self, config, _simulate=False, _verbose=True):
         super().__init__()
 
+        # just used for eval callbacks
+        self.end_of_horizon = False
         # Keep track of total number of training steps
         self.step_count = 0
 
@@ -784,6 +786,7 @@ class TrajectoryEnv(gym.Env):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 
         if end_of_horizon:
+            self.end_of_horizon = True
             next_state = self.reset()
         # Track total number of steps
         self.step_count += 1
