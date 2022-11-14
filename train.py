@@ -43,7 +43,7 @@ def parse_args_train():
     parser.add_argument('--iters', type=int, default=1, nargs='+',
                         help='Number of iterations (rollouts) to train for.'
                              'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
-    parser.add_argument('--n_steps', type=int, default=640, nargs='+',
+    parser.add_argument('--n_steps', type=int, default=500, nargs='+',
                         help='Number of environment steps to sample in each rollout in each environment.'
                              'This can span over less or more than the environment horizon.'
                              'Ideally should be a multiple of {batch_size}.')

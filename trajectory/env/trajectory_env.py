@@ -730,8 +730,10 @@ class TrajectoryEnv(gym.Env):
 
         # get next state & done
         next_state = self.get_state() if not self.simulate else None  # don't stack memory here during eval
-        done = (end_of_horizon or crash)
+        done = crash
         infos = {'metrics': metrics}
+        if done:
+            infos['terminal_observation'] = next_state
 
         if self.collect_rollout:
             base_state = self.get_base_state()
@@ -772,6 +774,8 @@ class TrajectoryEnv(gym.Env):
             for i, av in enumerate(self.avs):
                 self.collected_rollout[f'platoon_{i}'].append(self.get_platoon_state(av))
 
+        if end_of_horizon:
+            next_state = self.reset()
         # Track total number of steps
         self.step_count += 1
 
