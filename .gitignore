@@ -29,3 +29,4 @@ leaderboard_uploads/
 *.m
 data/
 acc_controller.py
+trajectory.csv
