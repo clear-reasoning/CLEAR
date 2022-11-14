@@ -244,6 +244,8 @@ class TensorboardCallback(BaseCallback):
         if av_controller == 'idm':
             config['av_kwargs'] = 'dict(v0=45,noise=0)'
         test_env = TrajectoryEnv(config=config, _verbose=False)
+        # dont reset at the end of eval rollout otherwise data gets erased
+        test_env.do_not_reset_on_end_of_horizon = True
 
         # execute controller on traj
         state = test_env.reset()

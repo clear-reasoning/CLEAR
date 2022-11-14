@@ -188,6 +188,8 @@ class TrajectoryEnv(gym.Env):
             if not self.simulate and len([v for v in self.sim.vehicles if v.kind == 'av']) > 1:
                 raise ValueError('Training is only supported with 1 AV in the platoon.')
 
+        self.do_not_reset_on_end_of_horizon = False
+
         # define action space
         a_min = self.min_accel
         a_max = self.max_accel
@@ -623,7 +625,6 @@ class TrajectoryEnv(gym.Env):
 
     def reset(self):
         """Reset."""
-
         # Create simulation with lc enabled with a probability of lc_prob (if lane changing is disabled overall)
         lc = self.lane_changing
         if not self.lane_changing and not self.simulate and self.step_count > self.lc_curriculum_steps:
@@ -787,7 +788,8 @@ class TrajectoryEnv(gym.Env):
 
         if end_of_horizon:
             self.end_of_horizon = True
-            next_state = self.reset()
+            if not self.do_not_reset_on_end_of_horizon:
+                next_state = self.reset()
         # Track total number of steps
         self.step_count += 1
 
