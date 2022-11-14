@@ -287,7 +287,7 @@ def run_experiment(config):
                                                             get bootstrapping to work properly'
 
     # create env
-    multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config), vec_env_cls=SubprocVecEnv)
+    multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config)) # , vec_env_cls=SubprocVecEnv)
 
     fake_env = TrajectoryEnv(config=env_config)
 
