@@ -373,7 +373,7 @@ def run_experiment(config):
     # create learn config
     learn_config = {
         'total_timesteps': config['iters'] * config['n_steps'] * config['n_envs'],
-        'callback': callbacks,
+        # 'callback': callbacks,
     }
 
     # save configs
