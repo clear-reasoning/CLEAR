@@ -110,8 +110,8 @@ DEFAULT_ENV_CONFIG = {
     'leader_faster': 0,
     'dummy_states': 0,
     # past leader speeds and AV accels
-    'past_vels_state': False,
-    'past_accels_state': False,
+    'past_vels_state': 0,
+    'past_accels_state': 0,
 }
 
 # platoon presets that can be passed to the "platoon" env param
@@ -166,8 +166,9 @@ class TrajectoryEnv(gym.Env):
         self.traj_idx = -1
         self.chunk_idx = -1
         
-        self.past_av_speeds = [-40] * 10
-        self.past_requested_speed_setting = [-40] * 10
+        self.past_av_speeds = [-40] * 1000
+        self.past_requested_speed_setting = [-40] * 1000
+        self.past_leader_present = [-1] * 1000
 
         self.megacontroller = MegaController(output_acc=False)
 
@@ -341,7 +342,7 @@ class TrajectoryEnv(gym.Env):
                 'target_speed': (target_speed, 40.0),
                 'max_headway': (max_headway, 1.0),
             })
-            
+
         for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
             target_speed_delta, _ = self.megacontroller.get_target(av, pos_delta=pos_delta)
             state.update({
@@ -357,10 +358,18 @@ class TrajectoryEnv(gym.Env):
         if self.dummy_states > 0:
             state.update({f"dummy_{i}": (0.0, 1.0) for i in range(self.dummy_states)})
 
-        for i in range(10):
+        for i in range(1, 11):
             state.update({
-                f'past_av_speeds_{i}': (self.past_av_speeds[-i-1], 40.0),
-                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i-1], 40.0),           
+                f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
+                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
+                f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
+            })
+
+        for i in range(50, 601, 50):
+            state.update({
+                f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
+                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
+                f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
             })
 
         return state

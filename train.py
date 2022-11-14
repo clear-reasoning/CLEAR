@@ -13,6 +13,8 @@ sys.path.append('./')
 
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.policies import register_policy
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
@@ -285,7 +287,7 @@ def run_experiment(config):
                                                             get bootstrapping to work properly'
 
     # create env
-    multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config))
+    multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config), vec_env_cls=SubprocVecEnv)
 
     # create callbacks
     callbacks = []
