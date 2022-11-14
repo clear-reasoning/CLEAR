@@ -289,10 +289,12 @@ def run_experiment(config):
     # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config), vec_env_cls=SubprocVecEnv)
 
+    fake_env = TrajectoryEnv(config=env_config)
+
     # create callbacks
     callbacks = []
     if not config['no_eval']:
-        callbacks.append(TensorboardCallback(
+        callbacks.append(TensorboardCallback(env_config=fake_env.config,
             eval_freq=config['eval_frequency'],
             eval_at_end=True))
     callbacks += [

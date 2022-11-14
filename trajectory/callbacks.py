@@ -23,33 +23,34 @@ matplotlib.use('agg')
 class TensorboardCallback(BaseCallback):
     """Callback for plotting additional metrics in tensorboard."""
 
-    def __init__(self, eval_freq, eval_at_end):
+    def __init__(self, eval_freq, eval_at_end, env_config):
         super().__init__()
 
         self.eval_freq = eval_freq
         self.eval_at_end = eval_at_end
         self.rollout = 0
+        self.env_config = env_config
 
     def _on_training_start(self):
-        self.env = self.training_env.envs[0]
+        pass  # self.env = self.training_env.envs[0]
 
     def _on_training_end(self):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.env.av_controller), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl_acc'), custom_plot=True)
 
     def _on_rollout_start(self):
-        self.env.start_collecting_rollout()
+        pass  # self.env.start_collecting_rollout()
 
     def _on_rollout_end(self):
-        self.env.stop_collecting_rollout()
-        self.log_rollout_dict('metrics', self.get_rollout_dict(self.env), plot_images=False)
+        # self.env.stop_collecting_rollout()
+        # self.log_rollout_dict('metrics', self.get_rollout_dict(self.env), plot_images=False)
 
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.env.av_controller), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl_acc'), custom_plot=True)
 
         self.rollout += 1
 
@@ -66,7 +67,7 @@ class TensorboardCallback(BaseCallback):
                     },
                     'headway': {
                         'av_gap': rollout_dict['sim_data_av']['headway'],
-                        'gap_closing_threshold': [max(self.env.max_headway, self.env.max_time_headway * vel)
+                        'gap_closing_threshold': [max(120, 6 * vel)
                                                   for vel in rollout_dict['sim_data_av']['speed']],
                         'failsafe_threshold': [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
                                                for this_vel, lead_vel in zip(rollout_dict['sim_data_av']['speed'],
@@ -134,7 +135,7 @@ class TensorboardCallback(BaseCallback):
         self.logger.record(f'{base_name}/{base_name}_n_veh_end', rollout_dict['lane_changes']['n_vehicles'][-1])
         self.logger.record(f'{base_name}/{base_name}_n_cutins', rollout_dict['lane_changes']['n_cutins'][-1])
         self.logger.record(f'{base_name}/{base_name}_n_cutouts', rollout_dict['lane_changes']['n_cutouts'][-1])
-        for i in range(len(self.env.avs)):
+        for i in range(1):
             platoon_mpg = rollout_dict[f'platoon_{i}']['platoon_mpg'][-1]
             self.logger.record(f'{base_name}/{base_name}_platoon_{i}_mpg', platoon_mpg)
         for penalty in ['crash', 'low_headway_penalty', 'large_headway_penalty', 'low_time_headway_penalty']:
@@ -147,7 +148,7 @@ class TensorboardCallback(BaseCallback):
             ('speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption', rollout_dict['sim_data_av']['instant_energy_consumption']),
             ('speed', rollout_dict['base_state']['speed'])] + \
-                [(f'platoon_{i}_speed', rollout_dict[f'platoon_{i}']['platoon_speed']) for i in range(len(self.env.avs))]:
+                [(f'platoon_{i}_speed', rollout_dict[f'platoon_{i}']['platoon_speed']) for i in range(1)]:
             self.logger.record(f'{base_name}/{base_name}_min_{name}', np.min(array))
             self.logger.record(f'{base_name}/{base_name}_max_{name}', np.max(array))
             self.logger.record(f'{base_name}/{base_name}_mean_{name}', np.mean(array))
@@ -234,7 +235,7 @@ class TensorboardCallback(BaseCallback):
         np.random.seed(self.rollout)
 
         # create test env
-        config = dict(self.env.config)
+        config = dict(self.env_config)
         config['whole_trajectory'] = True
         if av_controller != 'rl':
             config['use_fs'] = False
