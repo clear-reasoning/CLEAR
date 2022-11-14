@@ -342,7 +342,7 @@ class TrajectoryEnv(gym.Env):
                 'target_speed': (target_speed, 40.0),
                 'max_headway': (max_headway, 1.0),
             })
-            
+
         for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
             target_speed_delta, _ = self.megacontroller.get_target(av, pos_delta=pos_delta)
             state.update({

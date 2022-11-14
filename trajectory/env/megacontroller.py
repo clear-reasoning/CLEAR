@@ -450,8 +450,8 @@ class MegaController(AbstractMegaController):
 
     def get_target(self, veh, pos_delta=0):
         """Get target speed and max headway."""
-        target_speed = get_target_by_position(self.target_speed_profile[veh], veh.pos + 0, float)
-        max_headway = get_target_by_position(self.max_headway_profile[veh], veh.pos + 0, bool)
+        target_speed = get_target_by_position(self.target_speed_profile[veh], veh.pos + pos_delta, float)
+        max_headway = get_target_by_position(self.max_headway_profile[veh], veh.pos + pos_delta, bool)
         return target_speed, max_headway
 
     def get_main_accel(
