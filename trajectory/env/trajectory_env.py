@@ -637,6 +637,9 @@ class TrajectoryEnv(gym.Env):
         }
         return self.get_state() if not self.simulate else None  # don't stack memory here during eval
 
+    def seed(self, seed):
+        np.random.seed(seed)
+
     def step(self, actions):
         """Step forward."""
         # additional trajectory data that will be plotted in tensorboard
