@@ -7,6 +7,7 @@ from datetime import datetime
 from datetime import timezone
 import json
 from pathlib import Path
+import random
 
 import gym
 import numpy as np
@@ -638,6 +639,7 @@ class TrajectoryEnv(gym.Env):
         return self.get_state() if not self.simulate else None  # don't stack memory here during eval
 
     def seed(self, seed):
+        random.seed(seed)
         np.random.seed(seed)
 
     def step(self, actions):
