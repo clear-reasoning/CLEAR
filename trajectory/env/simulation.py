@@ -226,9 +226,9 @@ class Simulation(object):
         # cut-in and cut-out probabilities (between 0 and 1) per 0.1s timestep
         def cutin_proba_fn(space_gap, leader_speed): return \
             (1.9e-2 + -8.975e-4 * space_gap + 1.002e-4 * space_gap * space_gap) / 100.0 if leader_speed <= 25.0 \
-            else (-5.068e-3 + 1.347e-3 * space_gap + 8.912e-6 * space_gap * space_gap) / 100.0
+            else (-5.068e-3 + 1.347e-3 * space_gap + 8.912e-6 * space_gap * space_gap) / 500.0
         def cutout_proba_fn(leader_speed): return \
-            (-8.98e-3 + 8.763e-3 * leader_speed - 2.1e-4 * leader_speed * leader_speed) / 100.0
+            (-8.98e-3 + 8.763e-3 * leader_speed - 2.1e-4 * leader_speed * leader_speed) / 500.0
         # gap ratio (gap of inserted vehicle / gap of ego vehicle) on cut-in
         def gap_ratio_fn(): return min(max(random.gauss(mu=43.9, sigma=21.75) / 100.0, 0.0), 1.0)
 
