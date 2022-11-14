@@ -32,7 +32,7 @@ class TensorboardCallback(BaseCallback):
         self.env_config = env_config
 
     def _on_training_start(self):
-        pass  # self.env = self.training_env.envs[0]
+        self.env = self.training_env.envs[0]
 
     def _on_training_end(self):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
@@ -41,11 +41,11 @@ class TensorboardCallback(BaseCallback):
             self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl_acc'), custom_plot=True)
 
     def _on_rollout_start(self):
-        pass  # self.env.start_collecting_rollout()
+        self.env.start_collecting_rollout()
 
     def _on_rollout_end(self):
-        # self.env.stop_collecting_rollout()
-        # self.log_rollout_dict('metrics', self.get_rollout_dict(self.env), plot_images=False)
+        self.env.stop_collecting_rollout()
+        self.log_rollout_dict('metrics', self.get_rollout_dict(self.env), plot_images=False)
 
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))

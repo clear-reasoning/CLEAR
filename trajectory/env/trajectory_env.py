@@ -796,7 +796,7 @@ class TrajectoryEnv(gym.Env):
             self.data_loader.update_curriculum()
             self.trajectories = self.data_loader.get_trajectories(chunk_size=self.chunk_size)
 
-        return next_state, reward, done, infos
+        return next_state, reward / 100.0, done, infos
 
     def start_collecting_rollout(self):
         """Start collecting rollout."""
