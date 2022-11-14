@@ -43,6 +43,8 @@ DEFAULT_ENV_CONFIG = {
     'min_headway_penalty_speed': 1.0,
     'accel_penalty': 0.2,
     'intervention_penalty': 0,
+    'env_leader_present_penalty': 0.0,
+    'env_leader_present_penalty_threshold': 0,
     'penalize_energy': 1,
     # if false, we only include the AVs mpg in the calculation
     'include_idm_mpg': False,
@@ -327,7 +329,7 @@ class TrajectoryEnv(gym.Env):
 
         # Add inrix data to base state if downstream set and including in memory
         if self.downstream and self.inrix_mem:
-            state.update(self.get_downstream_state(av_idx))
+            state.update(self.get_downstream_state(av_idx)) 
 
         if self.num_leader_speed_memory:
             n_mem = self.num_leader_speed_memory
@@ -537,9 +539,9 @@ class TrajectoryEnv(gym.Env):
 
         # penalize large headways
         headway_reward = 0
-        if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
-            headway_reward = -self.headway_penalty * av.get_time_headway()
-            reward += headway_reward
+        # if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
+        #     headway_reward = -self.headway_penalty * av.get_time_headway()
+        #     reward += headway_reward
     
         # speed planner and curr speed diff
         speed_diff_reward = 0
@@ -549,6 +551,16 @@ class TrajectoryEnv(gym.Env):
             target_speed, _ = self.megacontroller.get_target(av)
             speed_diff_reward = -self.speed_diff_reward_weight * (target_speed - av.speed)**2
             reward += speed_diff_reward
+            
+        # penalty to not lose track of the leader car
+        if self.env_leader_present_penalty > 0:
+            penalize = True
+            for i in range(self.env_leader_present_penalty_threshold):
+                if self.past_leader_present[-i] == 1:
+                    penalize = False
+                    break
+            if penalize:
+                headway_reward -= self.env_leader_present_penalty
 
         return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
 
@@ -711,6 +723,9 @@ class TrajectoryEnv(gym.Env):
                 
                 self.past_requested_speed_setting.append(speed_setting)
                 self.past_av_speeds.append(av.speed)
+                self.past_leader_present.append(
+                    int(av.get_headway() < self.leader_present_threshold)
+                )
 
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)

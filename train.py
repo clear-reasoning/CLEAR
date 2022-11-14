@@ -150,6 +150,10 @@ def parse_args_train():
     parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
                         help='Factor to multiply accel_penalty to determine gap closing / failsafe penalty to'
                              'discourages use of these interventions')
+    parser.add_argument('--env_leader_present_penalty', type=float, default=0, nargs='+',
+                        help='How much penalty to give at each time step once leader has been lost for n time steps')
+    parser.add_argument('--env_leader_present_penalty_threshold', type=int, default=0, nargs='+',
+                        help='Penalty is triggered once no leader has been seen in the last n time steps')
     parser.add_argument('--env_include_thresholds', default=False, action='store_true',
                         help='If set, adds failsafe and gap-closing thresholds to base state.')
     parser.add_argument('--env_penalize_energy', type=int, default=1, nargs='+',
@@ -242,6 +246,8 @@ def run_experiment(config):
         'headway_penalty': config['env_headway_penalty'],
         'accel_penalty': config['env_accel_penalty'],
         'intervention_penalty': config['env_intervention_penalty'],
+        'env_leader_present_penalty': config['env_leader_present_penalty'],
+        'env_leader_present_penalty_threshold': config['env_leader_present_penalty_threshold'],
         'include_thresholds': config['env_include_thresholds'],
         'penalize_energy': config['env_penalize_energy'],
         'include_idm_mpg': config['env_include_idm_mpg'],
