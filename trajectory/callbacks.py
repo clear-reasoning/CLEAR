@@ -377,7 +377,7 @@ class LoggingCallback(BaseCallback):
 
     def print_metrics(self):
         """Print metrics."""
-        metrics = self.logger.get_log_dict()
+        metrics = self.logger.name_to_value
         gs_str = ', '.join([f'{k} = {v}' for k, v in self.grid_search_config.items()])
         print(f'\nEnd of rollout for grid search: {gs_str}')
 

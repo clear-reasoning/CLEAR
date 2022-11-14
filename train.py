@@ -9,6 +9,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+sys.path.append('./')
+
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -17,15 +19,9 @@ from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
 import wandb
-from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
-from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
-from trajectory.algos.td3.policies import CustomTD3Policy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
-
-register_policy("PopArtMlpPolicy", PopArtActorCriticPolicy)
-
 
 def parse_args_train():
     """Parse arguments for training."""
@@ -49,7 +45,7 @@ def parse_args_train():
     parser.add_argument('--iters', type=int, default=1, nargs='+',
                         help='Number of iterations (rollouts) to train for.'
                              'Over the whole training, {iters} * {n_steps} * {n_envs} environment steps will be sampled.')
-    parser.add_argument('--n_steps', type=int, default=640, nargs='+',
+    parser.add_argument('--n_steps', type=int, default=500, nargs='+',
                         help='Number of environment steps to sample in each rollout in each environment.'
                              'This can span over less or more than the environment horizon.'
                              'Ideally should be a multiple of {batch_size}.')
@@ -287,6 +283,9 @@ def run_experiment(config):
         'accel_delta_state': config['env_accel_delta_state']
     })
 
+    assert config['env_horizon'] % config['n_steps'] == 0, 'env horizon must be divisible by n steps to \
+                                                            get bootstrapping to work properly'
+
     # create env
     multi_env = make_vec_env(TrajectoryEnv, n_envs=config['n_envs'], env_kwargs=dict(config=env_config), vec_env_cls=SubprocVecEnv)
 
@@ -317,9 +316,8 @@ def run_experiment(config):
 
     # create train config
     if config['algorithm'].lower() == 'ppo':
-        algorithm = AugmentedPPO if config['augment_vf'] else PPO
-        policy = SplitActorCriticPolicy if config['augment_vf'] else PopArtActorCriticPolicy
-
+        algorithm = PPO
+        policy = 'MlpPolicy'
         train_config = {
             'policy_kwargs': {
                 'net_arch': [{
