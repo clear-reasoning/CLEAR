@@ -228,10 +228,19 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         latent_pi, latent_sde = self._get_latent(obs)
         # Evaluate the values for the given observations
         values = self.value_net(self.vf_extractor(obs))
-        distribution = self._get_action_dist_from_latent(latent_pi, latent_sde=latent_sde)
+        distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
         log_prob = distribution.log_prob(actions)
         return actions, values, log_prob
+
+    def predict_values(self, obs: th.Tensor) -> th.Tensor:
+        """
+        Get the estimated values according to the current policy given the observations.
+        :param obs:
+        :return: the estimated values.
+        """
+        values = self.value_net(self.vf_extractor(obs))
+        return values
 
     # def _get_latent(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
     #     """
@@ -261,7 +270,7 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         :return: Taken action according to the policy
         """
         latent_pi, latent_sde = self._get_latent(observation)
-        distribution = self._get_action_dist_from_latent(latent_pi, latent_sde)
+        distribution = self._get_action_dist_from_latent(latent_pi)
         return distribution.get_actions(deterministic=deterministic)
 
     def _get_latent(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
@@ -279,8 +288,8 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
 
         # Features for sde
         latent_sde = latent_pi
-        if self.sde_features_extractor is not None:
-            latent_sde = self.sde_features_extractor(features)
+        # if self.sde_features_extractor is not None:
+        #     latent_sde = self.sde_features_extractor(features)
         return latent_pi, latent_sde
 
     def evaluate_actions(self, obs: th.Tensor,
@@ -294,7 +303,7 @@ class SplitActorCriticPolicy(ActorCriticPolicy):
         """
         policy_obs, _ = th.split(obs, int(obs.shape[1] / 2), dim=1)
         latent_pi, latent_sde = self._get_latent(obs)
-        distribution = self._get_action_dist_from_latent(latent_pi, latent_sde)
+        distribution = self._get_action_dist_from_latent(latent_pi)
         log_prob = distribution.log_prob(actions)
         values = self.value_net(self.vf_extractor(obs))
         return values, log_prob, distribution.entropy()
