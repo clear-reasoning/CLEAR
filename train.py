@@ -14,10 +14,12 @@ sys.path.append('./')
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
 from stable_baselines3.ppo import PPO
 from stable_baselines3.td3 import TD3
 
 import wandb
+from trajectory.algos.ppo.policies import PopArtActorCriticPolicy, SplitActorCriticPolicy
 from trajectory.callbacks import CheckpointCallback, LoggingCallback, TensorboardCallback, TelegramCallback
 from trajectory.env.trajectory_env import DEFAULT_ENV_CONFIG, TrajectoryEnv
 from trajectory.env.utils import dict_to_json, partition
@@ -317,8 +319,8 @@ def run_experiment(config):
 
     # create train config
     if config['algorithm'].lower() == 'ppo':
-        algorithm = PPO
-        policy = 'MlpPolicy'
+        algorithm = AugmentedPPO if config['augment_vf'] else PPO
+        policy = SplitActorCriticPolicy if config['augment_vf'] else PopArtActorCriticPolicy
         train_config = {
             'policy_kwargs': {
                 'net_arch': [{

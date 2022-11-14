@@ -11,7 +11,7 @@ from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.callbacks import BaseCallback
 # from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import safe_mean
+from stable_baselines3.common.utils import obs_as_tensor, safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3.common.buffers import RolloutBuffer
 from trajectory.algos.ppo.policies import SplitActorCriticPolicy
@@ -78,7 +78,7 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
         super(AugmentedOnPolicyAlgorithm, self).__init__(
             policy=policy,
             env=env,
-            policy_base=SplitActorCriticPolicy,
+            # policy_base=SplitActorCriticPolicy,
             learning_rate=learning_rate,
             policy_kwargs=policy_kwargs,
             verbose=verbose,
@@ -126,23 +126,28 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
         self.policy = self.policy.to(self.device)
 
     def collect_rollouts(
-        self, env: VecEnv, callback: BaseCallback, rollout_buffer: RolloutBuffer, n_rollout_steps: int
+        self,
+        env: VecEnv,
+        callback: BaseCallback,
+        rollout_buffer: RolloutBuffer,
+        n_rollout_steps: int,
     ) -> bool:
-        """Collect rollouts.
-
+        """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
         The term rollout here refers to the model-free notion and should not
         be used with the concept of rollout used in model-based RL or planning.
-
         :param env: The training environment
         :param callback: Callback that will be called at each step
             (and at the beginning and end of the rollout)
         :param rollout_buffer: Buffer to fill with rollouts
-        :param n_steps: Number of experiences to collect per environment
+        :param n_rollout_steps: Number of experiences to collect per environment
         :return: True if function returned with at least `n_rollout_steps`
             collected, False if callback terminated rollout prematurely.
         """
         assert self._last_obs is not None, "No previous observation was provided"
+        # Switch to eval mode (this affects batch norm / dropout)
+        self.policy.set_training_mode(False)
+
         n_steps = 0
         rollout_buffer.reset()
         # Sample new weights for the state dependent exploration
@@ -157,10 +162,9 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
                 self.policy.reset_noise(env.num_envs)
 
             with th.no_grad():
-                # Convert to pytorch tensor
-                obs_tensor = th.as_tensor(self._last_obs).to(self.device)
-                # policy_obs_tensor, _ = th.split(obs_tensor, int(obs_tensor.shape[1] / 2), dim=1)
-                actions, values, log_probs = self.policy.forward(obs_tensor)
+                # Convert to pytorch tensor or to TensorDict
+                obs_tensor = obs_as_tensor(self._last_obs, self.device)
+                actions, values, log_probs = self.policy(obs_tensor)
             actions = actions.cpu().numpy()
 
             # Rescale and perform action
@@ -184,14 +188,27 @@ class AugmentedOnPolicyAlgorithm(BaseAlgorithm):
             if isinstance(self.action_space, gym.spaces.Discrete):
                 # Reshape in case of discrete action
                 actions = actions.reshape(-1, 1)
-            rollout_buffer.add(self._last_obs, actions, rewards, self._last_dones, values, log_probs)
+
+            # Handle timeout by bootstraping with value function
+            # see GitHub issue #633
+            for idx, done in enumerate(dones):
+                if (
+                    done
+                    and infos[idx].get("terminal_observation") is not None
+                    and infos[idx].get("TimeLimit.truncated", False)
+                ):
+                    terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                    with th.no_grad():
+                        terminal_value = self.policy.predict_values(terminal_obs)[0]
+                    rewards[idx] += self.gamma * terminal_value
+
+            rollout_buffer.add(self._last_obs, actions, rewards, self._last_episode_starts, values, log_probs)
             self._last_obs = new_obs
-            self._last_dones = dones
+            self._last_episode_starts = dones
 
         with th.no_grad():
             # Compute value for the last timestep
-            obs_tensor = th.as_tensor(new_obs).to(self.device)
-            _, values, _ = self.policy.forward(obs_tensor)
+            values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
