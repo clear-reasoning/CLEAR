@@ -111,6 +111,7 @@ class DataLoader(object):
             if chunk_size is None or traj['size'] <= chunk_size:
                 yield (traj_idx, 0), dict(traj)
                 continue
+
             start_idx = random.randint(0, traj['size'] - chunk_size)
             traj_chunk = {
                 k: traj[k][start_idx:start_idx + chunk_size]

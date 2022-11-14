@@ -486,7 +486,6 @@ class TrajectoryEnv(gym.Env):
             if round(self.sim.time_counter, 1) % 1 == 0:
                 self.past_states[av_idx][index:] = np.roll(self.past_states[av_idx][index:], len(state))
                 self.past_states[av_idx][index: index + len(state)] = state
-
         # use past states (including current state) as state
         state = self.past_states[av_idx]
 
@@ -960,3 +959,9 @@ class TrajectoryEnv(gym.Env):
             os.remove(emissions_path)
 
         return emissions_path
+
+    def get_veh_kind_name(self):
+        return [(veh.kind, veh.name) for veh in self.sim.vehicles]
+
+    def get_sim_data_by_vehicle(self):
+        return dict(self.sim.data_by_vehicle)

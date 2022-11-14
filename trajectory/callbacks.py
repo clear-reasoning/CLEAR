@@ -34,12 +34,6 @@ class TensorboardCallback(BaseCallback):
     def _on_training_start(self):
         # self.env = self.training_env.envs[0]
         self.env_remote = self.training_env.remotes[0]
-        
-    def env_call(self, function, arg=None, expect_return=False):
-        if arg is None:
-            self.env_remote.send((str(function), arg))
-        if expect_return:
-            return self.env_remote.recv()
 
     def _on_training_end(self):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
@@ -49,16 +43,16 @@ class TensorboardCallback(BaseCallback):
 
     def _on_rollout_start(self):
         self.env_remote.send(('env_method', ('start_collecting_rollout', [], {})))
-        # if expect_return:
-        #     return self.env_remote.recv()
-        # self.env_call('start_collecting_rollout')
+        # self.env_remote.send(('env_method', ('do_nothing', [], {})))
+        self.env_remote.recv()
         pass
 
     def _on_rollout_end(self):
         self.env_remote.send(('env_method', ('stop_collecting_rollout', [], {})))
+        self.env_remote.recv()
         # self.env.stop_collecting_rollout()
 
-        self.log_rollout_dict('metrics', self.get_rollout_dict(self.env_remote), plot_images=False)
+        self.log_rollout_dict('metrics', self.get_rollout_dict(env_remote=self.env_remote), plot_images=False)
 
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
@@ -166,13 +160,21 @@ class TensorboardCallback(BaseCallback):
             self.logger.record(f'{base_name}/{base_name}_max_{name}', np.max(array))
             self.logger.record(f'{base_name}/{base_name}_mean_{name}', np.mean(array))
 
-    def get_rollout_dict(self, env_remote):
+    def get_rollout_dict(self, env=None, env_remote=None):
         """Get rollout dict."""
 
-        env_remote.send(('env_method', ('get_collected_rollout', [], {})))
-        collected_rollout = env_remote.recv()
-
-        # collected_rollout = env.get_collected_rollout()
+        if env_remote is not None:
+            env_remote.send(('env_method', ('get_collected_rollout', [], {})))
+            collected_rollout = env_remote.recv()
+            env_remote.send(('env_method', ('get_veh_kind_name', [], {})))
+            veh_kind_name_list = env_remote.recv()
+            env_remote.send(('env_method', ('get_sim_data_by_vehicle', [], {})))
+            sim_data_by_vehicle = env_remote.recv()
+        elif env is not None:
+            collected_rollout = env.get_collected_rollout()
+            sim = env.sim
+            veh_kind_name_list = env.get_veh_kind_name()
+            sim_data_by_vehicle = env.get_sim_data_by_vehicle()
 
         rollout_dict = defaultdict(lambda: defaultdict(list))
 
@@ -184,12 +186,12 @@ class TensorboardCallback(BaseCallback):
         rollout_dict['training']['speed_diff_reward'] = collected_rollout['speed_diff_reward']
         rollout_dict['training']['dones'] = collected_rollout['dones']
         rollout_dict['training']['actions'] = collected_rollout['actions']
-        if env.output_acc:
+        if True:
             rollout_dict['training']['speed_actions'] = collected_rollout['speed_actions']
             rollout_dict['training']['gap_actions'] = collected_rollout['gap_actions']
             rollout_dict['training']['speed_setting'] = collected_rollout['speed_setting']
             rollout_dict['training']['gap_setting'] = collected_rollout['gap_setting']
-        if env.speed_planner:
+        if True:
             rollout_dict['training']['target_speed'] = collected_rollout['target_speed']
 
 
@@ -209,31 +211,31 @@ class TensorboardCallback(BaseCallback):
             for k, v in lane_change_info.items():
                 rollout_dict['lane_changes'][k].append(v)
 
-        for veh in env.sim.vehicles:
-            if veh.kind == 'av':
-                for k, v in env.sim.data_by_vehicle[veh.name].items():
+        for veh_kind, veh_name in veh_kind_name_list:
+            if veh_kind == 'av':
+                for k, v in sim_data_by_vehicle[veh_name].items():
                     rollout_dict['sim_data_av'][k] = v
-            if veh.kind == 'av':
-                for k, v in env.sim.data_by_vehicle[veh.name].items():
+            if veh_kind == 'av':
+                for k, v in sim_data_by_vehicle[veh_name].items():
                     if k == 'avg_mpg':
                         rollout_dict['sim_data_avs'][k].append(v[-1])
-            if veh.kind == 'leader':
-                for k, v in env.sim.data_by_vehicle[veh.name].items():
+            if veh_kind == 'leader':
+                for k, v in sim_data_by_vehicle[veh_name].items():
                     if k == 'speed':
                         rollout_dict['sim_data_leader'][k] = v
                         
-        for veh in env.sim.vehicles:
-            if veh.kind == 'leader':
-                rollout_dict['speed_planner']['leader_speed'] = env.sim.data_by_vehicle[veh.name]['speed']
-            if veh.kind == 'av':
-                rollout_dict['speed_planner']['gap'] = env.sim.data_by_vehicle[veh.name]['headway']
-                rollout_dict['speed_planner']['inrix_local_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_local_speed']
-                rollout_dict['speed_planner']['inrix_next_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_next_speed']
-                rollout_dict['speed_planner']['inrix_next_next_speed'] = env.sim.data_by_vehicle[veh.name]['inrix_next_next_speed']
+        for veh_kind, veh_name in veh_kind_name_list:
+            if veh_kind == 'leader':
+                rollout_dict['speed_planner']['leader_speed'] = sim_data_by_vehicle[veh_name]['speed']
+            if veh_kind == 'av':
+                rollout_dict['speed_planner']['gap'] = sim_data_by_vehicle[veh_name]['headway']
+                rollout_dict['speed_planner']['inrix_local_speed'] = sim_data_by_vehicle[veh_name]['inrix_local_speed']
+                rollout_dict['speed_planner']['inrix_next_speed'] = sim_data_by_vehicle[veh_name]['inrix_next_speed']
+                rollout_dict['speed_planner']['inrix_next_next_speed'] = sim_data_by_vehicle[veh_name]['inrix_next_next_speed']
                 rollout_dict['speed_planner']['target_speed'] = rollout_dict['base_state']['target_speed']
                 rollout_dict['speed_planner']['max_headway'] = rollout_dict['base_state']['max_headway']
 
-        for i in range(len(env.avs)):
+        for i in range(1):  # len(env.avs)):
             for platoon_state in collected_rollout[f'platoon_{i}']:
                 for k, v in platoon_state.items():
                     rollout_dict[f'platoon_{i}'][k].append(v)
