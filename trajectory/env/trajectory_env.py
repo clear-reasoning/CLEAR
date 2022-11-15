@@ -386,13 +386,18 @@ class TrajectoryEnv(gym.Env):
         while self.past_leader_present[-i] != 1:
             i += 1
             if self.past_leader_present[-i] == -1:
-                i = 600
+                i = 999999
                 break
-        i = min(i, 600)
+        i1 = min(i, 100)
+        i2 = min(i, 300)
+        i3 = min(i, 450)
+        i4 = min(i, 600)
         state.update({
-            f'last_time_leader_was_seen': (i, 600.0),
-            f'last_time_leader_was_seen2': (i - 300.0, 300.0),
-            f'last_time_leader_was_seen3': (1.0, 1.0),
+            f'last_time_leader_was_seen1': (i1, 100.0),
+            f'last_time_leader_was_seen2': (i2, 300.0),
+            f'last_time_leader_was_seen3': (i3, 450.0),
+            f'last_time_leader_was_seen4': (i4, 600.0),
+            f'last_time_leader_was_seen5': (1.0, 1.0),
         })
 
         return state
