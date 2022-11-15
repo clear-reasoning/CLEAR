@@ -390,7 +390,9 @@ class TrajectoryEnv(gym.Env):
                 break
         i = min(i, 600)
         state.update({
-            f'last_time_leader_was_seen': (i, 600.0),           
+            f'last_time_leader_was_seen': (i, 600.0),
+            f'last_time_leader_was_seen2': (i - 300.0, 300.0),
+            f'last_time_leader_was_seen3': (1.0, 1.0),
         })
 
         return state
@@ -748,6 +750,16 @@ class TrajectoryEnv(gym.Env):
                 self.past_leader_present.append(
                     int(av.get_headway() < self.leader_present_threshold)
                 )
+                
+                # print('BASE')
+                # import pprint
+                # pprint.pprint(self.get_base_state(), sort_dicts=False)
+                # print('-' * 50)
+                # print(len(self.get_base_state().keys()), self.get_base_state())
+                # print('\nFULL')
+                # print(self.get_state())
+                
+                # import sys; sys.exit(0)
 
                 av.set_speed_setting(speed_setting)
                 av.set_gap_setting(gap_setting)
