@@ -716,6 +716,14 @@ class TrajectoryEnv(gym.Env):
                 # # =================>
 
                 speed_setting, gap_setting = self.get_acc_input(action)
+                previous_speed_setting, previous_gap_setting = av.get_speed_setting(), av.get_gap_setting()
+                
+                action_change_penalty = 0
+                if previous_gap_setting is not None:
+                    action_change_penalty -= self.gap_change_penalty_coef * abs(gap_setting - previous_gap_setting)
+                if previous_speed_setting is not None:
+                    action_change_penalty -= self.speed_change_penalty_coef * abs(speed_setting - previous_speed_setting)
+                
                 if self.action_delta:
                     delta = self.action_mapping[action[0]]
                     if curr_speed := av.get_speed_setting():
@@ -750,6 +758,8 @@ class TrajectoryEnv(gym.Env):
         # compute reward, store reward components for rollout dict
         reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
+        reward += action_change_penalty
+        intervention_reward = action_change_penalty
 
         # print crashes
         crash = False
