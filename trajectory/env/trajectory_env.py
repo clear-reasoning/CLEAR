@@ -43,6 +43,8 @@ DEFAULT_ENV_CONFIG = {
     'min_headway_penalty_speed': 1.0,
     'accel_penalty': 0.2,
     'intervention_penalty': 0,
+    'gap_change_penalty_coef': 0.0,
+    'speed_change_penalty_coef': 0.0,
     'env_leader_present_penalty': 0.0,
     'env_leader_present_penalty_threshold': 0,
     'penalize_energy': 1,
