@@ -369,15 +369,27 @@ class TrajectoryEnv(gym.Env):
             state.update({
                 f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
                 f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
-                f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
+                # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
             })
 
         for i in range(50, 601, 50):
             state.update({
                 f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
                 f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
-                f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
+                # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
             })
+            
+        # compute how long ago was a leader seen, max 60s
+        i = 1
+        while self.past_leader_present[-i] != 1:
+            i += 1
+            if self.past_leader_present[-i] == -1:
+                i = 600
+                break
+        i = min(i, 600)
+        state.update({
+            f'last_time_leader_was_seen': (i, 600.0),           
+        })
 
         return state
 
