@@ -220,7 +220,12 @@ def parse_args_train():
                         help='If set, will not use the ACCWrappedRLVehicle method for closing gaps above large thresholds.')
     parser.add_argument('--env_accel_delta_state', type=int, default=0, nargs='+',
                         help='If set, includes the delta of AV accel and its instruction.')
-                    
+    parser.add_argument('--env_future_target_speed_states', type=int, default=0, nargs='+',
+                        help='If set, includes target speeds upstream in the state.')
+    parser.add_argument('--env_past_speed_states', type=int, default=0, nargs='+',
+                        help='If set, includes past AV speed/speed setting in the state.')
+    parser.add_argument('--env_last_time_leader_seen_states', type=int, default=0, nargs='+',
+                        help='If set, add info about the last time the leader was seen in the state (in case there is no headway).')
 
     args = parser.parse_args()
     return args
@@ -293,7 +298,10 @@ def run_experiment(config):
         'past_accels_state': config['past_accels_state'],
         'no_acc_failsafe': config['no_acc_failsafe'],
         'no_acc_gap_closing': config['no_acc_gap_closing'],
-        'accel_delta_state': config['env_accel_delta_state']
+        'accel_delta_state': config['env_accel_delta_state'],
+        'future_target_speed_states': config['env_future_target_speed_states'],
+        'past_speed_states': config['env_past_speed_states'],
+        'last_time_leader_seen_states': config['env_last_time_leader_seen_states'],
     })
 
     assert config['env_horizon'] % config['n_steps'] == 0, 'env horizon must be divisible by n steps to \

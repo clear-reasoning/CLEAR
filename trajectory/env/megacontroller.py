@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as spi
 
+from trajectory.env.planners import Zhe as SpeedPlanner
+
 MPH_TO_MS = 0.44704
 
 
@@ -32,24 +34,24 @@ class AbstractMegaController(metaclass=abc.ABCMeta):
         self.accel_without_noise = 0
         self.lc_flag = lc_flag
 
-    @abc.abstractmethod
-    def run_speed_planner(self, veh):
-        """Get target_speed and max_headway from Speed Planner.
+    # @abc.abstractmethod
+    # def run_speed_planner(self, veh):
+    #     """Get target_speed and max_headway from Speed Planner.
 
-        Parameters
-        ----------
-        veh : Vehicle
-            The AvVehicle vehicle object
+    #     Parameters
+    #     ----------
+    #     veh : Vehicle
+    #         The AvVehicle vehicle object
 
-        Returns
-        -------
-        target_speed_profile : list of float
-            Profile of suggested speed setting.
-        max_headway : list of bool
-            Profile of suggested headway.
-            Tentatively, True if opening a gap is not suggested, False if otherwise.
-        """
-        pass
+    #     Returns
+    #     -------
+    #     target_speed_profile : list of float
+    #         Profile of suggested speed setting.
+    #     max_headway : list of bool
+    #         Profile of suggested headway.
+    #         Tentatively, True if opening a gap is not suggested, False if otherwise.
+    #     """
+    #     pass
 
     def get_accel(
         self,
@@ -402,58 +404,22 @@ class MegaController(AbstractMegaController):
         self.max_headway_profile = defaultdict(lambda: -1)
         
         self.latest_tse = {}
-
-    def run_speed_planner(self, veh):
-        """See parent class."""
-        new_dx = 100  # 100 meter resolution on resampled profile
-        x_range = np.arange(-20000, 21000, new_dx)
-
-        if veh._tse["avg_speed"] is not None:
-            if veh not in self.latest_tse or (self.latest_tse[veh] != veh._tse["avg_speed"]).any():
-                self.latest_tse[veh] = veh._tse["avg_speed"]
-                x = np.array(veh._tse["segments"])
-                speed = np.array(veh._tse["avg_speed"])
-
-                # resample to finer spatial grid
-                speed_interp = spi.interp1d(
-                    x, speed, kind="linear", fill_value="extrapolate"
-                )
-                speed = speed_interp(x_range)
-
-                # apply gaussian smoothing
-                gaussian_smoothed_speed = np.array(
-                    [
-                        gaussian(x_range[i], x_range, np.array(speed), sigma=250)
-                        for i in range(len(x_range))
-                    ]
-                )
-
-                bn_pos, stand_bn_pos, move_bn_pos = get_bn_loc_by_type(veh)
-
-                target_speed_profile, max_headway_profile = get_target_profiles_with_equilibrium_mbn(
-                    x_range, gaussian_smoothed_speed, stand_bn_pos=stand_bn_pos, move_bn_pos=move_bn_pos
-                )
-
-                self.target_speed_profile[veh] = target_speed_profile
-                self.max_headway_profile[veh] = max_headway_profile
-
-            return
-
-        # Update with free speed profile if veh._tse is disabled or no bottleneck observed
-        free_speed_profile = tuple([x_range, np.ones(x_range.shape) * 33, np.array(1)])
-        free_headway_profile = tuple(
-            [x_range, np.array([True] * len(x_range)), np.array(1)]
-        )
-        self.target_speed_profile[veh] = free_speed_profile
-        self.max_headway_profile[veh] = free_headway_profile
-        return
+        
+        self.speed_planner = SpeedPlanner()
 
     def get_target(self, veh, pos_delta=0):
-        """Get target speed and max headway."""
-        target_speed = get_target_by_position(self.target_speed_profile[veh], veh.pos + pos_delta, float)
-        max_headway = get_target_by_position(self.max_headway_profile[veh], veh.pos + pos_delta, bool)
-        return target_speed, max_headway
+        """See parent class."""
+        x_av = np.array([veh.pos + pos_delta])  # position of AV
+        x_seg = np.array(veh._tse["segments"])  # position of every segment
+        v_seg = np.array(veh._tse["avg_speed"])  # approximated speed at every segment
 
+        if veh._tse["avg_speed"] is not None:
+            target_speeds, max_headways = self.speed_planner.get_target(x_av, x_seg, v_seg)
+        else:
+            target_speeds, max_headways = [33.0], [True]
+
+        return target_speeds[0], max_headways[0]
+    
     def get_main_accel(
         self,
         this_vel,
@@ -769,374 +735,3 @@ class MegaController(AbstractMegaController):
         speed_setting = round(speed_setting / MPH_TO_MS) * MPH_TO_MS
         speed_setting = max(speed_setting, MPH_TO_MS * 20)
         return speed_setting, gap_setting
-
-
-def get_target_profiles_with_equilibrium_mbn(
-    x, speed, stand_bn_pos=[], move_bn_pos=[], v_q=27, k_c=0.048, c_bn=2000/3600, over_decel_rate=1, decel=-0.1, aggresiveness=0.2):
-    # headway_profile = [True] * len(speed)
-    target_speed_df = pd.DataFrame()
-    dx = x[1] - x[0]
-
-    if len(stand_bn_pos) > 0:
-
-        speed_stand = deepcopy(speed)
-        bn_loc = stand_bn_pos[0]
-
-        speed_bn = speed[x < bn_loc]
-        speed_bn = speed_bn[speed_bn < v_q]
-        n_bn = get_k_of_v(speed_bn) * dx
-        # q_bn = min(c_bn, get_k_of_v(speed_bn.min()) * speed_bn.min())
-        # v_sl = q_bn / k_c * over_decel_rate
-        v_sl = speed_bn.min() * 1.05
-        # print(v_sl)
-        l_decel = (v_sl ** 2 - v_q ** 2) / (2 * decel)
-
-        l_buffer = n_bn.sum() / k_c
-
-        start_loc = bn_loc - l_buffer - l_decel
-
-        next_speed = speed_stand[-1]
-
-        if start_loc <= 0:
-            start_loc = 0
-            if bn_loc > l_decel:
-                l_buffer = bn_loc - l_decel
-
-            else:
-                l_buffer = 0
-                l_decel = bn_loc
-                decel = (v_sl ** 2 - v_q ** 2) / (2 * l_decel)
-
-        for i in range(len(x) - 1, 0, -1):
-            decel_speed = speed_stand[i]
-            if (x[i] >= start_loc) & (x[i] <= bn_loc - l_buffer):
-                decel_speed = np.sqrt(next_speed ** 2 - dx * decel * 2.0)
-
-            elif (x[i] <= bn_loc) & (x[i] > bn_loc - l_buffer):
-                decel_speed = v_sl
-
-            if decel_speed < speed_stand[i]:
-                speed_stand[i] = decel_speed
-            next_speed = speed_stand[i]
-        target_speed_df['stand_bn'] = speed_stand
-
-    if len(move_bn_pos) > 0:
-        for wave_loc in move_bn_pos:
-            bn_loc = wave_loc
-            move_speed = deepcopy(speed)
-            v_wave = move_speed[x == int(wave_loc/dx)*dx]
-            l_decel = (v_wave ** 2 - v_q ** 2) / (2 * decel)
-
-            start_loc = bn_loc - l_decel
-
-            next_speed = move_speed[-1]
-
-            if start_loc <= 0:
-                start_loc = 0
-                l_decel = bn_loc
-                decel = (v_wave ** 2 - v_q ** 2) / (2 * l_decel)
-
-            for i in range(len(x) - 1, 0, -1):
-                decel_speed = move_speed[i]
-                if (x[i] >= start_loc) & (x[i] <= bn_loc):
-                    decel_speed = np.sqrt(next_speed ** 2 - dx * decel * 2.0)
-
-                if decel_speed < move_speed[i]:
-                    move_speed[i] = decel_speed
-                next_speed = move_speed[i]
-            target_speed_df[f'{int(wave_loc)}'] = move_speed
-
-    target_speed_df['raw'] = speed
-    target_speed_df['target_raw'] = target_speed_df.apply(lambda x: x.min(), axis=1)
-
-    target_speed_df['agrsv_con'] = speed * (1 - aggresiveness)
-    target_speed_df['target_soft'] = target_speed_df.apply(lambda x: max(x['target_raw'], x['agrsv_con']), axis=1)
-
-
-    target_speed_df['headway'] = target_speed_df.apply(lambda x: x['target_soft'] < x['raw'], axis=1)
-
-    target_speed = np.array(target_speed_df['target_soft'].values)
-    headway_profile = np.array(target_speed_df['headway'].values)
-
-    return tuple([x, target_speed, np.array(1)]), tuple([x, headway_profile, np.array(1)])
-
-
-def simlified_inverse_pems_bn_identify(inrix, v_diff=4):
-    """Identify bottleneck with simplified inverse PeMS."""
-    bn_inrix = deepcopy(inrix)
-    for i in range(len(inrix)-1, 0, -1):
-        if_bn = False
-        if inrix[i] <= 60:
-            if inrix[i] - inrix[i-1] > v_diff:
-                if_bn = True
-                bn_inrix[i] = False
-        bn_inrix[i-1] = if_bn
-    bn_inrix[0] = False
-    bn_inrix[len(inrix)-1] = False
-
-    return bn_inrix
-
-
-def get_bn_loc_by_type(veh, prev_time=5, stand_time=4):
-    bn_loc = simlified_inverse_pems_bn_identify(veh._tse["avg_speed"])
-
-    # if bn_inrix.sum()>0 & len(veh.tse_log.columns) > prev_time:
-    if len(veh.tse_log.columns) > prev_time:
-        prev_inrix = veh.tse_log.iloc[:, -prev_time:]
-        prev_bn = prev_inrix.apply(lambda x : simlified_inverse_pems_bn_identify(x), axis=0)
-        stand_bn_loc = prev_bn.apply(lambda x: x.sum() >= stand_time, axis=1) * bn_loc
-        move_bn_loc = (bn_loc - stand_bn_loc) > 0
-    else:
-        move_bn_loc = bn_loc
-        stand_bn_loc = bn_loc - move_bn_loc
-
-    bn_loc = bn_loc > 0
-    stand_bn_loc = stand_bn_loc > 0
-    move_bn_loc = move_bn_loc > 0
-
-    # # to test bn scenario
-    # stand_bn_loc = bn_loc
-    # move_bn_loc = [False for _ in stand_bn_loc]
-
-    bn_pos = np.array(veh._tse["segments"])[list(bn_loc)]
-    stand_bn_pos = np.array(veh._tse["segments"])[list(stand_bn_loc)]
-    move_bn_pos = np.array(veh._tse["segments"])[list(move_bn_loc)]
-
-    return bn_pos, stand_bn_pos, move_bn_pos
-
-
-def get_k_of_v(v):
-    """Get the density of the speed using IDM equilibrium."""
-    #  Read the IDM params from controller
-    # idm_params = self.get_idm_params()
-    # s = (idm_params.s0 + idm_params.T * idm_params.v) / (1 - (v / idm_params.v0) ** idm_params.delta) ** (1 / 2)
-    #  Manually define the IDM params
-    v0 = 35
-    T = 1.24
-    delta = 4
-    s0 = 2
-    # a = 1.3
-    # b = 2
-    s = (s0 + T * v) / (1 - (v / v0) ** delta) ** (1 / 2)
-    k = 1 / (s + 4)  # Assume average veh len is 4 meters
-    return k
-
-def get_sl_by_distance(x, v_0=33, v_bn=28 / 3.6, D=16000):
-    """Get SL by distance."""
-    a = (v_bn * v_bn - v_0 * v_0) / (2 * D)
-    if (v_0 * v_0 + 2 * a * x) > 0:
-        t = -(v_0 - (v_0 * v_0 + 2 * a * x) ** (1 / 2)) / a
-        sl = v_0 + a * t
-        sl = max(sl, 20 / 3.6)
-    else:
-        sl = None
-    return sl
-
-
-def get_target_profile_with_constant_decel(
-    x, speed, start_loc: float = None, bn_loc: float = None
-):
-    """Get target profile with constant decel."""
-    start_loc = x[int(x.size * 0.12)] if start_loc is None else start_loc
-    bn_loc = min(x[speed == speed[speed > 0].min()]) if bn_loc is None else bn_loc
-
-    # to fix the shift of target profile
-    unique_seg, unique_index = np.unique(x, return_index=True)
-    speed_vsl = speed[unique_index]
-
-    v_0 = speed_vsl[unique_seg == start_loc]
-    v_bn = speed_vsl[unique_seg == bn_loc]
-
-    seg_vsl_downstream = unique_seg[(unique_seg >= bn_loc) & (speed_vsl > 0)]
-    speed_vsl_downstream = speed_vsl[(unique_seg >= bn_loc) & (speed_vsl > 0)]
-
-    seg_vsl_upstream = unique_seg[(unique_seg <= start_loc) & (speed_vsl > 0)]
-    speed_vsl_upstream = speed_vsl[(unique_seg <= start_loc) & (speed_vsl > 0)]
-
-    smoothed_x = np.arange(start_loc + 1, bn_loc, 1)
-    smoothed_v = []
-    for i in smoothed_x:
-        # Coverting unit for INRIX API, but eventually get the same return value
-        # smoothed_v.append(get_sl_by_distance((i - start_loc) * 1609, v_0[0] * 0.45, v_bn[0] * 0.45,
-        #                                      (bn_loc - start_loc) * 1609) * 2.24)
-        smoothed_v.append(
-            get_sl_by_distance((i - start_loc), v_0[0], v_bn[0], (bn_loc - start_loc))
-        )
-    smoothed_v = np.array(smoothed_v)
-
-    x = np.hstack((seg_vsl_upstream, smoothed_x, seg_vsl_downstream))
-    y = np.hstack((speed_vsl_upstream, smoothed_v, speed_vsl_downstream))
-
-    return tuple([x, y, 1])
-
-
-def get_target_profiles_with_fixed_decel(x, speed, decel):
-    """Get target profile with fixed decel."""
-    dx = x[1] - x[0]
-    headway_profile = [True] * len(speed)
-    next_speed = speed[-1]
-    for i in range(len(x) - 1, 0, -1):
-        decel_speed = np.sqrt(next_speed ** 2 - dx * decel * 2.0)
-        if decel_speed < speed[i]:
-            speed[i] = decel_speed
-            headway_profile[i] = False
-        next_speed = speed[i]
-    return tuple([x, speed, np.array(1)]), tuple([x, headway_profile, np.array(1)])
-
-
-def get_target_by_position(profile, position, dtype=float):
-    """Get target speed by position."""
-    if dtype == bool:
-        kind = "previous"
-    else:
-        kind = "linear"
-    interp = spi.interp1d(profile[0], profile[1], kind=kind, fill_value="extrapolate")
-    return interp(position)
-
-
-def naive_bn_identify(inrix):
-    """Identify bottleneck naively."""
-    congest_range = np.where(inrix < 18)
-    return congest_range[0][0] if len(congest_range[0]) > 0 else None
-
-
-# def simlified_inverse_pems_bn_identify(inrix):
-#     """Identify bottleneck with simplified inverse PeMS."""
-#     inrix_diff = np.diff(inrix)
-#     gap_loc = np.where(inrix_diff < -8)
-#     return gap_loc[0][0] + 1 if len(gap_loc) > 0 else None
-
-
-def anneal(x0, x, z, forward_width, backward_width):
-    """Anneal."""
-    ix0 = next(i for i in range(len(x)) if x[i] >= x0 - backward_width)
-    width = forward_width + backward_width
-
-    x = deepcopy(x[ix0 - 1:])
-    z = deepcopy(z[ix0 - 1:])
-
-    # Replace starting point with a cutoff.
-    z[0] = z[0] + (z[1] - z[0]) * (x0 - backward_width - x[0]) / (x[1] - x[0])
-    x[0] = x0 - backward_width
-
-    try:
-        ix1 = next(i for i in range(len(x)) if x[i] >= x0 + forward_width)
-
-        x = deepcopy(x[:ix1])
-        z = deepcopy(z[:ix1])
-
-        z[-1] = z[-2] + (z[-1] - z[-2]) * (x0 + forward_width - x[-2]) / (x[-1] - x[-2])
-        x[-1] = x0 + forward_width
-
-    except StopIteration:  # doesn't exist
-
-        width = x[-1] - x0
-        pass  # TODO
-
-    answer = 0
-    for i in range(len(x) - 1):
-        x1_p = x[i]
-        v1_p = z[i]
-
-        x2_p = x[i + 1]
-        v2_p = z[i + 1]
-
-        u1 = x0 - backward_width
-        u2 = x0 + forward_width
-        w = v1_p * x2_p - v2_p * x1_p
-
-        a1 = u1 * w
-        b1 = u1 * (v2_p - v1_p) - w
-        c = v2_p - v1_p
-
-        a2 = u2 * w
-        b2 = u2 * (v2_p - v1_p) - w
-
-        if x[i + 1] <= x0:
-            answer += (
-                2
-                / (width * backward_width * (x2_p - x1_p))
-                * (-a1 * x2_p - b1 * x2_p ** 2 / 2 + c * x2_p ** 3 / 3)
-            )
-            answer -= (
-                2
-                / (width * backward_width * (x2_p - x1_p))
-                * (-a1 * x1_p - b1 * x1_p ** 2 / 2 + c * x1_p ** 3 / 3)
-            )
-        elif x[i] < x0:
-            answer += (
-                2
-                / (width * backward_width * (x2_p - x1_p))
-                * (-a1 * x0 - b1 * x0 ** 2 / 2 + c * x0 ** 3 / 3)
-            )
-            answer -= (
-                2
-                / (width * backward_width * (x2_p - x1_p))
-                * (-a1 * x1_p - b1 * x1_p ** 2 / 2 + c * x1_p ** 3 / 3)
-            )
-            answer += (
-                2
-                / (width * forward_width * (x2_p - x1_p))
-                * (a2 * x2_p + b2 * x2_p ** 2 / 2 - c * x2_p ** 3 / 3)
-            )
-            answer -= (
-                2
-                / (width * forward_width * (x2_p - x1_p))
-                * (a2 * x0 + b2 * x0 ** 2 / 2 - c * x0 ** 3 / 3)
-            )
-        else:
-            answer += (
-                2
-                / (width * forward_width * (x2_p - x1_p))
-                * (a2 * x2_p + b2 * x2_p ** 2 / 2 - c * x2_p ** 3 / 3)
-            )
-            answer -= (
-                2
-                / (width * forward_width * (x2_p - x1_p))
-                * (a2 * x1_p + b2 * x1_p ** 2 / 2 - c * x1_p ** 3 / 3)
-            )
-
-    return answer
-
-
-def gaussian(x0, x, z, sigma):
-    """Perform a kernel smoothing operation on future average speeds."""
-    # Collect relevant traffic-state info.
-    # - ix0: segments in front of the ego vehicle
-    # - ix1: final segment, or clipped to estimate congested speeds
-    ix0 = 0  # next(i for i in range(len(x)) if x[i] >= x0)
-    ix1 = len(x)
-    x = x[ix0:ix1]
-    z = z[ix0:ix1]
-
-    densities = (
-        1 / (np.sqrt(2 * np.pi) * sigma) * np.exp(-np.square(x - x0) / (2 * sigma ** 2))
-    )
-
-    densities = densities / sum(densities)
-
-    return sum(densities * z)
-
-
-def visualize_profile(
-    x: np.array,
-    inrix: np.array,
-    currrent_profile: tuple,
-    target_profile: tuple,
-    file_name: str,
-):
-    """Save plots for debug purpose."""
-    x0 = x
-    inrix = inrix
-
-    plt.figure()
-    plt.plot(x0, inrix, "o", label="INRIX Points")
-    plt.plot(
-        x0, spi.splev(x0, currrent_profile), color="r", label="Current Speed Profile"
-    )
-    plt.plot(x0, spi.splev(x0, target_profile), color="b", label="Target Speed Profile")
-    plt.xlabel("Position (m)")
-    plt.ylabel("speed (meter/s)")
-    plt.legend()
-
-    plt.savefig(file_name, dpi=360)

@@ -345,18 +345,19 @@ class TrajectoryEnv(gym.Env):
             })
 
         if self.speed_planner:
-            self.megacontroller.run_speed_planner(av)
+            # self.megacontroller.run_speed_planner(av)
             target_speed, max_headway = self.megacontroller.get_target(av)
             state.update({
                 'target_speed': (target_speed, 40.0),
                 'max_headway': (max_headway, 1.0),
             })
 
-        for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
-            target_speed_delta, _ = self.megacontroller.get_target(av, pos_delta=pos_delta)
-            state.update({
-                f'target_speed_{pos_delta}': (target_speed_delta, 40.0),
-            })
+        if self.future_target_speed_states:
+            for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
+                target_speed_delta, _ = self.megacontroller.get_target(av, pos_delta=pos_delta)
+                state.update({
+                    f'target_speed_{pos_delta}': (target_speed_delta, 40.0),
+                })
             
         if self.acc_states:
             state.update({
@@ -367,38 +368,40 @@ class TrajectoryEnv(gym.Env):
         if self.dummy_states > 0:
             state.update({f"dummy_{i}": (0.0, 1.0) for i in range(self.dummy_states)})
 
-        for i in range(1, 11):
-            state.update({
-                f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
-                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
-                # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
-            })
+        if self.past_speed_states:
+            for i in range(1, 11):
+                state.update({
+                    f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
+                    f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
+                    # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
+                })
 
-        for i in range(50, 601, 50):
-            state.update({
-                f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
-                f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
-                # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
-            })
+            for i in range(50, 601, 50):
+                state.update({
+                    f'past_av_speeds_{i}': (self.past_av_speeds[-i], 40.0),
+                    f'past_requested_speed_setting_{i}': (self.past_requested_speed_setting[-i], 40.0),           
+                    # f'past_leader_present_{i}': (self.past_leader_present[-i], 1.0),
+                })
             
-        # compute how long ago was a leader seen, max 60s
-        i = 1
-        while self.past_leader_present[-i] != 1:
-            i += 1
-            if self.past_leader_present[-i] == -1:
-                i = 999999
-                break
-        i1 = min(i, 100)
-        i2 = min(i, 300)
-        i3 = min(i, 450)
-        i4 = min(i, 600)
-        state.update({
-            f'last_time_leader_was_seen1': (i1, 100.0),
-            f'last_time_leader_was_seen2': (i2, 300.0),
-            f'last_time_leader_was_seen3': (i3, 450.0),
-            f'last_time_leader_was_seen4': (i4, 600.0),
-            f'last_time_leader_was_seen5': (1.0, 1.0),
-        })
+        if self.last_time_leader_seen_states:
+            # compute how long ago was a leader seen, max 60s
+            i = 1
+            while self.past_leader_present[-i] != 1:
+                i += 1
+                if self.past_leader_present[-i] == -1:
+                    i = 999999
+                    break
+            i1 = min(i, 100)
+            i2 = min(i, 300)
+            i3 = min(i, 450)
+            i4 = min(i, 600)
+            state.update({
+                f'last_time_leader_was_seen1': (i1, 100.0),
+                f'last_time_leader_was_seen2': (i2, 300.0),
+                f'last_time_leader_was_seen3': (i3, 450.0),
+                f'last_time_leader_was_seen4': (i4, 600.0),
+                f'last_time_leader_was_seen5': (1.0, 1.0),
+            })
 
         return state
 
