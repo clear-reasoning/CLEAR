@@ -6,7 +6,7 @@ dependencies:
     - python=3.8.10
     - pip:
           - cloudpickle==1.6.0
-          - gym==0.18.3
+          - gym==0.21.0
           - matplotlib==3.4.2
           - numpy==1.19.2
           - pandas==1.2.4
