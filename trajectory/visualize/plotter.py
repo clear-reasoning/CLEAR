@@ -106,13 +106,16 @@ class Plotter(object):
         if len(self.plot_data) == 1:
             axes = [axes]
         for ax, data in zip(axes, self.plot_data):
+            if len(data['plots']) == 0:
+                continue
             for plot in data['plots']:
                 ax.plot(plot['x'], plot['y'], label=plot['label'], linewidth=plot['linewidth'])
             ax.set_title(data['title'])
             ax.set_xlabel(data['xlabel'])
             ax.set_ylabel(data['ylabel'])
-            ax.set_xlim(np.min([plot['x'] for plot in data['plots']]),
-                        np.max([plot['x'] for plot in data['plots']]))
+            if len(data['plots'][0]['x']) > 0:
+                ax.set_xlim(np.min([plot['x'] for plot in data['plots']]),
+                            np.max([plot['x'] for plot in data['plots']]))
             if data['grid']:
                 ax.grid()
             if data['legend']:

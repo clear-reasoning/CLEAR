@@ -30,6 +30,7 @@ class TensorboardCallback(BaseCallback):
         self.eval_at_end = eval_at_end
         self.rollout = 0
         self.env_config = env_config
+        self.av_controller = 'rl_acc' if self.env_config['output_acc'] else 'rl'
 
     def _on_training_start(self):
         # self.env = self.training_env.envs[0]
@@ -39,7 +40,7 @@ class TensorboardCallback(BaseCallback):
         if self.eval_at_end and (self.eval_freq is None or (self.rollout - 1) % self.eval_freq != 0):
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl_acc'), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.av_controller), custom_plot=True)
 
     def _on_rollout_start(self):
         self.env_remote.send(('env_method', ('start_collecting_rollout', [], {})))
@@ -57,7 +58,7 @@ class TensorboardCallback(BaseCallback):
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
             # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
-            self.log_rollout_dict('rl_eval', self.run_eval(av_controller='rl_acc'), custom_plot=True)
+            self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.av_controller), custom_plot=True)
 
         self.rollout += 1
 

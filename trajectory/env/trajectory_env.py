@@ -780,8 +780,8 @@ class TrajectoryEnv(gym.Env):
         # compute reward, store reward components for rollout dict
         reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
-        reward += action_change_penalty
-        intervention_reward = action_change_penalty
+        # reward += action_change_penalty
+        # intervention_reward = action_change_penalty
 
         # print crashes
         crash = False
