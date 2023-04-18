@@ -178,6 +178,7 @@ class TrajectoryEnv(gym.Env):
         self.past_leader_present = [-1] * 1000
 
         self.megacontroller = MegaController(output_acc=False)
+        self.av_last_accel = 0
 
         # create simulation
         self.create_simulation(self.lane_changing)
@@ -585,8 +586,12 @@ class TrajectoryEnv(gym.Env):
                     break
             if penalize:
                 headway_reward -= self.env_leader_present_penalty
+        
+        accel_delta = (self.av_last_accel - action) ** 2
+        accel_delta_reward = -self.accel_delta_reward_weight * accel_delta
+        reward += accel_delta_reward
 
-        return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward
+        return reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward, accel_delta_reward
 
     def gap_closing_threshold(self, av):
         return max(self.max_headway, self.max_time_headway * av.speed)
@@ -776,9 +781,13 @@ class TrajectoryEnv(gym.Env):
                 accel = av.set_acc(large_gap_threshold=self.gap_closing_threshold(av))
                 metrics['rl_controller_accel'] = accel
                 metrics['rl_processed_accel'] = accel
+                
+        # smooth accel
+        if self.accel_smoothing_filter:
+            accel = 0.5 * self.av_last_accel + 0.5 * accel
 
         # compute reward, store reward components for rollout dict
-        reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward \
+        reward, energy_reward, accel_reward, intervention_reward, headway_reward, speed_diff_reward, accel_delta_reward \
             = self.reward_function(av=self.avs[0], action=accel) if accel is not None else (0, 0, 0, 0, 0)
         # reward += action_change_penalty
         # intervention_reward = action_change_penalty
@@ -833,6 +842,7 @@ class TrajectoryEnv(gym.Env):
             self.collected_rollout['intervention_rewards'].append(intervention_reward)
             self.collected_rollout['headway_rewards'].append(headway_reward)
             self.collected_rollout['speed_diff_reward'].append(speed_diff_reward)
+            self.collected_rollout['accel_delta_reward'].append(accel_delta_reward)
             self.collected_rollout['dones'].append(done)
             self.collected_rollout['infos'].append(infos)
             self.collected_rollout['system'].append({
@@ -860,6 +870,8 @@ class TrajectoryEnv(gym.Env):
         if self.traj_curriculum and self.step_count % self.traj_curriculum_freq == 0:
             self.data_loader.update_curriculum()
             self.trajectories = self.data_loader.get_trajectories(chunk_size=self.chunk_size)
+
+        self.av_last_accel = action
 
         return next_state, reward / 10.0, done, infos
 

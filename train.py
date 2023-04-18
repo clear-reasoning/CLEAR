@@ -200,6 +200,10 @@ def parse_args_train():
                         help='If set, calculates delta by...? ') 
     parser.add_argument('--speed_diff_reward_weight', type=float, default=0, nargs='+',
                         help='Weights speed diff reward') 
+    parser.add_argument('--accel_delta_reward_weight', type=float, default=0, nargs='+',
+                        help='Weights accel delta reward') 
+    parser.add_argument('--accel_smoothing_filter', type=int, default=0, nargs='+',
+                        help='Smoothing filter on outputted acceleration') 
     parser.add_argument('--stripped_state', default=False, action='store_true',
                         help='If set, a stripped down state space without leader information will be used.')
     parser.add_argument('--env_leader_present', type=int, default=0, nargs='+',
@@ -289,6 +293,8 @@ def run_experiment(config):
         'action_delta': config['action_delta'],
         'jonny_style': config['jonny_style'],
         'speed_diff_reward_weight': config['speed_diff_reward_weight'],
+        'accel_delta_reward_weight': config['accel_delta_reward_weight'],
+        'accel_smoothing_filter': config['accel_smoothing_filter'],
         'stripped_state': config['stripped_state'],
         'leader_present': config['env_leader_present'],
         'leader_present_threshold': config['env_leader_present_threshold'],
