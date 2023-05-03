@@ -111,20 +111,20 @@ def plot_time_space_diagram(emissions_path, save_path, inrix_path=None):
     ax.set_ylim(max(bottom, -8000), min(top, 20000))
     axcb.set_label('Velocity (m/s)', fontsize=16)
 
-    i = 0
-    t_range = throughput['time_range']
-    axleft = {}
-    max_tput = max([max(tput) for _, tput in throughput['lines']['time_series'].items()])
-    for line, tput_line in throughput['lines']['time_series'].items():
-        axleft[i] = fig.add_subplot(spec[4 - i, 1])
-        axleft[i].plot(t_range, tput_line, linewidth=2, label='Pos: {}m'.format(line))
-        axleft[i].legend(loc='upper right')
-        axleft[i].set_ylim(0, max_tput*1.05)
-        if i == 2:
-            axleft[i].set_ylabel('Throughput (veh/hr)', fontsize=20)
-        if i == 0:
-            axleft[i].set_xlabel('Time (s)', fontsize=20)
-        i += 1
+    # i = 0
+    # t_range = throughput['time_range']
+    # axleft = {}
+    # max_tput = max([max(tput) for _, tput in throughput['lines']['time_series'].items()])
+    # for line, tput_line in throughput['lines']['time_series'].items():
+    #     axleft[i] = fig.add_subplot(spec[4 - i, 1])
+    #     axleft[i].plot(t_range, tput_line, linewidth=2, label='Pos: {}m'.format(line))
+    #     axleft[i].legend(loc='upper right')
+    #     axleft[i].set_ylim(0, max_tput*1.05)
+    #     if i == 2:
+    #         axleft[i].set_ylabel('Throughput (veh/hr)', fontsize=20)
+    #     if i == 0:
+    #         axleft[i].set_xlabel('Time (s)', fontsize=20)
+    #     i += 1
     # ax2 = plt.subplot(122)
     # ax2.plot(queue_length[:, 0], queue_length[:, 1], linewidth=2)
     # ax2.set_ylim(0, 1200)
