@@ -35,7 +35,7 @@ class ACCWrappedRLVehicle(Vehicle):
         self.tse_log = pd.DataFrame()
         self.speed_setting = None
         self.gap_setting = None
-        self.stripped_state = kwargs['stripped_state']
+        # self.stripped_state = kwargs['stripped_state']
         self.no_acc_failsafe = kwargs['no_acc_failsafe']
         self.no_acc_gap_closing = kwargs['no_acc_gap_closing']
 
