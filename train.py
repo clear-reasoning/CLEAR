@@ -147,6 +147,8 @@ def parse_args_train():
                              'is multiplied by the time headway when headway > 10.')
     parser.add_argument('--env_accel_penalty', type=float, default=0.2, nargs='+',
                         help='Sets the magnitude of the acceleration penalty (to discourage large actions).')
+    parser.add_argument('--env_energy_penalty', type=float, default=0.1, nargs='+',
+                        help='Sets the magnitude of the energy penalty.')
     parser.add_argument('--env_intervention_penalty', type=float, default=0, nargs='+',
                         help='Factor to multiply accel_penalty to determine gap closing / failsafe penalty to'
                              'discourages use of these interventions')
@@ -160,8 +162,6 @@ def parse_args_train():
                         help='Coef of |requested speed setting - previous speed setting| penalty')
     parser.add_argument('--env_include_thresholds', default=False, action='store_true',
                         help='If set, adds failsafe and gap-closing thresholds to base state.')
-    parser.add_argument('--env_penalize_energy', type=int, default=1, nargs='+',
-                        help='If true, penalize energy in the reward function')
     parser.add_argument('--env_platoon', type=str, default='av human*5', nargs='+',
                         help='Platoon of vehicles following the leader. Can contain either "human"s or "av"s. '
                              '"(av human*2)*2" can be used as a shortcut for "av human human av human human". '
@@ -260,13 +260,13 @@ def run_experiment(config):
         'minimal_time_to_collision': config['env_minimal_time_to_collision'],
         'headway_penalty': config['env_headway_penalty'],
         'accel_penalty': config['env_accel_penalty'],
+        'energy_penalty': config['env_energy_penalty'],
         'intervention_penalty': config['env_intervention_penalty'],
         'env_leader_present_penalty': config['env_leader_present_penalty'],
         'env_leader_present_penalty_threshold': config['env_leader_present_penalty_threshold'],
         'gap_change_penalty_coef': config['gap_change_penalty_coef'],
         'speed_change_penalty_coef': config['speed_change_penalty_coef'],
         'include_thresholds': config['env_include_thresholds'],
-        'penalize_energy': config['env_penalize_energy'],
         'include_idm_mpg': config['env_include_idm_mpg'],
         'num_concat_states': config['env_num_concat_states'],
         'num_concat_states_large': config['env_num_concat_states_large'],
