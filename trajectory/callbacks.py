@@ -121,11 +121,11 @@ class TensorboardCallback(BaseCallback):
                     else:
                         plotter.plot(v, title=k, grid=True, linewidth=2.0)
                 plotter.save(f'{base_name}/{base_name}_data')
-            else:
-                for group, metrics in rollout_dict.items():
-                    for k, v in metrics.items():
-                        plotter.plot(v, title=k, grid=True, linewidth=2.0)
-                    plotter.save(f'{base_name}/{base_name}_{group}')
+
+            for group, metrics in rollout_dict.items():
+                for k, v in metrics.items():
+                    plotter.plot(v, title=k, grid=True, linewidth=2.0)
+                plotter.save(f'{base_name}/{base_name}_{group}')
 
         episode_reward = np.sum(rollout_dict['training']['rewards'])
         episode_energy_reward = np.sum(rollout_dict['training']['energy_rewards'])
