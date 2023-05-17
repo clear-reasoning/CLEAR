@@ -583,10 +583,10 @@ class TrajectoryEnv(gym.Env):
 
         # penalize large headways
         headway_reward = 0
-        # if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
-        #     headway_reward = -self.headway_penalty * av.get_time_headway()
-        #     reward += headway_reward
-    
+        if av.get_headway() > self.min_headway_penalty_gap and av.speed > self.min_headway_penalty_speed:
+            headway_reward = -self.headway_penalty * av.get_time_headway()
+            reward += headway_reward
+
         # speed planner and curr speed diff
         speed_diff_reward = 0
 
