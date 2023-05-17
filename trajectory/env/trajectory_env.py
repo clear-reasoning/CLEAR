@@ -369,6 +369,8 @@ class TrajectoryEnv(gym.Env):
                 'target_speed': (target_speed, 40.0),
                 'max_headway': (float(max_headway), 1.0),
             })
+            av.target_speed = target_speed
+            av.max_headway = max_headway
 
         if self.future_target_speed_states:
             for pos_delta in [200, 500, 1000]:  # ]list(range(100, 1001, 100)) + [2000]:
@@ -706,7 +708,7 @@ class TrajectoryEnv(gym.Env):
             # for eval
             if 'rl' in self.av_controller and actions is None and self.model_fn is not None:
                 actions = self.model_fn([self.get_state(av_idx=i) for i in range(len(self.avs))])
-            
+
             # additional trajectory data that will be plotted in tensorboard
             metrics = {}
 
@@ -720,9 +722,9 @@ class TrajectoryEnv(gym.Env):
                         accel = self.action_set[action]
                     else:
                         if action < 0:
-                            accel = abs(self.min_accel) * action
+                            accel = abs(self.min_accel) * float(action)
                         else:
-                            accel = abs(self.max_accel) * action
+                            accel = abs(self.max_accel) * float(action)
                         accel = min(max(accel, self.min_accel), self.max_accel)
                     metrics['rl_controller_accel'] = accel
                     accel = av.set_accel(accel, large_gap_threshold=self.gap_closing_threshold(av))
