@@ -2,6 +2,7 @@
 import math
 import os
 import random
+import copy
 import time
 from collections import defaultdict, deque
 from datetime import datetime
@@ -56,7 +57,8 @@ class TensorboardCallback(BaseCallback):
         self.log_rollout_dict('metrics', self.get_rollout_dict(env_remote=self.env_remote), plot_images=False)
 
         if self.eval_freq is not None and self.rollout % self.eval_freq == 0:
-            # self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
+            if self.rollout == 0:  # only eval IDM once since it wont change
+                self.log_rollout_dict('idm_eval', self.run_eval(av_controller='idm'))
             # self.log_rollout_dict('fs_eval', self.run_eval(av_controller='fs'))
             self.log_rollout_dict('rl_eval', self.run_eval(av_controller=self.av_controller), custom_plot=True)
 
@@ -64,6 +66,10 @@ class TensorboardCallback(BaseCallback):
 
     def log_rollout_dict(self, base_name, rollout_dict, plot_images=True, custom_plot=False):
         """Log rollout dict."""
+        if len(rollout_dict) == 3:
+            rollout_dict, system_mpg_large_avg, system_mpg_large_total = rollout_dict
+            self.logger.record(f'{base_name}/{base_name}_system_mpg_large_avg', system_mpg_large_avg)
+            self.logger.record(f'{base_name}/{base_name}_system_mpg_large_total', system_mpg_large_total)
         if plot_images:
             plotter = TensorboardPlotter(self.logger)
             if custom_plot:
@@ -75,7 +81,7 @@ class TensorboardCallback(BaseCallback):
                     },
                     'headway': {
                         'av_gap': rollout_dict['sim_data_av']['headway'],
-                        'gap_closing_threshold': [max(120, 6 * vel)
+                        'gap_closing_threshold': [max(150, 6 * vel)
                                                   for vel in rollout_dict['sim_data_av']['speed']],
                         'failsafe_threshold': [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
                                                for this_vel, lead_vel in zip(rollout_dict['sim_data_av']['speed'],
@@ -252,14 +258,16 @@ class TensorboardCallback(BaseCallback):
 
     def run_eval(self, av_controller):
         """Run evaluation."""
-        # set seed so that the different evaluated controllers use the same trajectory
-
+        # (obsolete) set seed so that the different evaluated controllers use the same trajectory
         random.seed(self.rollout)
         np.random.seed(self.rollout)
 
         # create test env
-        config = dict(self.env_config)
+        config = copy.deepcopy(self.env_config)
         config['whole_trajectory'] = True
+        config['traj_dir'] = None
+        config['fixed_traj_path'] = \
+            'dataset/data_v2_preprocessed_west/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv'
         if av_controller != 'rl':
             config['use_fs'] = False
             config['discrete'] = False
@@ -284,7 +292,29 @@ class TensorboardCallback(BaseCallback):
             state, reward, done, infos = test_env.step(action)
         test_env.stop_collecting_rollout()
 
-        return self.get_rollout_dict(test_env)
+        # also run controller on a larger platoon and just get system mpg
+
+        def model_fn(state):
+            return self.model.predict(state, deterministic=True)[0]
+        config["platoon"] = "(av human*24)*8"
+        test_env_large = TrajectoryEnv(config=config, _simulate=True, _verbose=True, _model_fn=model_fn)
+        test_env_large.do_not_reset_on_end_of_horizon = True  # dont reset at the end of eval rollout otherwise data gets erased
+        test_env_large.reset()
+
+        while not test_env_large.end_of_horizon:
+            _, _, done, _ = test_env_large.step(None)
+
+        data = copy.deepcopy(test_env_large.sim.data_by_vehicle)
+        keys = list(data)
+
+        avg_mpgs = [data[key]['avg_mpg'] for key in keys]
+        system_mpg_avg = np.mean(avg_mpgs)
+
+        miles = [data[key]['total_miles'] for key in keys]
+        gallons = [data[key]['total_gallons'] for key in keys]
+        system_mpg_total = np.sum(miles) / np.sum(gallons)
+
+        return self.get_rollout_dict(test_env), system_mpg_avg, system_mpg_total
 
     def _on_step(self):
         return True
