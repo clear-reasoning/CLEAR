@@ -325,17 +325,25 @@ class RLVehicle(Vehicle):
             self.accel_no_noise_with_failsafe = IDMVehicle.apply_failsafe(self, self.accel_no_noise_no_failsafe)
             self.accel = self.accel_no_noise_with_failsafe
         else:
-            # hardcoded gap closing ~(linearly increasing from 0.1 to 0.5 up to 100m)~
-            if self.get_headway() >= large_gap_threshold:
-                # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 100.0)  # between 0 and 100
-                # accel_gap_closing = 0.5 * gap_over_threshold / 100.0
-                accel_gap_closing = 1.0
-                # maxed with controller accel (can go faster than hardcoded)
-                accel = max(accel, accel_gap_closing)
-
             self.accel_with_noise_no_failsafe = accel
             self.accel_no_noise_no_failsafe = accel
+
+            # hardcoded gap closing (linearly increasing up to 10m through the threshold)
+            if self.get_headway() >= large_gap_threshold:
+                # gap_over_threshold = min(self.get_headway() - large_gap_threshold, 10.0)
+                # accel_gap_closing = gap_over_threshold / 10.0
+                accel_gap_closing = 1.0
+                accel = max(accel, accel_gap_closing)
+
+            # hardcoded failsafe (linearly increasing up to 10m through the threshold)
+            # failsafe_threshold = self.failsafe_threshold() + 10
+            # if self.get_headway() <= failsafe_threshold:
+            #     gap_below_threshold = min(failsafe_threshold - self.get_headway(), 10.0)
+            #     accel_failsafe = -3.0 * gap_below_threshold / 10.0
+            #     accel = min(accel, accel_failsafe)
+
             self.accel = self.apply_failsafe(accel)
+            self.accel = accel
             self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
