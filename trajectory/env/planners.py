@@ -51,7 +51,7 @@ class Zhe(SpeedPlanner):
 
     def __init__(self):
         # For uniform smoothing, acts as the smoothing window.
-        self.width = 5000.
+        self.width = 2000.
 
         # previously stored v(x) values
         self._prev_v_points = None
