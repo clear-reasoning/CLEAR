@@ -127,6 +127,7 @@ DEFAULT_ENV_CONFIG = {
     'last_time_leader_seen_states': 0,
     'accel_smoothing_filter': 0,
     'accel_delta_reward_weight': 0,
+    'steps_per_action': 1,
 }
 
 # platoon presets that can be passed to the "platoon" env param
