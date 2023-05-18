@@ -343,7 +343,6 @@ class RLVehicle(Vehicle):
             #     accel = min(accel, accel_failsafe)
 
             self.accel = self.apply_failsafe(accel)
-            self.accel = accel
             self.accel_no_noise_with_failsafe = self.accel
         return self.accel
 
