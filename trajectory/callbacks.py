@@ -81,7 +81,7 @@ class TensorboardCallback(BaseCallback):
                     },
                     'headway': {
                         'av_gap': rollout_dict['sim_data_av']['headway'],
-                        'gap_closing_threshold': [max(80, 6 * vel)
+                        'gap_closing_threshold': [max(120, 6 * vel)
                                                   for vel in rollout_dict['sim_data_av']['speed']],
                         'failsafe_threshold': [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
                                                for this_vel, lead_vel in zip(rollout_dict['sim_data_av']['speed'],
