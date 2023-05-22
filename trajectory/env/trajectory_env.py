@@ -168,8 +168,8 @@ class TrajectoryEnv(gym.Env):
             self.av_controller = 'rl_fs'
 
         if self.output_acc:
-            assert 'rl' in self.av_controller
-            self.av_controller = 'rl_acc'
+            if 'rl' in self.av_controller:
+                self.av_controller = 'rl_acc'
 
         # instantiate generator of dataset trajectories
         self.data_loader = DataLoader(traj_path=self.fixed_traj_path, traj_dir=self.traj_dir,
@@ -381,9 +381,11 @@ class TrajectoryEnv(gym.Env):
                 })
 
         if self.acc_states:
+            speed_setting = av.megacontroller.speed_setting if self.av_controller == 'rl_acc' else -1
+            gap_setting = av.megacontroller.gap_setting if self.av_controller == 'rl_acc' else -1
             state.update({
-                'speed_setting': (av.megacontroller.speed_setting, 40.0),
-                'gap_setting': (av.megacontroller.gap_setting, 3.0),                
+                'speed_setting': (speed_setting, 40.0),
+                'gap_setting': (gap_setting, 3.0),
             })
 
         if self.dummy_states > 0:
@@ -762,7 +764,6 @@ class TrajectoryEnv(gym.Env):
                     # speed_setting = round(speed_setting / MPH_TO_MS) * MPH_TO_MS
                     # speed_setting = max(speed_setting, MPH_TO_MS * 20)
                     # # =================>
-
                     speed_setting, gap_setting = self.get_acc_input(action)
                     previous_speed_setting, previous_gap_setting = av.get_speed_setting(), av.get_gap_setting()
                     
@@ -854,11 +855,15 @@ class TrajectoryEnv(gym.Env):
                 base_state = self.get_base_state()
                 self.collected_rollout['actions'].append(get_first_element(actions))
                 if self.output_acc:
+                    if actions is None:  # idm
+                        actions = np.array([[0, 0]])
                     speed_setting, gap_setting = self.get_acc_input(actions[0])
                     self.collected_rollout['speed_actions'].append(speed_setting)
                     self.collected_rollout['gap_actions'].append(gap_setting)
-                    self.collected_rollout['speed_setting'].append(self.avs[0].megacontroller.speed_setting)
-                    self.collected_rollout['gap_setting'].append(self.avs[0].megacontroller.gap_setting)
+                    speed_setting = self.avs[0].megacontroller.speed_setting if self.av_controller == 'rl_acc' else -1
+                    gap_setting = self.avs[0].megacontroller.gap_setting if self.av_controller == 'rl_acc' else -1
+                    self.collected_rollout['speed_setting'].append(speed_setting)
+                    self.collected_rollout['gap_setting'].append(gap_setting)
                 if self.speed_planner:
                     target_speed = float(base_state['target_speed'][0])
                     self.collected_rollout['target_speed'].append(target_speed)

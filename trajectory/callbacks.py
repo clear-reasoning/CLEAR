@@ -288,7 +288,7 @@ class TensorboardCallback(BaseCallback):
             elif av_controller == 'rl':
                 action = get_first_element(self.model.predict(state, deterministic=True))
             else:
-                action = 0
+                action = None
             state, reward, done, infos = test_env.step(action)
         test_env.stop_collecting_rollout()
 
