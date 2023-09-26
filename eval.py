@@ -16,6 +16,12 @@ from os.path import join as opj
 import trajectory.config as tc
 
 
+KEEP_EMISSION_FILES = True  # heavy files
+
+NO_IDM = True
+NO_TSD = True
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate controllers in an experiment logdir.')
 
@@ -23,32 +29,53 @@ def parse_args():
                         help='Experiment logdir (eg. log/09May22/test_18h42m0gamma4s) OR '
                              'sweep dir (e.g. log/09May22/test_18h42m04s/gamma=0.999/ OR '
                              'a folder containing one configs.json and one checkpoint.zip file.')
+    parser.add_argument('--output_dirname', default=None, type=str,
+                        help='Name of output subdirectory')
+    parser.add_argument('--platoon', default='(av human*24)*8', type=str,
+                        help='Platoon of vehicles to simulate during evaluation')
     parser.add_argument('--n_cpus', type=int, default=1,
                         help='Set to the number of parallel processes you wish to run.')
+    parser.add_argument('--cp_number', type=int, default=None,
+                        help='CP number to use. If unset, uses the latest checkpoint, unless all_checkpoints is set.')
+    parser.add_argument('--all_checkpoints', default=False, action='store_true',
+                        help='If set, will evaluate all checkpoints for each model instead of just the latest one.')
 
     # If no paths specified, will evaluate on the 7050 trajectory only
     parser.add_argument('--trajectories', default='one_traj', type=str, nargs='?',
-                        choices=['one_traj', 'low_speed', 'high_speed', 'west', 'east', 'all'],
+                        choices=['one_traj', 'low_speed', 'high_speed', 'west', 'east', 'all', 'eval_itsc'],
                         help='Which set of trajectories to evaluate on')
     parser.add_argument('--traj_path', default='dataset/data_v2_preprocessed_west/'
                                                '2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050/trajectory.csv',
                         help="if --trajectories is 'one_traj', which trajectory to evaluate on")
 
+    parser.add_argument('--lc_only', default=False, action='store_true',
+                        help='If set, only evaluate with lane-changing.')
+    parser.add_argument('--no_lc_only', default=False, action='store_true',
+                        help='If set, only evaluate without lane-changing.')
     args = parser.parse_args()
     return args
 
 
 def run_eval(env_config, traj_dir):
-    av_name = env_config['av_controller'] if env_config['av_controller'] != 'av' \
+    av_name = env_config['av_controller'] if env_config['av_controller'] != 'rl' \
         else eval(env_config['av_kwargs'])['cp_path']
 
     # create env
-    env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=False)
+    av_kwargs = eval(env_config['av_kwargs'])
+    if 'cp_path' in av_kwargs:
+        from trajectory.algos.ppo.ppo import PPO as AugmentedPPO
+        model = AugmentedPPO.load(str(av_kwargs['cp_path']))
+        model_fn = lambda state: model.predict(state, deterministic=True)[0]
+        env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=True, _model_fn=model_fn)
+    else:
+        env = TrajectoryEnv(config=env_config, _simulate=True, _verbose=True)
+
+    env.do_not_reset_on_end_of_horizon = True  # dont reset at the end of eval rollout otherwise data gets erased
     env.reset()
 
     # step through the whole trajectory
     done = False
-    while not done:
+    while not env.end_of_horizon:
         _, _, done, _ = env.step(None)
 
     # create controller dir
@@ -61,7 +88,8 @@ def run_eval(env_config, traj_dir):
 
     # compute tsd
     tsd_path = controller_dir / 'tsd.png'
-    plot_time_space_diagram(emissions_path, save_path=tsd_path)
+    if not NO_TSD:
+        plot_time_space_diagram(emissions_path, save_path=tsd_path)
     print('>', tsd_path)
 
     # load emissions data
@@ -70,27 +98,40 @@ def run_eval(env_config, traj_dir):
 
     # compute trajectory plots
     traj_leader_id = [vid for vid in df['id'].unique() if 'leader' in vid][0]
+
+    veh_id_to_str = {
+        '0_trajectory_leader': 'Trajectory leader',
+        **{f'{i}_rl_av': f'AV {i//25+1}' for i in range(200)},
+        **{f'{i}_idm_av': f'AV {i//25+1} (IDM)' for i in range(200)},
+    }
+
     av_ids = [vid for vid in df['id'].unique() if 'av' in vid]
+    av_ids.sort(key=lambda x: veh_id_to_str[x])
 
     # plot speed of leader and all avs
-    plt.figure(figsize=(15, 3))
-    for veh_id in [traj_leader_id] + av_ids:
+    plt.figure(figsize=(20, 5), dpi=300)
+    plt.rcParams['font.size'] = '17'
+    # for veh_id in [traj_leader_id] + av_ids:
+    for veh_id in [traj_leader_id, av_ids[0], av_ids[1], av_ids[2], av_ids[3]]:
         # color red for leader and blue for AVs
         if veh_id == traj_leader_id:
-            color = (0.8, 0.2, 0.2, 1.0)
+            color = 'C3'  # (0.8, 0.2, 0.2, 1.0)
         else:
             # hardcoded for a platoon of (av human*24)*8
             av_number = int(veh_id.split('_')[0])
-            color = (0.2, 0.2, 0.8, 1.0) if av_number == 1 \
-                else (0.2, 0.8, 0.2, 1.0) if av_number == 176 \
-                else (0.2, 0.2, 1.0, 0.2)
+            color = 'C0' if av_number == 1 \
+                else 'C2' if av_number == 176 \
+                else (0.2, 0.2, 1.0, max(0.6 - av_number / 300, 0.1))
         df_av = df[df['id'] == veh_id]
-        plt.plot(df_av['time'] / timestep, df_av['speed'], label=veh_id, linewidth=2.0, color=color)
-    plt.title('platoon speeds')
-    plt.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.01, 0.5))
+        # plot by position instead of time
+        plt.plot(df_av['time'], df_av['speed'], label=veh_id_to_str[veh_id], linewidth=2.0, color=color)
+    # plt.title('platoon speeds')
+    plt.legend(loc='center left', bbox_to_anchor=(1.01, 0.5))
     plt.grid()
-    plt.xlim(0, (df['time'] / timestep).max())
+    plt.xlim(0, (df['time']).max())
     fig_path = controller_dir / 'speed_avs_leader.png'
+    plt.xlabel('Time (s)')
+    plt.ylabel('Speed (m/s)')
     plt.tight_layout()
     plt.savefig(fig_path)
     print('>', fig_path)
@@ -129,6 +170,26 @@ def run_eval(env_config, traj_dir):
         fig_path = controller_dir / f'traj_{av_id}.png'
         plt.savefig(fig_path)
         print('>', fig_path)
+
+    for av_id in av_ids[:1]:
+        plt.rcParams['font.size'] = '16'
+        df_av = df[df['id'] == av_id]
+        plt.figure(figsize=(10, 5))
+        plt.plot(df_av['time'], df_av['headway'], label='AV space gap', linewidth=2.0)
+        gap_closing_threshold = [max(env.max_headway, env.max_time_headway * vel)
+                                 for vel in df_av['speed']]
+        failsafe_threshold = [6 * ((this_vel + 1 + this_vel * 4 / 30) - lead_vel)
+                              for this_vel, lead_vel in zip(df_av['speed'], df_av['leader_speed'])]
+        plt.plot(df_av['time'], gap_closing_threshold, label='Gap-closing threshold', linewidth=2.0)
+        plt.plot(df_av['time'], failsafe_threshold, label='Failsafe threshold', linewidth=2.0)
+        plt.grid()
+        plt.xlim(0, df_av['time'].max())
+        plt.legend(loc='lower right', bbox_to_anchor=(1, 1))  # , loc='center left', bbox_to_anchor=(1.01, 0.5))
+        plt.xlabel('Time (s)')
+        plt.ylabel('Space gap (m)')
+        plt.tight_layout()
+        fig_path = controller_dir / f'gap_{av_id}.png'
+        plt.savefig(fig_path, dpi=300)
 
     # compute MPG metrics (AV, platoon, system ; low speeds vs high speeds)
     def meters_per_second_to_miles(meters_per_second):
@@ -182,13 +243,14 @@ def run_eval(env_config, traj_dir):
     mpgs_high_speeds = extract_mpg_metrics(df_high_speeds)
 
     # delete emission file (heavy)
-    emissions_path.unlink()
+    if not KEEP_EMISSION_FILES:
+        emissions_path.unlink()
 
     # return metrics
     return (av_name, [*mpgs, *mpgs_low_speeds, *mpgs_high_speeds])
 
 
-def generate_metrics(eval_dir, lane_changing, eval_trajectories):
+def generate_metrics(eval_dir, lane_changing, eval_trajectories, platoon):
     eval_dir.mkdir(exist_ok=True)
     print('>', eval_dir)
 
@@ -196,16 +258,18 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
     # for each eval trajectory
     for eval_traj in eval_trajectories:
         # create env config
-        abstract_env_config = DEFAULT_ENV_CONFIG
-        abstract_env_config.update({
+        # abstract_env_config = DEFAULT_ENV_CONFIG
+        base_env_config = {
             'whole_trajectory': True,
-            'platoon': '(av human*24)*8',
+            'platoon': platoon,
             'fixed_traj_path': str(eval_traj),
+            'traj_dir': None,
             'human_controller': 'idm',
             'human_kwargs': 'dict()',
             'lane_changing': lane_changing,
-            'road_grade': None,
-        })
+            'road_grade': None,  # 'i24'
+            'steps_per_action': 1,
+        }
 
         # create trajectory logdir
         traj_name = eval_traj.parent.name
@@ -221,20 +285,19 @@ def generate_metrics(eval_dir, lane_changing, eval_trajectories):
         print('>', traj_fig_path)
 
         # run controllers
-        av_configs = [{'av_controller': baseline_controller, 'av_kwargs': 'dict(noise=0)'}]
+        av_configs = [{'av_controller': baseline_controller, 'av_kwargs': 'dict(noise=0)'}] if not NO_IDM else []
         for config_path, cp_path in rl_paths:
             with open(config_path, 'r') as f:
-                config = json.load(f)
-                av_configs.append(
-                    {'av_controller': 'av',
-                     'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")',
-                     'max_headway': config['env_config']['max_headway'],
-                     'max_time_headway': config['env_config']['max_time_headway']})
+                config = json.load(f)['env_config']
+                config.update(
+                    {'av_controller': 'rl',
+                     'av_kwargs': f'dict(config_path="{config_path}", cp_path="{cp_path}")'})
+                av_configs.append(config)
 
         av_env_configs = []
         for av_config in av_configs:
-            env_config = copy.deepcopy(abstract_env_config)
-            env_config.update(av_config)
+            env_config = copy.deepcopy(av_config)
+            env_config.update(base_env_config)
             av_env_configs.append(env_config)
 
         with multiprocessing.Pool(processes=args.n_cpus) as pool:
@@ -301,7 +364,10 @@ if __name__ == '__main__':
     logdir = Path(args.logdir)
     print("Evaluating all checkpoints in", logdir)
 
-    eval_name = "eval_" + args.trajectories
+    if args.output_dirname:
+        eval_name = args.output_dirname
+    else:
+        eval_name = "eval_" + args.trajectories
 
     # If running eval on all sweeps of a run
     if (logdir / "params.json").exists():
@@ -328,17 +394,28 @@ if __name__ == '__main__':
         # find latest checkpoint
         checkpoints_path = config_path.parent / 'checkpoints'
         cp_numbers = [int(f.stem) for f in checkpoints_path.glob('*.zip')]
+        if args.cp_number is not None:
+            assert args.cp_number in cp_numbers
         if len(cp_numbers) > 0:
-            # get the latest checkpoint
-            latest_cp_number = sorted(cp_numbers)[-1]
-            latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+            if args.cp_number is not None:
+                cp_path = checkpoints_path / f'{args.cp_number}.zip'
+                rl_paths.append((config_path, cp_path))
+            elif args.all_checkpoints:
+                for cp_number in cp_numbers:
+                    cp_path = checkpoints_path / f'{cp_number}.zip'
+                    rl_paths.append((config_path, cp_path))
+            else:
+                # get the latest checkpoint
+                latest_cp_number = sorted(cp_numbers)[-1]
+                latest_cp_path = checkpoints_path / f'{latest_cp_number}.zip'
+                rl_paths.append((config_path, latest_cp_path))
         elif (config_path.parent / 'checkpoint.zip').exists():
             # if no checkpoints, but a checkpoint.zip exists, use that
             latest_cp_path = config_path.parent / 'checkpoint.zip'
+            rl_paths.append((config_path, latest_cp_path))
         else:
             # if no checkpoints, and no checkpoint.zip, skip this config
             raise ValueError('No checkpoints found in', config_path.parent)
-        rl_paths.append((config_path, latest_cp_path))
 
     EVAL_TRAJECTORIES = []
     if args.trajectories == 'one_traj':
@@ -350,7 +427,8 @@ if __name__ == '__main__':
             'high_speed': ['dataset/data_v2_preprocessed_west_high_speed/'],
             'west': ['dataset/data_v2_preprocessed_west/'],
             'east': ['dataset/data_v2_preprocessed_east/'],
-            'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/']
+            'all': ['dataset/data_v2_preprocessed_west/', 'dataset/data_v2_preprocessed_east/'],
+            'eval_itsc': ['datasets/eval/'],
         }
         print("Evaluating on trajectories in the following directories:", paths[args.trajectories])
         for path in paths[args.trajectories]:
@@ -358,5 +436,7 @@ if __name__ == '__main__':
 
     lc_dir = eval_root / "lc"
     no_lc_dir = eval_root / "no_lc"
-    generate_metrics(eval_dir=lc_dir, lane_changing=True, eval_trajectories=EVAL_TRAJECTORIES)
-    generate_metrics(eval_dir=no_lc_dir, lane_changing=False, eval_trajectories=EVAL_TRAJECTORIES)
+    if not args.no_lc_only:
+        generate_metrics(eval_dir=lc_dir, lane_changing=True, eval_trajectories=EVAL_TRAJECTORIES, platoon=args.platoon)
+    if not args.lc_only:
+        generate_metrics(eval_dir=no_lc_dir, lane_changing=False, eval_trajectories=EVAL_TRAJECTORIES, platoon=args.platoon)
