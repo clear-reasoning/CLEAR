@@ -18,8 +18,8 @@ import trajectory.config as tc
 
 KEEP_EMISSION_FILES = True  # heavy files
 
-NO_IDM = True
-NO_TSD = True
+NO_IDM = False
+NO_TSD = False
 
 
 def parse_args():
