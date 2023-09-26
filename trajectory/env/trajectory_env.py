@@ -116,7 +116,7 @@ DEFAULT_ENV_CONFIG = {
     'leader_faster': 0,
     'dummy_states': 0,
     # past leader speeds and AV accels
-    'past_vels_state': 0,
+    'past_vels_state': 1,
     'past_accels_state': 0,
     'no_acc_failsafe': 0,
     'no_acc_gap_closing': 0,
