@@ -245,7 +245,7 @@ class TrajectoryEnv(gym.Env):
             print()
         if self.augment_vf:
             n_additional_vf_states = 0
-        assert n_additional_vf_states <= n_states
+            assert n_additional_vf_states <= n_states
 
         # create buffer to concatenate past states
         assert self.num_concat_states >= 0  # we store at least the current state
