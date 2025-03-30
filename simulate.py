@@ -4,6 +4,10 @@ import traceback
 from collections import defaultdict
 from datetime import datetime
 import importlib
+import sys
+import pygame
+import select
+import threading
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,8 +15,14 @@ import pandas
 import pandas as pd
 from pathlib import Path
 import os
+# Uncomment below 2 lines if running into issues on docker
+# os.environ["SDL_VIDEODRIVER"] = "dummy"
+# os.environ["SDL_AUDIODRIVER"] = "dummy"
 import re
 import uuid
+import sqlite3
+import onnx
+import onnxruntime as ort
 
 import trajectory.config as tc
 from trajectory.callbacks import TensorboardCallback
@@ -98,6 +108,32 @@ def parse_args_simulate(return_defaults=False):
 
 logs_str = ''
 
+def create_control_window():
+    control_window = pygame.display.set_mode((300, 200))
+    pygame.display.set_caption("Control Panel")
+    
+    font = pygame.font.Font(None, 32)
+    stop_button = pygame.Rect(50, 50, 200, 50)
+    
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if stop_button.collidepoint(event.pos):
+                    return True  # Signal to stop early
+        
+        control_window.fill((255, 255, 255))
+        pygame.draw.rect(control_window, (0, 255, 0), stop_button)
+        text = font.render("Stop Early", True, (0, 0, 0))
+        text_rect = text.get_rect(center=stop_button.center)
+        control_window.blit(text, text_rect)
+        
+        pygame.display.flip()
+    
+    return False  # Continue running if window is closed
+
 
 def print_and_log(*args, output=True):
     """Print and log."""
@@ -127,41 +163,56 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
     if args.av_controller != 'rl' and (args.cp_path or cp_path):
         print_and_log("\nOverriding av_controller to rl because cp_path provided")
         args.av_controller = 'rl'
+    if 'rl' in args.av_controller.lower():
+        AV_POLICY_ONNX_FILE = "vandertest_controller.onnx"
+        _ = onnx.load_model(AV_POLICY_ONNX_FILE)
+        ort_session = ort.InferenceSession(AV_POLICY_ONNX_FILE)
+    
+    def get_accel(state):
+        # state is [av speed, leader speed, headway] (no normalization needed)
+        # output is instant acceleration to apply to the AV
+        data = np.array([state]).astype(np.float32)
+        outputs = ort_session.run(None, {ort_session.get_inputs()[0].name: data})
+        return outputs[0][0][0]
+    
+    def get_accel_wrapper(state):
+        return get_accel(state.numpy())
     # logging function
 
     # generate env config
     env_config = DEFAULT_ENV_CONFIG
 
-    # load AV controller
-    if 'rl' in args.av_controller.lower():
-        # load config file
-        if not cp_path:
-            cp_path = Path(args.cp_path)
+    # Old RL check point code below
+    # # load AV controller 
+    # if 'rl' in args.av_controller.lower():
+    #     # load config file
+    #     if not cp_path:
+    #         cp_path = Path(args.cp_path)
 
-        with open(cp_path.parent.parent / 'configs.json', 'r') as fp:
-            configs = json.load(fp)
-        env_config.update(configs['env_config'])
+    #     with open(cp_path.parent.parent / 'configs.json', 'r') as fp:
+    #         configs = json.load(fp)
+    #     env_config.update(configs['env_config'])
 
-        # retrieve algorithm
-        alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
-        assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
-        algorithm = getattr(importlib.import_module(alg_module), alg_class)
+    #     # retrieve algorithm
+    #     alg_module, alg_class = re.match("<class '(.+)\\.([a-zA-Z\\_]+)'>", configs['algorithm']).group(1, 2)
+    #     assert (alg_module.split('.')[0] in ['stable_baselines3', 'algos'] or alg_module.split('.')[1] == 'algos')
+    #     algorithm = getattr(importlib.import_module(alg_module), alg_class)
 
-        # load checkpoint into model
-        model = algorithm.load(cp_path)
+    #     # load checkpoint into model
+    #     model = algorithm.load(cp_path)
 
-        print_and_log(f'\nLoaded model checkpoint at {cp_path}')
-        if not select_policy:
-            print_and_log(f'\n\ttrained for {model.num_timesteps} timesteps'
-                          f'\n\talgorithm = {alg_module}.{alg_class}'
-                          f'\n\tobservation space = {model.observation_space}'
-                          f'\n\taction space = {model.action_space}'
-                          f'\n\tpolicy = {model.policy_class}'
-                          f'\n\n{model.policy}')
+    #     print_and_log(f'\nLoaded model checkpoint at {cp_path}')
+    #     if not select_policy:
+    #         print_and_log(f'\n\ttrained for {model.num_timesteps} timesteps'
+    #                       f'\n\talgorithm = {alg_module}.{alg_class}'
+    #                       f'\n\tobservation space = {model.observation_space}'
+    #                       f'\n\taction space = {model.action_space}'
+    #                       f'\n\tpolicy = {model.policy_class}'
+    #                       f'\n\n{model.policy}')
 
-        def get_action(state):
-            """Get the requested action from the model."""
-            return model.predict(state, deterministic=True)[0]
+    #     def get_action(state):
+    #         """Get the requested action from the model."""
+    #         return model.predict(state, deterministic=True)[0]
 
     env_config.update({
         'platoon': args.platoon,
@@ -213,17 +264,59 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
         done = False
         if args.render:
             renderer = Renderer()
+        
+        quit_flag = False
+        timestep = 0
+        reward_arr = []
+        # breakpoint()
+
+        # Create Database
+        parent_path_name = os.path.basename(os.path.dirname(args.traj_path))
+        db_name = f"{parent_path_name}_run_{i}.db"
+        db_path = os.path.join(exp_dir, db_name)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Get all the keys
+        data_by_vehicle = test_env.sim.data_by_vehicle
+        all_columns = ['timestep', 'reward']  # Start with timestep
+        for veh_id, veh_data in data_by_vehicle.items():
+            for key in veh_data.keys():
+                colname = f"{veh_id}__{key}"
+                all_columns.append(colname)
+        sample_veh_id = next(iter(test_env.sim.data_by_vehicle))
+        all_keys = test_env.sim.data_by_vehicle[sample_veh_id].keys()
+
+        # Create Schema
+        column_defs = [f'"{col}" TEXT' for col in all_columns]
+        create_sql = f"CREATE TABLE IF NOT EXISTS timestep_data (\n  {', '.join(column_defs)}\n);"
+        cursor.execute(create_sql)
+        conn.commit()
+
         while not done:
+            if args.render:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        done = True
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_q:
+                            print("Early exit triggered by 'q' key press")
+                            quit_flag = True
             if 'rl' in args.av_controller:
-                # get RL action
-                action = [
-                    get_first_element(model.predict(test_env.get_state(av_idx=i), deterministic=True))
-                    for i in range(len(test_env.avs))
-                ]
+                # get RL action: Corresponding code for old RL checkpoint code
+                # action = [
+                #     get_first_element(model.predict(test_env.get_state(av_idx=i), deterministic=True))
+                #     for i in range(len(test_env.avs))
+                # ]
+                curr_state = test_env.get_base_state()
+                curr_model_state = [curr_state['speed'][0], curr_state['leader_speed'][0], curr_state['headway'][0]] # .numpy()
+                action = get_accel(curr_model_state)
             else:
                 # other controllers should be implemented via Vehicle objects
                 action = 0
             state, reward, done, infos = test_env.step(action)
+            reward_arr.append(reward)
+            timestep += 1
 
             if args.render:
                 time = test_env.sim.time_counter
@@ -232,7 +325,33 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                 veh_speeds = [v.speed for v in test_env.sim.vehicles]
                 renderer.step(time, veh_types, veh_positions, veh_speeds)
                 renderer.render()
+            
+            if quit_flag:
+                pygame.quit()
+                break
 
+        for t in range(timestep):
+            row = {'timestep': t, 'reward': reward_arr[t]}
+            for veh_id, veh_data in data_by_vehicle.items():
+                if t >= len(veh_data['step']):
+                    continue
+                for key, value_list in veh_data.items():
+                    colname = f"{veh_id}__{key}"
+                    value = value_list[t] if value_list[t] is not None else "NULL"
+                    row[colname] = value
+
+            full_row = [row.get(col, "NULL") for col in all_columns]
+            placeholders = ", ".join(["?"] * len(all_columns))
+            quoted_cols = [f'"{col}"' for col in all_columns]
+            cursor.execute(
+                f"INSERT INTO timestep_data ({', '.join(quoted_cols)}) VALUES ({placeholders})",
+                full_row
+            )
+
+
+        conn.commit()
+        conn.close()
+            
         test_env.stop_collecting_rollout()
 
         # generate emissions file and optionally upload to leaderboard
@@ -261,7 +380,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
                 test_env.gen_emissions(emissions_path=emissions_path, upload_to_leaderboard=False)
 
         # gen metrics
-        tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True)
+        tb_callback = TensorboardCallback(eval_freq=0, eval_at_end=True, env_config=env_config)
         rollout_dict = tb_callback.get_rollout_dict(test_env)
 
         if not args.fast:
@@ -355,7 +474,7 @@ def simulate(args, cp_path=None, select_policy=False, df=None):
             + [
             ('av_leader_speed_difference', rollout_dict['sim_data_av']['speed_difference']),
             ('instant_energy_consumption',
-             rollout_dict['sim_data_av']['instant_energy_consumption']),
+             rollout_dict['sim_data_av']['instant_energy_consumption']), # DBSchema
             ('rl_reward', rollout_dict['training']['rewards']),
         ]:
             for fn_name, fn in stat_fns:
