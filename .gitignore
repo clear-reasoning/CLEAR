@@ -2,6 +2,7 @@ __pycache__
 ray_results
 *.txt
 *.png
+!dataset/**/*.png
 .DS_STORE
 s3
 events.out*
@@ -10,7 +11,7 @@ events.out*
 slurm_logs*
 log/
 emissions*
-dataset/
+dataset/*.csv
 *.sh
 *.onnx
 *trajectory.egg-info/
@@ -34,3 +35,4 @@ wandb/
 MVT/
 danville/
 local/
+venv/
