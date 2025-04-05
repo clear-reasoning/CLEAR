@@ -108,14 +108,14 @@ class SimulationDB:
         all_columns = self.get_column_names()
         
         # Get timestep column and all columns for this vehicle
-        vehicle_columns = ["timestep"] + [
+        vehicle_columns = ["timestep", "reward"] + [
             col for col in all_columns 
             if col.startswith(f"{vehicle_id}__")
         ]
         
         # Filter by data keys if specified
         if data_keys:
-            vehicle_columns = ["timestep"] + [
+            vehicle_columns = ["timestep", "reward"] + [
                 col for col in vehicle_columns[1:]
                 if any(col.endswith(f"__{key}") for key in data_keys)
             ]

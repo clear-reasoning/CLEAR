@@ -1,6 +1,7 @@
 import os
 from openai import OpenAI
-
+from dotenv import load_dotenv
+load_dotenv()
 class GeminiModel:
     def __init__(self):
         # Ref: https://ai.google.dev/gemini-api/docs/openai
@@ -27,12 +28,12 @@ class GeminiModel:
     
 class GroqModel:
     def __init__(self):
-        self.client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-    
-    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "groq-llm") -> str:
-        """
-        Get response from Groq model.
-        """
+        self.client = OpenAI(
+            api_key=os.environ.get("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1"
+        )
+
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "llama3-70b-8192") -> str:
         response = self.client.chat.completions.create(
             model=model_name,
             messages=[
