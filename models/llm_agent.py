@@ -98,7 +98,7 @@ class OpenAiModel:
     def __init__(self):
         self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) 
         
-    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gpt-4o-mini") -> str:
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gpt-4o-mini", temperature: float = 0.7, num_samples: int = 1) -> str:
         """
         Get response from OpenAI model.
         """
@@ -107,9 +107,14 @@ class OpenAiModel:
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ]
+            ],
+            temperature=temperature,
+            n=num_samples
         )
-        return response.choices[0].message.content
+        if num_samples == 1:
+            return response.choices[0].message.content
+        else:
+            return [choice.message.content for choice in response.choices]
 
 class LLM_Agent:
     def __init__(self, model) -> None:
