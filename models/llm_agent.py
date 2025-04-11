@@ -1,5 +1,5 @@
 import os
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 load_dotenv()
 class GeminiModel:
@@ -33,7 +33,75 @@ class GroqModel:
             base_url="https://api.groq.com/openai/v1"
         )
 
-    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "llama3-70b-8192") -> str:
+        self.async_client = AsyncOpenAI(
+            api_key=os.environ.get("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1"
+        )
+
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "llama-3.3-70b-versatile", temperature=0.7) -> str:
+        response = self.client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature
+        )
+        return response.choices[0].message.content
+    
+    async def get_response_async(self, system_prompt: str, user_prompt: str, model_name: str = "llama-3.3-70b-versatile", temperature=0.7) -> str:
+        response = await self.async_client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature
+        )
+        return response.choices[0].message.content
+ 
+class OpenRouterModel:
+    def __init__(self):
+        api_key=os.environ.get("OPENROUTER_API_KEY")
+        self.client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+        )
+        self.async_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
+
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "google/gemma-2-9b-it:free", temperature: float = 0.7) -> str:
+        response = self.client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature
+        )
+        return response.choices[0].message.content
+
+    async def get_response_async(self, system_prompt: str, user_prompt: str, model_name: str = "google/gemma-2-9b-it:free", temperature: float = 0.7) -> str:
+        response = await self.async_client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=temperature
+        )
+        return response.choices[0].message.content
+   
+class OpenAiModel:
+    def __init__(self):
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) 
+        
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gpt-4o-mini") -> str:
+        """
+        Get response from OpenAI model.
+        """
         response = self.client.chat.completions.create(
             model=model_name,
             messages=[
@@ -42,28 +110,6 @@ class GroqModel:
             ]
         )
         return response.choices[0].message.content
-    
-class OpenAiModel:
-    def __init__(self):
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) 
-        
-    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gpt-4o-mini", temperature: float = 1.0, num_samples: int = 1) -> str:
-        """
-        Get response from OpenAI model.
-        """
-        response = self.client.chat.completions.create(
-            model=model_name,
-            temperature=temperature,
-            n=num_samples,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        if num_samples == 1:
-            return response.choices[0].message.content
-        else:
-            return [choice.message.content for choice in response.choices]
 
 class LLM_Agent:
     def __init__(self, model) -> None:
@@ -90,4 +136,5 @@ if __name__ == '__main__':
         system_prompt="You are a helpful assistant.",
         user_prompt="What is the capital of France?"
     )
+
     print(response)
