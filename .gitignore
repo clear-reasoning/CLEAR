@@ -8,6 +8,8 @@ s3
 events.out*
 *.zip
 *.json
+!trajectory/env/*.json
+!rag_documents/json/*.json
 slurm_logs*
 log/
 emissions*

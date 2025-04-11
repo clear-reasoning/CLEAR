@@ -2,18 +2,25 @@ from utils.db.simulation_db import SimulationDB
 from utils.df_utils import plot_dataframe, convert_cols_to_numeric, get_df_from_csv, get_formatted_df_for_llm
 from utils.trajectory.trajectory_container import TrajectoryChunker, TrajectoryWindows
 from models.llm_agent import LLM_Agent, OpenAiModel, GroqModel
+from utils.rag.embedding_models import OpenAIEmbeddingModel, EnvironmentEmbeddingModel
+from utils.rag.read_embedding_db import RAG_Database
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import re
 from sklearn.metrics import mean_squared_error
 import asyncio
 
-USE_DB = True # currently the csv doesn't have reward so ideally use db
+# Loading in the prompts that we want to use 
+from prompts.ashwin_04_05 import user_prompt
+from prompts.adrien_04_07 import rag_user_prompt, system_prompt
+
+USE_DB = False # currently the csv doesn't have reward so ideally use db
 
 if USE_DB:
-    db_path = "data/simulate/1743744527_04Apr25_05h28m47s/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050_run_0.db"
+    db_path = "data/simulate/1743365635_30Mar25_20h13m55s/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050_run_0.db"
     with SimulationDB(db_path) as db:
-        trajectory_df = db.get_vehicle_data("1_rl_av", ["speed", "leader_speed", "headway"])
+        trajectory_df = db.get_vehicle_data("1_rl_av", ["speed", "leader_speed", "position", "headway"])
     chunk_val = "timestep"
     trajectory_df['timestep'] = pd.to_numeric(trajectory_df['timestep'])
     columns_to_rename = {col: col.replace('1_rl_av__', '') for col in trajectory_df.columns if '1_rl_av__' in col}
@@ -38,49 +45,6 @@ trajectory_windows = TrajectoryWindows(
     indexing_col=chunk_val
 )
 trajectory_windows = trajectory_windows.get_windows()
-
-system_prompt = """
-You are an AI assistant specializing in traffic flow analysis and vehicle dynamics. Your task is to analyze the initial 6 timesteps of vehicle trajectory data and predict the next 4 timesteps for all four variables: reward(float), speed (m/s), headway (m), and leader_speed (m/s).
-
-The data represents real-world traffic measurements from a vehicle equipped with an rl control policy that aims to smooth traffic flow. You must understand the relationship between the following vehicle, its speed adjustments, and the leader vehicle ahead.
-
----
-
-The RL policy taken by the car is determined by 4 core objectives:
-1. **Safety**: A crash indicator computed as `1 if headway < 0 else 0`
-2. **Efficiency**: Estimated as `follower_speed × abs(action)`
-3. **Comfort**: Measured as `action ** 2` (penalizing abrupt accelerations)
-4. **Cohesion**: Measured as `abs(leader_speed - follower_speed) + headway` (how well the AV follows)
-
-The reward is a **linear combination** of these components:
-
-\\[
-\text{reward} = w_1 \cdot \text{safety} + w_2 \cdot \text{efficiency} + w_3 \cdot \text{comfort} + w_4 \cdot \text{cohesion}
-\\]
-
----
-
-For each prediction, you must:
-1. First analyze the initial data inside <reasoning> tags to explain your thought process
-2. Provide precise numerical predictions for each variable
-3. Provide the reward coefficents in seperate tags:
-    -<reward_coefficient>w1,w2,w3,w4</reward_coefficient>
-4. Format your predictions in separate tags:
-   - <future_speeds>speed_t6,speed_t7,speed_t8,speed_t9</future_speeds>
-   - <future_headway>headway_t6,headway_t7,headway_t8,headway_t9</future_headway>
-   - <future_leader_speed>leader_t6,leader_t7,leader_t8,leader_t9</future_leader_speed>
-   - <future_reward>reward_t6,reward_t7,reward_t8,reward_t9</future_reward>
-
----
-
-In your reasoning, analyze:
-1. The behavior of the leader vehicle compared to our vehicle
-2. The apparent advised speed for traffic smoothing
-3. The actual set speed of the vehicle 
-4. Whether future acceleration or deceleration is expected
-
-You are effectively explaining what a self-driving car is doing to smooth traffic flow. Your predictions must obey physical constraints and vehicle dynamics (e.g., speeds should evolve gradually, headway depends on relative speed). Avoid hallucinated values.
-"""
 
 def extract_tag_content(response, tag_name):
     pattern = f"<{tag_name}>(.*?)</{tag_name}>"
@@ -108,40 +72,28 @@ def calculate_l2_norm(predictions, ground_truth):
         return float('nan')
     return np.sqrt(mean_squared_error(ground_truth, predictions))
 
-def evaluate_window(window_data, start_idx, llm_agent):
+def evaluate_window(window_data, start_idx, llm_agent, rag_db_path=None):
     first_six_steps = window_data.iloc[:6]
     rest_steps = window_data.iloc[6:]
-    formatted_first_six = get_formatted_df_for_llm(first_six_steps, precision=2)
-    
-    user_prompt = f"""
-    Below are the initial 6 timesteps of trajectory data from a vehicle operating under an RL-based traffic smoothing policy:
 
-    {formatted_first_six}
+    if rag_db_path is not None:
+        # Retrieve the top k situations from the database
+        db = RAG_Database(rag_db_path) 
+        embedding_model = EnvironmentEmbeddingModel()
+        top_k_situations = db.get_top_k_situations(first_six_steps, embedding_model, k=5, columns=["headway", "speed", "leader_speed"], apply_normalization = False)
+        retrieved_situations = ""
+        for index, sit in enumerate(top_k_situations):
+            retrieved_situations += f"Situation {index + 1}:\n"
+            retrieved_situations += f"{sit[2]}\n"
+        formatted_first_six = get_formatted_df_for_llm(first_six_steps, precision=2)
+        provided_user_prompt = rag_user_prompt.format(formatted_first_six, retrieved_situations)
+        response = llm_agent.get_response(system_prompt, provided_user_prompt, temperature=1, num_samples=1)
+    else:
+        # No example situations from the database added to the prompt
+        formatted_first_six = get_formatted_df_for_llm(first_six_steps, precision=2)
+        provided_user_prompt = user_prompt.format(formatted_first_six)
+        response = llm_agent.get_response(system_prompt, provided_user_prompt, temperature=1, num_samples=1)
 
-    Based on this history, please:
-
-    1. Predict the next 4 timesteps (t6–t9) for all four variables:
-       - reward (float)
-       - speed (m/s)
-       - headway (m)
-       - leader_speed (m/s)
-
-    2. Use the standard output tag format for each variable:
-       - <future_speeds>...</future_speeds>
-       - <future_headway>...</future_headway>
-       - <future_leader_speed>...</future_leader_speed>
-       - <future_rewards>...</future_rewards>
-
-    3. Provide your estimated reward coefficients in:
-       - <reward_coefficients>w1,w2,w3,w4</reward_coefficients>
-
-    4. Include your reasoning in <reasoning> tags, reflecting on dynamics, expected changes, and whether the vehicle will accelerate or decelerate.
-
-    Be sure to keep your predictions physically plausible and consistent with vehicle dynamics.
-    """
-    
-    response = llm_agent.get_response(system_prompt, user_prompt)
-    
     speed_values, speed_ok = extract_values(response, "future_speeds")
     headway_values, headway_ok = extract_values(response, "future_headway")
     leader_values, leader_ok = extract_values(response, "future_leader_speed")
@@ -160,11 +112,11 @@ def evaluate_window(window_data, start_idx, llm_agent):
     gt_speeds = gt["speed"].values
     gt_headways = gt["headway"].values
     gt_leader_speed = gt["leader_speed"].values
-    gt_rewards = gt["reward"].values
-    
+    gt_rewards = gt["position"].values
+
     result = {
         "start_index": start_idx,
-        "user_prompt": user_prompt,
+        "user_prompt": provided_user_prompt,
         "response": response,
         "reasoning": reasoning if reasoning_ok else "Not extractable",
         "reward_coefficients": reward_coefficients if coeff_ok else [],
@@ -185,20 +137,20 @@ def evaluate_window(window_data, start_idx, llm_agent):
 
     return result
 
-llm_agent = GroqModel()
+llm_agent = OpenAiModel()
 
 results = []
 
-for i, window in enumerate(trajectory_windows):
+for i, window in enumerate(tqdm(trajectory_windows, desc="Processing window")):
     if i ==2:
         break
-    print(f"Processing window {i+1}/{len(trajectory_windows)}")
     start_idx = window.iloc[0][chunk_val]
-    result = evaluate_window(window, start_idx, llm_agent)
+    result = evaluate_window(window, start_idx, llm_agent, rag_db_path="rag_documents/pkl_db/semantic_db_examples.pkl")
     results.append(result)
 
 results_df = pd.DataFrame(results)
 results_df.to_json("trajectory_prediction_results.json", orient="records", indent=2)
+print("Results saved in 'trajectory_prediction_results.json'")
 
 
 plot_dataframe(
