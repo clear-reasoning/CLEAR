@@ -37,8 +37,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run simulation with specified experiment configuration")
     parser.add_argument(
         "--experiment", 
-        type=str, 
-        default="experiments/experiment_1.py",
+        type=str,
+        required=True,
         help="Path to the experiment configuration file (e.g., 'experiments/experiment_1.py')"
     )
     return parser.parse_args()
