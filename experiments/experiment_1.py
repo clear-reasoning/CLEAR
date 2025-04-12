@@ -12,14 +12,18 @@ config = {
     
     # Vehicle and data settings
     "vehicle_id": "1_rl_av",
-    "db_columns": ["speed", "leader_speed", "position", "headway"],
-    "csv_columns": ["step", "speed", "headway", "leader_speed", "position"],
+    "db_columns": ["speed", "leader_speed", "position", "headway", "acceleration", "time", "reward"],
+    "csv_columns": ["time""step", "speed", "headway", "leader_speed", "position", "acceleration"],
     
     # Chunking and windowing settings
     "chunk_col_db": "timestep",
     "chunk_col_csv": "step",
     "chunk_indices": [575, 1000, 1500],
     "window_size": 10,
+    
+    # Runs the LLM loop on this much percentage of the trajectory. 
+    # For example, if the trajectory is 1000 timesteps, and this is set to 0.1, the LLM will run for 100 timesteps.
+    "percent_of_trajectory": 0.1,
     
     # RAG settings
     "rag_db_path": "rag_documents/pkl_db/semantic_db_examples.pkl",
