@@ -6,6 +6,7 @@ from typing import List, Tuple, Callable, Any, Dict
 from utils.rag.embedding_models import BaseEmbeddingModel, OpenAIEmbeddingModel, EnvironmentEmbeddingModel
 from utils.rag.similarity_functions import cosine_similarity, l2_loss, compare_dataframes
 from utils.df_utils import get_formatted_df_for_llm
+import os
 
 class RAG_Database:
     """A class for reading and managing a RAG (Retrieval-Augmented Generation) database from a pickle file.
@@ -43,12 +44,15 @@ class RAG_Database:
             always be present in the pickle file.
     """
     
-    def __init__(self, db_pkl_path: str):
+    def __init__(self, db_pkl_path: str = None):
         self.db_pkl_path = db_pkl_path
         self.db_data = None
         
-        with open(db_pkl_path, 'rb') as f:
-            self.db_data = pickle.load(f)
+        if db_pkl_path is None:
+            self._initialize_empty_db()
+        else:
+            with open(db_pkl_path, 'rb') as f:
+                self.db_data = pickle.load(f)
                 
         # Retrieving the embedding index and json contents
         self.embedding_index: np.ndarray = self.db_data['embedding_index']
@@ -58,6 +62,17 @@ class RAG_Database:
         
         # Note: db_rows is not always present in the pickle file.
         self.db_rows = self.db_data.get('db_rows', [])
+    
+    def _initialize_empty_db(self):
+        """Initialize an empty database with default values"""
+        self.db_data = {
+            'embedding_index': np.array([]),
+            'json_contents': [],
+            'embedding_key': 'embedding',
+            'file_path': None
+        }
+            
+        print("Initialized empty database in memory")
     
     def replace_document(self, document_index: int, new_json_content: Dict[str, Any], embedding_model: BaseEmbeddingModel) -> None:
         """Replace a document in the database
@@ -81,8 +96,18 @@ class RAG_Database:
             embedding_model (BaseEmbeddingModel): The embedding model to use
         """
         new_embedding = embedding_model.get_embedding(new_json_content['environment_key'])
-        self.embedding_index = np.vstack([self.embedding_index, new_embedding])
+        
+        # Handle empty database case
+        if len(self.embedding_index) == 0:
+            self.embedding_index = new_embedding.reshape(1, -1)
+        else:
+            self.embedding_index = np.vstack([self.embedding_index, new_embedding])
+            
         self.json_contents.append(new_json_content)
+        
+        # Update db_data to maintain consistency
+        self.db_data['embedding_index'] = self.embedding_index
+        self.db_data['json_contents'] = self.json_contents
     
     def remove_document(self, document_index: int) -> None:
         """Remove a document from the database
@@ -218,6 +243,41 @@ class RAG_Database:
         # only saving self.json_contents as the JSON file
         with open(save_path, 'w') as f:
             json.dump(self.json_contents, f, indent=4, sort_keys=True)
+
+    def add_entry(self, embedding: np.ndarray, json_content: Dict[str, Any]):
+        """Add a new entry to the database"""
+        # Update embedding index
+        if len(self.embedding_index) == 0:
+            self.embedding_index = embedding.reshape(1, -1)
+        else:
+            self.embedding_index = np.vstack([self.embedding_index, embedding])
+            
+        # Update json contents
+        self.json_contents.append(json_content)
+        
+        # Update db_data
+        self.db_data['embedding_index'] = self.embedding_index
+        self.db_data['json_contents'] = self.json_contents
+        
+        # Save updated database
+        with open(self.db_pkl_path, 'wb') as f:
+            pickle.dump(self.db_data, f)
+
+    def get_similar_entries(self, query_embedding: np.ndarray, top_k: int = 5) -> List[Dict[str, Any]]:
+        """Get the most similar entries to the query embedding"""
+        if len(self.embedding_index) == 0:
+            return []
+            
+        # Calculate cosine similarity
+        similarities = np.dot(self.embedding_index, query_embedding) / (
+            np.linalg.norm(self.embedding_index, axis=1) * np.linalg.norm(query_embedding)
+        )
+        
+        # Get top k indices
+        top_k_indices = np.argsort(similarities)[-top_k:][::-1]
+        
+        # Return corresponding json contents
+        return [self.json_contents[i] for i in top_k_indices]
 
 if __name__ == "__main__":
     # Example usage of using the RAG_Database

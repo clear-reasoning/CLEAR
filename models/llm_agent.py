@@ -8,21 +8,22 @@ class GeminiModel:
         self.client = OpenAI(api_key=os.environ.get("GEMINI_API_KEY"), 
                              base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
     
-    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gemini-1.5-flash") -> str:
+    def get_response(self, system_prompt: str, user_prompt: str, model_name: str = "gemini-2.0-flash", temperature: float = 0.7, num_samples: int = 1) -> str:
         """
         Get response from Gemini model.
         """
         # model = genai.GenerativeModel("gemini-1.5-flash")
         response = self.client.chat.completions.create(
-            model="gemini-2.0-flash",
-            n=1,
+            model=model_name,
+            n=num_samples,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": user_prompt,
                 }
-            ]
+            ],
+            temperature=temperature
         )
         return response.choices[0].message.content
     

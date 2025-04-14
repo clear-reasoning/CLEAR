@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from matplotlib.ticker import MaxNLocator, FuncFormatter
 from utils.trajectory.trajectory_container import TrajectoryChunker
-from typing import List
+from typing import List, Optional
 
 def get_df_from_csv(csv_file_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_file_path, na_values=["NULL", "NaN", "N/A", ""])
@@ -26,61 +26,59 @@ def plot_dataframe(df: pd.DataFrame,
                    x_axis: str, 
                    y_values: list[str], 
                    save_path: str, 
-                   epsilon: float = 1, 
+                   epsilon: float = 0.7, 
                    max_ticks: int = 10, 
-                   chunker: TrajectoryChunker | None = None, 
+                   chunker: Optional[TrajectoryChunker] = None, 
                    shaded_regions: List[tuple] = []) -> None:
     """
-    Plots a line chart for the given DataFrame, handling NULL values by replacing them with -1.
-    Allows sampling using epsilon to reduce the number of points plotted.
-    Automatically adjusts x-axis labels for readability using MaxNLocator.
-    
-    :param df: Pandas DataFrame containing the data.
-    :param x_axis: Column name for the x-axis.
-    :param y_values: List of column names to be plotted on the y-axis.
-    :param save_path: Path to save the plot.
-    :param epsilon: Sampling probability (0.0 to 1.0). A lower value reduces the number of points plotted.
-    :param max_ticks: Maximum number of x-axis ticks for readability.
+    Plots a line chart for the given DataFrame. For the 'speed' column, if 'accel' is present,
+    encodes acceleration as color. Other y-values are plotted normally.
     """
-    
-    # Replace NULL values with -1
+    # Clean and convert data
     df = df.copy()
-    df[x_axis] = df[x_axis].fillna(-1)
-    df[y_values] = df[y_values].fillna(-1)
-    df[x_axis] = pd.to_numeric(df[x_axis].replace("NULL", 0), errors='coerce').fillna(0)
-    df[y_values] = df[y_values].apply(lambda col: pd.to_numeric(col.replace("NULL", 0), errors='coerce').fillna(0))
-    
-    # Apply sampling based on epsilon
+    df[x_axis] = pd.to_numeric(df[x_axis].fillna(-1).replace("NULL", 0), errors='coerce').fillna(0)
+    df[y_values] = df[y_values].apply(lambda col: pd.to_numeric(col.fillna(-1).replace("NULL", 0), errors='coerce').fillna(0))
+
+    # Include accel if available
+    has_accel = 'accel' in df.columns
+    if has_accel:
+        df['accel'] = pd.to_numeric(df['accel'].fillna(0).replace("NULL", 0), errors='coerce').fillna(0)
+
+    # Sampling
     if 0.0 < epsilon < 1.0:
-        df = df.sample(frac=epsilon, random_state=42)  # Ensure reproducibility
-    
+        df = df.sample(frac=epsilon, random_state=42).sort_values(by=x_axis)
+
     plt.figure(figsize=(18, 6))
-    
+
     for y in y_values:
-        plt.scatter(df[x_axis], df[y], marker='X', label=y, s=0.25)
-        
-    # Add shaded regions (if any)
+        if y == 'speed' and has_accel:
+            sc = plt.scatter(df[x_axis], df[y], c=df['accel'], cmap='coolwarm', s=0.5, label=f'{y} (colored by accel)')
+            cbar = plt.colorbar(sc)
+            cbar.set_label("Acceleration (m/s²)")
+        else:
+            plt.scatter(df[x_axis], df[y], marker='X', label=y, s=0.25)
+
+    # Shaded regions
     for xmin, xmax, color, alpha in shaded_regions:
         plt.axvspan(xmin, xmax, color=color, alpha=alpha)
-        
-    # Add vertical dotted lines at chunk boundaries if chunker is provided
+
+    # Chunker boundaries
     if chunker is not None:
         for chunk_index in chunker.chunk_indices:
             boundary_x = df[df[chunker.chunk_col] == chunk_index][x_axis].min()
             plt.axvline(x=boundary_x, color='red', linestyle='dotted', linewidth=2)
-    
+
     plt.xlabel(x_axis)
     plt.ylabel("Values")
-    plt.title("Line Plot")
-    plt.legend()
+    plt.title("Trajectory Plot with Optional Acceleration Encoding")
     plt.grid(True)
-    
-    # Improve x-axis label readability
+    plt.legend()
+
     ax = plt.gca()
     ax.xaxis.set_major_locator(MaxNLocator(nbins=max_ticks))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=max_ticks))
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{x:.1f}'))  # Format y-axis labels to 1 decimal place
-    # Save the plot
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{x:.1f}'))
+
     plt.savefig(save_path)
     plt.close()
 

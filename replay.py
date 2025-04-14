@@ -25,15 +25,11 @@ from utils.rag.embedding_models import EnvironmentEmbeddingModel
 from utils.rag.read_embedding_db import RAG_Database
 from utils.trajectory.trajectory_container import TrajectoryChunker, TrajectoryWindows
 
-# Load prompts
-from prompts.ashwin_04_05 import user_prompt
-from prompts.adrien_04_07 import rag_user_prompt, system_prompt
-
 # Loading in the util functions that help us parse/extract the response from the LLM.
 from utils.formatters.response_extractors import extract_values, extract_tag_content, calculate_l2_norm
 
 # Loading in the utils for the LLM evaluation.
-from utils.llm_eval_utils import run_llm_on_window
+from utils.llm_eval_utils import run_llm_on_window, run_llm_correction
 
 def parse_arguments():
     """Parse command line arguments"""
@@ -122,6 +118,10 @@ def load_trajectory_data(config):
         trajectory_df = trajectory_df[config["csv_columns"]]  # TODO: position is the placeholder for reward
         chunk_val = config["chunk_col_csv"]
     
+    # Apply trajectory processor if it exists in config
+    if "trajectory_processor" in config:
+        trajectory_df = config["trajectory_processor"](trajectory_df)
+    
     return trajectory_df, chunk_val
 
 
@@ -161,19 +161,49 @@ def train_on_windows(trajectory_windows, chunk_val, llm_agent, config):
     else:
         num_windows = int(len(trajectory_windows) * config["percent_of_trajectory"])
     
+    # Set random seed for reproducibility if specified in config
+    if "random_seed" in config:
+        np.random.seed(config["random_seed"])
+    
+    # Shuffle the windows if specified in config
+    if config.get("shuffle_windows", False):
+        np.random.shuffle(trajectory_windows)
+        print(f"Shuffled {len(trajectory_windows)} windows with seed {config.get('random_seed', 'not specified')}")
+    
+    # Initializing some empty RAG database. We will be this as "memory" for the LLM. 
+    rag_db = RAG_Database(config["rag_db_path"])
+    embedding_model = EnvironmentEmbeddingModel()
+    
     for i, window in enumerate(tqdm(trajectory_windows, desc="Processing window")):
         if i == num_windows:
             break
         
         start_idx = window.iloc[0][chunk_val]
+            
+        # Running the generation LLM on the window, saving results from the generation LLM into the `result` dictionary
         result = run_llm_on_window(
             window, 
-            start_idx, 
+            start_idx,      
             llm_agent, 
-            rag_db_path=None, 
+            db=rag_db, 
+            embedding_model=embedding_model,
             config=config
         )
+        
+        # Running the corrective loop on the response
+        corrected_result = run_llm_correction(
+            result,
+            llm_agent,
+            config,
+            rag_db,
+            embedding_model
+        )
+        
         results.append(result)
+        
+    # Saving the RAG database.
+    rag_db.save_database(config["checkpoint_rag_db_path"])
+    rag_db.save_as_json(config["checkpoint_rag_db_path"])
     
     return pd.DataFrame(results)
 
@@ -189,7 +219,7 @@ def save_results_and_plot(results_df, results_path, trajectory_df, chunk_val,
     plot_dataframe(
         trajectory_df,
         x_axis=chunk_val,
-        y_values=["speed", "leader_speed"],
+        y_values=["speed", "leader_speed", "accel"],
         save_path=plot_path,
         chunker=trajectory_segmented,
         shaded_regions=[(10, 20, "orange", 0.2)],
@@ -212,7 +242,7 @@ def main():
     # Load and process trajectory data
     trajectory_df, chunk_val = load_trajectory_data(config)
     trajectory_segmented, trajectory_windows = process_trajectory(trajectory_df, chunk_val, config)
-    
+        
     # Get LLM agent from config
     llm_agent = config["llm_model"]
     
