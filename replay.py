@@ -11,34 +11,41 @@ import pandas as pd
 from tqdm import tqdm
 
 from utils.db.simulation_db import SimulationDB
-from utils.df_utils import (
-    get_df_from_csv,
-    get_formatted_df_for_llm,
-    plot_dataframe
-)
+from utils.df_utils import get_df_from_csv, get_formatted_df_for_llm, plot_dataframe
 from utils.formatters.response_extractors import (
     calculate_l2_norm,
     extract_tag_content,
-    extract_values
+    extract_values,
 )
 from utils.rag.embedding_models import EnvironmentEmbeddingModel
 from utils.rag.read_embedding_db import RAG_Database
 from utils.trajectory.trajectory_container import TrajectoryChunker, TrajectoryWindows
+from utils.evaluators.logic_eval import get_logic_score
+from utils.evaluators.scenario_eval import evaluate_scenario
 
 # Loading in the util functions that help us parse/extract the response from the LLM.
-from utils.formatters.response_extractors import extract_values, extract_tag_content, calculate_l2_norm
+from utils.formatters.response_extractors import (
+    extract_values,
+    extract_tag_content,
+    calculate_l2_norm,
+)
 
 # Loading in the utils for the LLM evaluation.
 from utils.llm_eval_utils import run_llm_on_window, run_llm_correction
 
+from experiments.hypothetical_situations import hyp_situations
+
+
 def parse_arguments():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Run simulation with specified experiment configuration")
+    parser = argparse.ArgumentParser(
+        description="Run simulation with specified experiment configuration"
+    )
     parser.add_argument(
-        "--experiment", 
+        "--experiment",
         type=str,
         required=True,
-        help="Path to the experiment configuration file (e.g., 'experiments/experiment_1.py')"
+        help="Path to the experiment configuration file (e.g., 'experiments/experiment_1.py')",
     )
     return parser.parse_args()
 
@@ -46,14 +53,16 @@ def parse_arguments():
 def load_experiment_config(experiment_path):
     """Dynamically load experiment configuration from file"""
     print(f"Loading experiment configuration from: {experiment_path}")
-    
+
     spec = importlib.util.spec_from_file_location("experiment", experiment_path)
     experiment_module = importlib.util.module_from_spec(spec)
-    sys.modules["experiment"] = experiment_module   
+    sys.modules["experiment"] = experiment_module
     spec.loader.exec_module(experiment_module)
     config = experiment_module.config
-    
-    print(f"Experiment metadata: {config.get('experiment_metadata', 'No metadata provided')}")
+
+    print(
+        f"Experiment metadata: {config.get('experiment_metadata', 'No metadata provided')}"
+    )
     return config
 
 
@@ -66,14 +75,14 @@ def create_output_directories(config):
     current_datetime = datetime.now()
     hour = current_datetime.hour
     am_pm = "_am" if hour < 12 else "_pm"
-    formatted_datetime = current_datetime.strftime('%m_%d_%y_%H%M%S') + am_pm
+    formatted_datetime = current_datetime.strftime("%m_%d_%y_%H%M%S") + am_pm
     run_dir = os.path.join(config["output_dir"], formatted_datetime)
     os.makedirs(run_dir, exist_ok=True)
 
     # Set full output paths
     results_path = os.path.join(run_dir, config["results_filename"])
     plot_path = os.path.join(run_dir, config["plot_filename"])
-    
+
     return run_dir, results_path, plot_path, current_datetime
 
 
@@ -87,7 +96,7 @@ def save_config_files(config, run_dir, experiment_path, current_datetime):
     # Save as JSON
     with open(os.path.join(run_dir, "experiment_config.json"), "w") as f:
         json.dump(save_config, f, indent=4, default=str)
-    
+
     # Save as pretty-printed text
     with open(os.path.join(run_dir, "experiment_config.txt"), "w") as f:
         f.write(f"Experiment source: {experiment_path}\n")
@@ -102,26 +111,33 @@ def load_trajectory_data(config):
         # Load from database
         db_path = config["db_path"]
         with SimulationDB(db_path) as db:
-            trajectory_df = db.get_vehicle_data(config["vehicle_id"], config["db_columns"])
-        
+            trajectory_df = db.get_vehicle_data(
+                config["vehicle_id"], config["db_columns"]
+            )
+
         # Process database data
         chunk_val = config["chunk_col_db"]
-        trajectory_df['timestep'] = pd.to_numeric(trajectory_df['timestep'])
-        columns_to_rename = {col: col.replace('1_rl_av__', '') 
-                            for col in trajectory_df.columns if '1_rl_av__' in col}
+        trajectory_df["timestep"] = pd.to_numeric(trajectory_df["timestep"])
+        columns_to_rename = {
+            col: col.replace("1_rl_av__", "")
+            for col in trajectory_df.columns
+            if "1_rl_av__" in col
+        }
         trajectory_df = trajectory_df.rename(columns=columns_to_rename)
         print(trajectory_df)
     else:
         # Load from CSV
         trajectory_df = get_df_from_csv(config["csv_path"])
         trajectory_df = trajectory_df[trajectory_df["id"] == config["vehicle_id"]]
-        trajectory_df = trajectory_df[config["csv_columns"]]  # TODO: position is the placeholder for reward
+        trajectory_df = trajectory_df[
+            config["csv_columns"]
+        ]  # TODO: position is the placeholder for reward
         chunk_val = config["chunk_col_csv"]
-    
+
     # Apply trajectory processor if it exists in config
     if "trajectory_processor" in config:
         trajectory_df = config["trajectory_processor"](trajectory_df)
-    
+
     return trajectory_df, chunk_val
 
 
@@ -132,84 +148,175 @@ def process_trajectory(trajectory_df, chunk_val, config):
         trajectory_df,
         chunk_col=chunk_val,
         chunk_indices=config["chunk_indices"],
-        sort_col=chunk_val
+        sort_col=chunk_val,
     )
     trajectory_chunks = trajectory_segmented.get_chunks()
-    
+
     # Create trajectory windows
     trajectory_windows = TrajectoryWindows(
-        trajectory_chunks[0],
-        window_size=config["window_size"],
-        indexing_col=chunk_val
+        trajectory_chunks[0], window_size=config["window_size"], indexing_col=chunk_val
     )
-    
+
     return trajectory_segmented, trajectory_windows.get_windows()
 
 
 def train_on_windows(trajectory_windows, chunk_val, llm_agent, config):
-    """Process all trajectory windows and collecting the reuslts. 
-    
+    """Process all trajectory windows and collecting the reuslts.
+
     This is the main training loop for the LLM. Ideally, we want to be using a random shuffling / batching
     of the windows when training the database of the LLM.
     """
     results = []
-    
+
     # Get the number of windows to process
     # This means that the user wants to run the LLM for a specific NUMBER of iterations.
-    if config["percent_of_trajectory"] > 1: 
+    if config["percent_of_trajectory"] > 1:
         num_windows = config["percent_of_trajectory"]
     else:
         num_windows = int(len(trajectory_windows) * config["percent_of_trajectory"])
-    
+
     # Set random seed for reproducibility if specified in config
     if "random_seed" in config:
         np.random.seed(config["random_seed"])
-    
+
     # Shuffle the windows if specified in config
     if config.get("shuffle_windows", False):
         np.random.shuffle(trajectory_windows)
-        print(f"Shuffled {len(trajectory_windows)} windows with seed {config.get('random_seed', 'not specified')}")
-    
-    # Initializing some empty RAG database. We will be this as "memory" for the LLM. 
-    rag_db = RAG_Database(config["rag_db_path"])
+        print(
+            f"Shuffled {len(trajectory_windows)} windows with seed {config.get('random_seed', 'not specified')}"
+        )
+
+    # Initializing some empty RAG database. We will be this as "memory" for the LLM.
+    rag_db = RAG_Database(config["rag_db_path"], config["rag_max_db_size"])
     embedding_model = EnvironmentEmbeddingModel()
-    
+
     for i, window in enumerate(tqdm(trajectory_windows, desc="Processing window")):
         if i == num_windows:
             break
-        
+
         start_idx = window.iloc[0][chunk_val]
-            
+
+        # Generation module
         # Running the generation LLM on the window, saving results from the generation LLM into the `result` dictionary
+
+        # choose one hypothetical situation from the list of hypothetical situations at random
+        # add the hypothetical situation to the current window to create a new document
+
+        idx = np.random.randint(0, len(hyp_situations))
+        hypothetical_situation = hyp_situations[idx]
+
         result = run_llm_on_window(
-            window, 
-            start_idx,      
-            llm_agent, 
-            db=rag_db, 
-            embedding_model=embedding_model,
-            config=config
-        )
-        
-        # Running the corrective loop on the response
-        corrected_result = run_llm_correction(
-            result,
+            window,
+            hypothetical_situation,
+            start_idx,
             llm_agent,
-            config,
-            rag_db,
-            embedding_model
+            db=rag_db,
+            embedding_model=embedding_model,
+            config=config,
         )
-        
+
+        # # Running the corrective loop on the response
+        # corrected_result = run_llm_correction(
+        #     result, llm_agent, config, rag_db, embedding_model
+        # )
+
+        # Training module
+
+        # If the RAG database is not full, we can add the document to the database.
+        if rag_db.get_size() < config["rag_max_db_size"]:
+            print(f"rag_db.embedding_index: {rag_db.embedding_index}")
+            rag_db.add_document(
+                {
+                    "current_situation": window.iloc[0][
+                        ["speed", "headway", "leader_speed"]
+                    ].to_dict(),
+                    "action_explanation": result["action_explanation"],
+                    "action": result["llm_task1_action"],
+                    "hypothetical_situation": hypothetical_situation,
+                    "situation_analysis": result["situation_analysis"],
+                    "embedding_model": str(type(embedding_model).__name__),
+                },
+                embedding_model,
+            )
+
+        else:
+            # Compute the different metrics
+
+            ## Logic score
+            logic_score_response = get_logic_score(llm_agent, result["llm_response"])
+
+            doc_logic_scores = []
+            for index in result["retrieved_document_indices"]:
+                doc = rag_db.get_doc_from_index(index)
+                score = get_logic_score(llm_agent, doc["situation_analysis"])
+                doc_logic_scores.append((score, index))
+
+            ## Scenario score
+            scenario_score_response = evaluate_scenario(
+                current_situation=window.iloc[0][
+                    ["speed", "headway", "leader_speed"]
+                ].to_dict(),
+                hypothetical_situation=hypothetical_situation,
+                llm_agent=llm_agent,
+            )
+
+            doc_scenario_scores = []
+            for index in result["retrieved_document_indices"]:
+                doc = rag_db.get_doc_from_index(index)
+                score = evaluate_scenario(
+                    current_situation=doc["current_situation"],
+                    hypothetical_situation=doc["hypothetical_situation"],
+                    llm_agent=llm_agent,
+                )
+                doc_scenario_scores.append((score, index))
+
+            ## Aggregated score
+            w1, w2 = 0.5, 0.5  # Weights for logic and scenario scores
+            aggregated_score_response = (
+                w1 * logic_score_response + w2 * scenario_score_response
+            )
+
+            doc_aggregated_score = []
+            for index in result["retrieved_document_indices"]:
+
+                score = (
+                    w1 * doc_logic_scores[index][0] + w2 * doc_scenario_scores[index][0]
+                )
+                doc_aggregated_score.append((score, index))
+
+            doc_aggregated_score = sorted(
+                doc_aggregated_score, key=lambda x: x[0]
+            )  # Sort by the first element (score)
+
+            if aggregated_score_response > doc_aggregated_score[0][0]:
+                # Replace the worst document in the database with the new one.
+                rag_db.replace_document(
+                    document_index=doc_aggregated_score[0][1],
+                    new_json_content={
+                        "current_situation": window.iloc[0][
+                            ["speed", "headway", "leader_speed"]
+                        ].to_dict(),
+                        "action_explanation": result["action_explanation"],
+                        "action": result["llm_task1_action"],
+                        "hypothetical_situation": hypothetical_situation,
+                        "situation_analysis": result["situation_analysis"],
+                        "embedding_model": str(type(embedding_model).__name__),
+                    },
+                    embedding_model=embedding_model,
+                )
+
         results.append(result)
-        
+
     # Saving the RAG database.
     rag_db.save_database(config["checkpoint_rag_db_path"])
     rag_db.save_as_json(config["checkpoint_rag_db_path"])
-    
+
     return pd.DataFrame(results)
 
 
-def save_results_and_plot(results_df, results_path, trajectory_df, chunk_val, 
-                          trajectory_segmented, plot_path):
+def save_results_and_plot(
+    results_df, results_path, trajectory_df, chunk_val, trajectory_segmented, plot_path
+):
     """Save results to JSON and create visualization plot"""
     # Save results
     results_df.to_json(results_path, orient="records", indent=2)
@@ -232,26 +339,36 @@ def main():
     # Parse arguments and load configuration
     args = parse_arguments()
     config = load_experiment_config(args.experiment)
-    
+
     # Create output directories
-    run_dir, results_path, plot_path, current_datetime = create_output_directories(config)
-    
+    run_dir, results_path, plot_path, current_datetime = create_output_directories(
+        config
+    )
+
     # Save configuration files
     save_config_files(config, run_dir, args.experiment, current_datetime)
-    
+
     # Load and process trajectory data
     trajectory_df, chunk_val = load_trajectory_data(config)
-    trajectory_segmented, trajectory_windows = process_trajectory(trajectory_df, chunk_val, config)
-        
+    trajectory_segmented, trajectory_windows = process_trajectory(
+        trajectory_df, chunk_val, config
+    )
+
     # Get LLM agent from config
     llm_agent = config["llm_model"]
-    
+
     # Process windows and collect results
     results_df = train_on_windows(trajectory_windows, chunk_val, llm_agent, config)
-    
+
     # Save results and create plot
-    save_results_and_plot(results_df, results_path, trajectory_df, chunk_val, 
-                          trajectory_segmented, plot_path)
+    save_results_and_plot(
+        results_df,
+        results_path,
+        trajectory_df,
+        chunk_val,
+        trajectory_segmented,
+        plot_path,
+    )
 
 
 if __name__ == "__main__":

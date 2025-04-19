@@ -2,6 +2,7 @@ __pycache__
 ray_results
 *.txt
 *.png
+!framework.png
 !dataset/**/*.png
 .DS_STORE
 s3

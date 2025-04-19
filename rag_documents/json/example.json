@@ -1,0 +1,10 @@
+[
+    {
+        "current_situation": {"speed": 71.0, "headway": 35.0, "leader_speed": 70.5},
+        "action_explanation": "<observation>First observation<\/observation> <deduction>Second observation<\/deduction> <action>0.5<\/action>",
+        "action": 0.5,
+        "hypothetical_situation": "What happens if the headway suddenly decreases from 18m to 10m over the next 3 seconds?",
+        "situation_analysis": "<observation>First observation<\/observation> <deduction>Second observation<\/deduction> <prediction>The vehicle will brake in 2 seconds.<\/prediction>",
+        "embedding_model": "OpenAIEmbeddingModel()"
+    }
+]

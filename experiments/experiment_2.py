@@ -1,5 +1,5 @@
 from models.llm_agent import GeminiModel, OpenAiModel
-from experiments.prompts.ashwin_04_11 import (
+from experiments.prompts.adrien_04_17 import (
     user_prompt,
     system_prompt,
     corrective_system_prompt,
@@ -10,7 +10,7 @@ config = {
     # Experiment metadata so we can easily track the run.
     "experiment_metadata": "Finished implementation of corrective loop in the RAG framework.",
     # Database settings
-    "use_db": True,  # Whether to use database or CSV
+    "use_db": False,  # Whether to use database or CSV
     "db_path": "data/simulate/1743365635_30Mar25_20h13m55s/2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050_run_0.db",
     "csv_path": "data/simulate/1743374502_30Mar25_22h41m42s/emissions/emissions_1.csv",
     "trajectory_processor": lambda x: x[100:],
@@ -52,7 +52,7 @@ config = {
     "rag_max_db_size": 100,  # Number of documents to keep in the RAG database
     "checkpoint_rag_db_path": "rag_documents/pkl_db/completed_loop_db.pkl",
     # LLM Model Settings,
-    "llm_model": GeminiModel(),
+    "llm_model": OpenAiModel(),
     "temperature": 1,
     "num_samples": 1,
     # Prompt settings for the training

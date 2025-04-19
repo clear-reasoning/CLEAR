@@ -96,6 +96,7 @@ class OpenAIEmbeddingModel(BaseEmbeddingModel):
             model=self.model_name
         )
         return response.data[0].embedding
+    
 
 class EnvironmentEmbeddingModel(BaseEmbeddingModel):        
     def get_embedding(self, text: str) -> np.ndarray:

@@ -1,15 +1,4 @@
-```
-python train.py --logdir ./exp_logs --iters 1000 \
---cp_frequency 100 --eval_frequency 20 --n_processes 10 \
---n_steps 25600 --batch_size 5120 --n_envs 1 --n_epochs 10 \
---network_depth 2 --hidden_layer_size 64 --env_horizon 500 \
---lr 3e-4 --gamma 0.997 --gae_lambda 0.99 \
---augment_vf 1 --env_num_concat_states 10 --algorithm PPO \
---expname {expname}
-```
-
-
-# Trajectory Training
+# XAI-Trajectories
 
 # Installation
 
@@ -20,11 +9,78 @@ conda env create -f environment.yml
 conda activate trajectory
 ```
 
+# Structure of the code
+
+### `experiments/`
+- **`.py`**: These files are config files to set the hyperparameters for experiments.
+- **`prompts/`**: Folder that contains different files for prompt engineering and experimentation.
+
+### `models/`
+Contains the core models and agents used in the project.
+- **`llm_agent.py`**: Defines the necessary classes to enable to use different languages models of your choice (Gemini, Groq, ChatGPT).
+
+### `outputs/`
+Contains the results of the user queries.
+
+### `rag_documents/`
+Contains the databases of situations that can be retrieved in the generation module.
+- **`json/`**: Contains `.json` files if needed in a human-readable format.
+- **`pkl_db/`**: Contains `.pkl` files for better storage.
+
+### `utils/`
+- **`evaluators/`**: All the content for the evaluation of the output in the training module.
+- **`rag/`**: All the content for the retrieval part of the generation module.
+
+### `replay.py`
+File to run the entire framework.
+
+# Goal of the project
+
+In this work, we aim to provide a framework to tackle the issue of the black-box functioning of the autonomous vehicle controller. Our key contributions are the following:
+- Development of a novel framework that translates complex RL decision-making into interpretable, human-centered explanations
+- Validation of the approach using data from large-scale highway experiments with automated vehicles
+- Advancement of explainable AI techniques in the critical domain of transportation systems
+
+## Presentation of the framework
+
+![Our framework](framework.png)
+
+
 ## Dataset
 
-The whole dataset released in the [Vandertest 2021 ICRA work](https://github.com/nathanlct/trajectory-training-icra/) can be found at: https://vanderbilt.app.box.com/s/z3nignz1cgm16dy56r1mqg9ycds40tkz
+Our work is a continuation of the [Vandertest 2021 ICRA work](https://github.com/nathanlct/trajectory-training-icra/). The data of the Mega Vandertest we are using in this work can be found at: https://vanderbilt.app.box.com/s/z3nignz1cgm16dy56r1mqg9ycds40tkz
 
 If you use the trajectory dataset in your published works please cite from this DOI: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6366761.svg)](https://doi.org/10.5281/zenodo.6366761)
+
+### Structure of the RAG Database
+
+For each situation, a dictionary is created with the following structure:
+
+```json
+[
+    {
+        "current_situation": {"speed": 71.0, "headway": 35.0, "leader_speed": 70.5},
+        "action_explanation": "<observation>First observation<\/observation> <deduction>Second observation<\/deduction> <action>0.5<\/action>",
+        "action": 0.5,
+        "hypothetical_situation": "What happens if the headway suddenly decreases from 18m to 10m over the next 3 seconds?",
+        "situation_analysis": "<observation>First observation<\/observation> <deduction>Second observation<\/deduction> <prediction>The vehicle will brake in 2 seconds.<\/prediction>",
+        "embedding_model": "OpenAIEmbeddingModel()"
+    }
+]
+```
+
+
+
+# get an explanation
+
+## Write the situation in .py file in ./experiment/
+
+## Run a the file replay.py
+
+## Visualize the results
+
+
+
 
 # Train a controller
 

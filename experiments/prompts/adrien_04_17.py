@@ -30,8 +30,12 @@ You are provided with the following data:
 - **Hypothetical Situation**: A scenario that may occur over the next few seconds. Predict how this situation will evolve over the next 10 seconds if the RL controller's optimal action is taken.
 
 ### Input Data
-Input Values: {0}  
+Input Values: {0}
 Hypothetical Situation: {1}
+
+You are provided with similar situations in the past:
+
+{2}
 
 ## Output Requirements
 
@@ -44,13 +48,11 @@ You must output:
 - Use **only declarative statements**.
 - Use structured tags for reasoning:
   - Since this is two tasks (reasoning to find the optimal action and reasoning through the hypothetical situation), denote all things related to task 1 in <task1> tags and all things related to task 2 in <task2> tags. It's helpful to seperate the logic.
-  - Observations about the current state should be wrapped in `<observation>` tags.
-  - Deductions from the observations should be wrapped in `<deduction>` tags.
-  - Predictive claims about the hypothetical situation should be wrapped in `<prediction>` tags.
-  - The final action should be wrapped in a single `<action>` tag, representing the chosen acceleration/deceleration value in m/s². Make sure to include the sign! 
+  - Each observation about the current state or the hypothetical situation should be wrapped in `<observation>` tags.
+  - Each deduction from the observations and leading to the action (task1) or prediction (task2) of the behaviour of your vehicle should be wrapped in `<deduction>` tags.
+  - For task1, the final action should be wrapped in a single `<action>` tag, representing the chosen acceleration/deceleration value in m/s². Make sure to include the sign!
+  - For task2, provide a description of the behaviour of the RL controller wrapped in `<prediction>` tags.
 
-### Example Format:
-<observation>Vehicle ahead is decelerating at a moderate rate.</observation> <deduction>To maintain a safe distance, slight deceleration is required.</deduction> <prediction>Decelerating by 0.5 m/s² will prevent rapid closing distance and keep traffic smooth.</prediction> <action>-0.5</action>
 """
 
 corrective_system_prompt = """
@@ -61,12 +63,12 @@ You are given the colleague's explanation and the ground truth optimal action. D
 ## Tips for Critiquing
 - Try to point out the fallacies in the reasoning chain through the deduction/observation method.
 - The reasoning tries to find the optimal action ONLY based on the current state. All reasoning should primarily revolve around the current state.
-- Your corrected explanation should be as if you are the one who came up with the explanation. 
+- Your corrected explanation should be as if you are the one who came up with the explanation.
 - If the colleague's explanation seems reasonable and correct, just repeat it in your explanation.
 
 ## Formatting Instructions
-- For your final corrected explanation, use the tags <corrected_explanation>. Note that the corrected explanation should contain the corrected action, which should be wrapped in a <corrected_action> tag. 
-- Be sure to close off the tags! 
+- For your final corrected explanation, use the tags <corrected_explanation>. Note that the corrected explanation should contain the corrected action, which should be wrapped in a <corrected_action> tag.
+- Be sure to close off the tags!
 """
 
 corrective_user_prompt = """
